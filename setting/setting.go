@@ -15,6 +15,11 @@ type AppConfig struct {
 	Port          int  `ini:"port"`
 	*MySQLConfig  `ini:"mysql"`
 	*LogrusConfig `ini:"logrus"`
+	*ApiConfig    `ini:"api"`
+}
+
+type ApiConfig struct {
+	SecretKey string `ini:"secretKey"`
 }
 
 // MySQLConfig 数据库配置

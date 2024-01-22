@@ -2,7 +2,9 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
+	"mini-gpt/controller"
 	"mini-gpt/setting"
+	"net/http"
 )
 
 // SetupRouter 布尔型的配置项，控制应用程序的发布（release）模式。
@@ -19,11 +21,13 @@ func SetupRouter() *gin.Engine {
 
 	//测试接口
 	r.GET("/test", func(context *gin.Context) {
-		context.JSON(200, gin.H{
+		context.JSON(http.StatusOK, gin.H{
 			"lang": "Golang",
 			"tag":  "<br>",
 		})
 	})
+
+	r.POST("/chat", controller.CreateChat)
 
 	//r.GET("/", controller.IndexHandler)
 
