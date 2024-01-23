@@ -8,7 +8,7 @@ import (
 )
 
 func CreateChat(c *gin.Context) {
-	var chatMessage models.PromptMessage
+	var chatMessage models.ApiRequestMessage
 	c.BindJSON(&chatMessage)
 	generateMessage, err := service.LoadingChat(chatMessage)
 	if err != nil {

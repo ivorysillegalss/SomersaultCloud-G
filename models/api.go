@@ -30,11 +30,15 @@ func (c CompletionResponse) ToString() {
 	//return fmt.Sprintf()
 }
 
+// GenerateMessage 生成的返回数据的格式 暂时只有两种信息
 type GenerateMessage struct {
 	GenerateText string
 	FinishReason string
 }
 
-type PromptMessage struct {
-	Prompt string `json:"prompt"`
+// ApiRequestMessage 前端发请求json格式
+type ApiRequestMessage struct {
+	InputPrompt string `json:"prompt"`
+	Model       string `json:"model"`
+	MaxToken    int    `json:"max_token"`
 }
