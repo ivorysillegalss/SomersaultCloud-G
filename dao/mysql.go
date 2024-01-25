@@ -9,10 +9,9 @@ import (
 )
 
 var (
-	DB *gorm.DB
+	DB     *gorm.DB
+	logger logrus.Logger
 )
-
-var logger logrus.Logger
 
 func InitMySQL(cfg *setting.MySQLConfig) (err error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -24,12 +23,4 @@ func InitMySQL(cfg *setting.MySQLConfig) (err error) {
 		return
 	}
 	return DB.DB().Ping()
-}
-
-func Close() {
-	err := DB.Close()
-	if err != nil {
-		logger.Error(err)
-		return
-	}
 }

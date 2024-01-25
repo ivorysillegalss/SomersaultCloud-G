@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mini-gpt/code"
+	"mini-gpt/constant"
 	"mini-gpt/models"
 	"mini-gpt/setting"
 	"net/http"
@@ -63,7 +63,7 @@ func encodeReq(reqMessage models.ApiRequestMessage) (*http.Request, error) {
 
 	//这个判空的过程可以优化在结构体 models层中
 	if reqMessage.MaxToken != 0 {
-		reqMessage.MaxToken = code.DefaultMaxToken
+		reqMessage.MaxToken = constant.DefaultMaxToken
 	}
 
 	// 构造请求体
