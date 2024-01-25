@@ -8,17 +8,28 @@ import (
 )
 
 func main() {
+	//加载配置文件
 	setting.AboutConf()
+
+	//加载日志框架
 	logger := setting.GetLogger()
+
 	// 连接数据库
-	//err := dao.InitMySQL(Conf.MySQLConfig)
-	err := dao.InitMySQL(setting.Conf.MySQLConfig)
-	if err != nil {
-		//Logger.Error("init mysql failed, err:%v\n", err)
-		logger.Error("init mysql failed, err:%v\n", err)
+	//mysql
+	mysqlErr := dao.InitMySQL(setting.Conf.MySQLConfig)
+	//redis
+	redisErr := dao.InitRedis(setting.Conf.RedisConfig)
+	if redisErr != nil || mysqlErr != nil {
+		logger.Error("init database failed, err:%v\n")
 		return
 	}
-	defer dao.Close() // 程序退出关闭数据库连接
+	// 注册  程序退出关闭数据库连接
+	defer func() {
+		err := dao.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	//上方代码顺序不能改变 日志框架文件路径在配置文件中 数据库初始化中使用了日志框架
 
