@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"mini-gpt/controller"
 	"mini-gpt/setting"
@@ -18,6 +19,13 @@ func SetupRouter() *gin.Engine {
 	}
 
 	r := gin.Default()
+	//注册路由
+
+	r.Use(cors.Default())
+	// config := cors.DefaultConfig()
+	// config.AllowAllOrigins = true
+	// router.Use(cors.New(config))
+	//此处注册跨域cors 中间件   默认配置
 
 	//测试接口
 	r.GET("/test", func(context *gin.Context) {
@@ -27,18 +35,16 @@ func SetupRouter() *gin.Engine {
 		})
 	})
 
-	r.POST("/chat", controller.CreateChat)
-
 	//r.GET("/", controller.IndexHandler)
 
-	// v1
-	//v1Group := r.Group("v1")
-	//{
-	//	// crud
-	//	v1Group.POST("/todo", controller.CreateTodo)
-	//	v1Group.GET("/todo", controller.GetTodoList)
-	//	v1Group.PUT("/todo/:id", controller.UpdateATodo)
-	//	v1Group.DELETE("/todo/:id", controller.DeleteATodo)
-	//}
+	chatGroup := r.Group("/chat")
+	{
+		//原始请求格式 暂定如下
+		r.POST("/chat/new", controller.CreateChat)
+
+		//主页面查询的chat历史记录
+		chatGroup.GET("/init", controller.InitChat)
+	}
+
 	return r
 }

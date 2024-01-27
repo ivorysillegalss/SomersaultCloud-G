@@ -81,7 +81,7 @@ func encodeReq(reqMessage models.ApiRequestMessage) (*http.Request, error) {
 	}
 
 	// 发送请求
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/completions", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", constant.ApiServerOpenAI, bytes.NewBuffer(jsonData))
 	if err != nil {
 		//logger.Error(err)
 		return new(http.Request), err
@@ -89,7 +89,7 @@ func encodeReq(reqMessage models.ApiRequestMessage) (*http.Request, error) {
 	secretKey := setting.Conf.ApiConfig.SecretKey
 	//organizationID := "org-KQEFla180NCNd60se8ecJNc7"
 	//req.Header.Set("OpenAI-Organization", organizationID)
-	//organnizationID 为可选项 有时候需要加上才运行成功 截至commit 不加也行
+	//organizationID 为可选项 有时候需要加上才运行成功 截至commit 不加也行
 	key := fmt.Sprintf("Bearer %s", secretKey)
 	req.Header.Set("Authorization", key) // 请确保使用你自己的API密钥
 	req.Header.Set("Content-Type", "application/json")
