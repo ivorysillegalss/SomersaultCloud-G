@@ -1,13 +1,12 @@
 package models
 
-import (
-	"mini-gpt/dao"
-)
+import "mini-gpt/dao"
 
-// Chat 一个Chat
+// 一次Chat
 type Chat struct {
 	ChatId         int       `json:"chat_id"  gorm:"primaryKey"`
 	UserId         int       `json:"user_id"`
+	BotId          int       `json:"bot_id"`
 	Title          int       `json:"title"`
 	LastUpdateTime int64     `json:"last_update_time"`
 	IsDelete       bool      `json:"is_delete"`
@@ -38,6 +37,6 @@ type Generation struct {
 // ShowChatTitle 主页面展示已有chat的标题
 func ShowChatTitle(userId int) ([]*Chat, error) {
 	var chats []*Chat
-	dao.DB.Table("chat").Where("is_delete = ?", 0).Where("user_id = ?", userId).Find(&chats)
-	return chats, nil
+	err := dao.DB.Table("chat").Where("is_delete = ?", 0).Where("user_id = ?", userId).Find(&chats).Error
+	return chats, err
 }

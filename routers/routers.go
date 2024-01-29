@@ -37,14 +37,21 @@ func SetupRouter() *gin.Engine {
 
 	//r.GET("/", controller.IndexHandler)
 
+	//原始请求格式 暂定如下
+	r.POST("/chat/new", controller.CreateChat)
+
+	//主页面模型
 	chatGroup := r.Group("/chat")
 	{
-		//原始请求格式 暂定如下
-		r.POST("/chat/new", controller.CreateChat)
-
 		//主页面查询的chat历史记录
 		chatGroup.GET("/init", controller.InitChat)
 	}
 
+	//小机器人功能
+	botGroup := r.Group("/bot")
+	{
+		botGroup.POST("/", controller.CallBot)
+
+	}
 	return r
 }
