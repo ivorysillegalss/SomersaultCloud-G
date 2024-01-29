@@ -42,3 +42,11 @@ type ApiRequestMessage struct {
 	Model       string `json:"model"`
 	MaxToken    int    `json:"max_token"`
 }
+
+// 异常返回空对象
+func ErrorGeneration() GenerateMessage {
+	return GenerateMessage{
+		GenerateText: "",
+		FinishReason: "error",
+	}
+}
