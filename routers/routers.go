@@ -53,5 +53,15 @@ func SetupRouter() *gin.Engine {
 		botGroup.POST("/", controller.CallBot)
 
 	}
+
+	//管理员功能
+	adminGroup := r.Group("/admin")
+	{
+		//获取机器人信息及其提示词
+		//adminGroup.GET("/bot",controller.ShowBot)
+		adminGroup.GET("/bot/:isOfficial/:botId", controller.AdminGetBot)
+		//管理员设置新机器人
+		adminGroup.POST("/bot/create", controller.AdminSaveNewBot)
+	}
 	return r
 }

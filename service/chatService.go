@@ -48,7 +48,7 @@ func botConfigToApiRequest(config models.BotConfig) models.ApiRequestMessage {
 }
 
 // 一次性使用的bot调用方式 (没有历史记录功能的调用方法)
-func DisposableChat(dto dto.BotDTO) (models.GenerateMessage, error) {
+func DisposableChat(dto dto.ExecuteBotDTO) (models.GenerateMessage, error) {
 	botId := dto.BotId
 	configs := dto.Configs
 	config, err := models.GetBotConfig(botId)
