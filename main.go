@@ -17,7 +17,7 @@ func main() {
 	// 连接数据库
 	//mysql
 	mysqlErr := dao.InitMySQL(setting.Conf.MySQLConfig)
-	//redis
+	//redisUtils
 	redisErr := dao.InitRedis(setting.Conf.RedisConfig)
 	if redisErr != nil || mysqlErr != nil {
 		logger.Error("init database failed, err:%v\n")

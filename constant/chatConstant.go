@@ -7,4 +7,6 @@ const (
 	ApiServerOpenAI = "https://api.openai.com/v1/completions"
 	// ReplaceCharFromDefaultToCustomize 自定义唯一标识符 选了个挺少见的 可优化算法
 	ReplaceCharFromDefaultToCustomize = '¶'
+	// OfficialBotPrefix 创建新机器人的前缀
+	OfficialBotPrefix = "OfficialBot"
 )
