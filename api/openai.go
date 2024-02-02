@@ -15,7 +15,7 @@ import (
 //var logger = setting.GetLogger()
 //正常来说应该全局变量的 但是由于代码的先后执行问题先放到下面的函数中
 
-func Execute(message models.ApiRequestMessage) (models.CompletionResponse, error) {
+func Execute(message *models.ApiRequestMessage) (*models.CompletionResponse, error) {
 	var logger = setting.GetLogger()
 
 	//构造请求头
@@ -23,16 +23,21 @@ func Execute(message models.ApiRequestMessage) (models.CompletionResponse, error
 	req, err := encodeReq(message)
 	if err != nil {
 		logger.Error(err)
-		return models.CompletionResponse{}, err
+		return models.ErrorCompletionResponse(), err
 	}
 
 	//发送请求
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Error(err)
-		return models.CompletionResponse{}, err
+		return models.ErrorCompletionResponse(), err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(resp.Body)
 
 	//处理响应信息
 	completionResponse, err := decodeResp(resp)
@@ -59,7 +64,7 @@ func setProxy() *http.Client {
 }
 
 // 构造请求头
-func encodeReq(reqMessage models.ApiRequestMessage) (*http.Request, error) {
+func encodeReq(reqMessage *models.ApiRequestMessage) (*http.Request, error) {
 
 	//这个判空的过程可以优化在结构体 models层中
 	if reqMessage.MaxToken == 0 {
@@ -98,10 +103,10 @@ func encodeReq(reqMessage models.ApiRequestMessage) (*http.Request, error) {
 }
 
 // 解码响应信息
-func decodeResp(resp *http.Response) (models.CompletionResponse, error) {
+func decodeResp(resp *http.Response) (*models.CompletionResponse, error) {
 	decoder := json.NewDecoder(resp.Body)
 	// 创建一个变量，用于存储解码后的数据
-	var completionResponse models.CompletionResponse
+	var completionResponse *models.CompletionResponse
 	for {
 		if err := decoder.Decode(&completionResponse); err == io.EOF {
 			// io.EOF 表示已经到达输入流的末尾

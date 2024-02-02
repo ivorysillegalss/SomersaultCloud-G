@@ -34,41 +34,64 @@ type BotInfo struct {
 }
 
 type BotConfig struct {
-	BotId      int `json:"bot_id"`
-	InitPrompt string
-	Model      string
+	BotId      int    `json:"bot_id"`
+	InitPrompt string `json:"init_prompt"`
+	Model      string `json:"model"`
 }
 
-func CreateBotInfo(botInfo BotInfo) error {
-	if err := dao.DB.Create(botInfo).Error; err != nil {
+// bot相关操作映射到sql中的结构体 害怕Bot直接调用会有错误 专门整了一个内部使用
+type BotToStruct struct {
+	BotId      int
+	isDelete   bool
+	isOfficial bool
+}
+
+// 写入映射结构体对象中
+func writeBotToStruct(isOfficial bool) *BotToStruct {
+	return &BotToStruct{
+		isDelete:   false,
+		isOfficial: isOfficial,
+	}
+}
+
+func CreateBot(isOfficial bool) (int, error) {
+	botToStruct := writeBotToStruct(isOfficial)
+	if err := dao.DB.Table("bot").Create(botToStruct).Error; err != nil {
+		return -1, err
+	}
+	return botToStruct.BotId, nil
+}
+
+func CreateBotInfo(botInfo *BotInfo) error {
+	if err := dao.DB.Table("bot_info").Create(botInfo).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func CreateBotConfig(config BotConfig) error {
-	if err := dao.DB.Create(config).Error; err != nil {
+func CreateBotConfig(config *BotConfig) error {
+	if err := dao.DB.Table("bot_config").Create(config).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 // 获取特定bot的配置信息
-func GetBotConfig(botId int) (BotConfig, error) {
+func GetBotConfig(botId int) (*BotConfig, error) {
 	var botConfig BotConfig
 	err := dao.DB.Table("bot_config").Where("bot_id = ?", botId).Find(&botConfig).Error
-	return botConfig, err
+	return &botConfig, err
 }
 
 // 获取特定bot一般信息
-func GetBotInfo(botId int) (BotInfo, error) {
+func GetBotInfo(botId int) (*BotInfo, error) {
 	var botInfo BotInfo
 	err := dao.DB.Table("bot_info").Where("bot_id = ?", botId).Find(&botInfo).Error
-	return botInfo, err
+	return &botInfo, err
 }
 
 // 获取bot启动信息
-func GetUnofficialBot(botId int) (Bot, error) {
+func GetUnofficialBot(botId int) (*Bot, error) {
 	var bot Bot
 	var err error
 
@@ -81,13 +104,13 @@ func GetUnofficialBot(botId int) (Bot, error) {
 		//记录日志
 		return ErrorBot(), err
 	}
-	bot.BotInfo = &botInfo
-	bot.BotConfig = &botConfig
-	return bot, nil
+	bot.BotInfo = botInfo
+	bot.BotConfig = botConfig
+	return &bot, nil
 }
 
-func ErrorBot() Bot {
-	return Bot{
+func ErrorBot() *Bot {
+	return &Bot{
 		BotInfo:    nil,
 		BotConfig:  nil,
 		BotId:      0,
@@ -97,9 +120,9 @@ func ErrorBot() Bot {
 }
 
 // 将官方机器人存到redis当中 如果调用的是官方的 直接从redis中取出
-func GetOfficialBot(botId int) (Bot, error) {
+func GetOfficialBot(botId int) (*Bot, error) {
 	botIdStr := string(rune(botId))
 	k := constant.OfficialBotPrefix + botIdStr
 	resBot, err := redisUtils.GetStruct[Bot](k)
-	return resBot, err
+	return &resBot, err
 }
