@@ -8,8 +8,8 @@ import (
 )
 
 // 管理员获取机器人信息
-func GetBot(botId int, isOfficial int) (models.Bot, error) {
-	var bot models.Bot
+func GetBot(botId int, isOfficial int) (*models.Bot, error) {
+	var bot *models.Bot
 	var err error
 	if isOfficial == 0 {
 		bot, err = models.GetUnofficialBot(botId)
@@ -24,14 +24,22 @@ func GetBot(botId int, isOfficial int) (models.Bot, error) {
 	return bot, nil
 }
 
-// 管理员创建新机器人
-func AdminCreateBot(dto dto.CreateBotDTO) error {
-	newBot := &models.Bot{
+func adminCreateNewBot(botId int, dto dto.CreateBotDTO) *models.Bot {
+	return &models.Bot{
+		BotId:      botId,
 		BotInfo:    dto.BotInfo,
 		BotConfig:  dto.BotConfig,
-		BotId:      dto.BotId,
 		IsDelete:   false,
 		IsOfficial: true,
+	}
+}
+
+// 管理员创建新机器人
+func AdminCreateBot(dto dto.CreateBotDTO) error {
+	botId, err := models.CreateBot(true)
+	newBot := adminCreateNewBot(botId, dto)
+	if err != nil {
+		return err
 	}
 	//存入redis当中
 	return redisUtils.SetStruct(constant.OfficialBotPrefix, newBot)

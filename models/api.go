@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // CompletionRequest 定义请求结构体
 type CompletionRequest struct {
 	Model     string `json:"model"`
@@ -44,9 +46,16 @@ type ApiRequestMessage struct {
 }
 
 // 异常返回空对象
-func ErrorGeneration() GenerateMessage {
-	return GenerateMessage{
+func ErrorGeneration() *GenerateMessage {
+	return &GenerateMessage{
 		GenerateText: "",
 		FinishReason: "error",
+	}
+}
+
+func ErrorCompletionResponse() *CompletionResponse {
+	return &CompletionResponse{
+		CreateTime: time.Now().Unix(),
+		Choices:    nil,
 	}
 }

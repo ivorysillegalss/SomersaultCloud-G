@@ -12,7 +12,7 @@ import (
 //正常来说应该全局变量的 但是由于代码的先后执行问题先放到下面的函数中
 
 // 最初始的调用方式
-func LoadingChat(apiRequestMessage models.ApiRequestMessage) (models.GenerateMessage, error) {
+func LoadingChat(apiRequestMessage *models.ApiRequestMessage) (*models.GenerateMessage, error) {
 
 	var logger = setting.GetLogger()
 
@@ -26,7 +26,7 @@ func LoadingChat(apiRequestMessage models.ApiRequestMessage) (models.GenerateMes
 }
 
 // 将调用api结果包装为返回用户的结果
-func completionResponseToGenerationMessage(completionResponse models.CompletionResponse) models.GenerateMessage {
+func completionResponseToGenerationMessage(completionResponse *models.CompletionResponse) *models.GenerateMessage {
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 	args := completionResponse.Choices
 	textBody := args[0]
@@ -34,12 +34,12 @@ func completionResponseToGenerationMessage(completionResponse models.CompletionR
 		GenerateText: textBody.Text,
 		FinishReason: textBody.FinishReason,
 	}
-	return generateMessage
+	return &generateMessage
 }
 
 // 将botConfig配置包装为调用api所需请求体
-func botConfigToApiRequest(config models.BotConfig) models.ApiRequestMessage {
-	return models.ApiRequestMessage{
+func botConfigToApiRequest(config *models.BotConfig) *models.ApiRequestMessage {
+	return &models.ApiRequestMessage{
 		InputPrompt: config.InitPrompt,
 		Model:       config.Model,
 		//暂定最大字符串不能修改
@@ -48,7 +48,7 @@ func botConfigToApiRequest(config models.BotConfig) models.ApiRequestMessage {
 }
 
 // 一次性使用的bot调用方式 (没有历史记录功能的调用方法)
-func DisposableChat(dto dto.ExecuteBotDTO) (models.GenerateMessage, error) {
+func DisposableChat(dto dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
 	botId := dto.BotId
 	configs := dto.Configs
 	config, err := models.GetBotConfig(botId)

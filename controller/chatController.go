@@ -19,7 +19,7 @@ func CreateChat(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.StartChatError, "请求参数解析失败", nil))
 		return
 	}
-	generateMessage, err := service.LoadingChat(chatMessage)
+	generateMessage, err := service.LoadingChat(&chatMessage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.StartChatError, "开启聊天失败", nil))
 	} else {

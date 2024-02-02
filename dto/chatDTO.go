@@ -17,7 +17,7 @@ type ExecuteBotDTO struct {
 
 // CreateBotDTO 创建机器人映射
 type CreateBotDTO struct {
-	BotInfo   *models.BotInfo
-	BotConfig *models.BotConfig
-	BotId     int
+	BotInfo   *models.BotInfo   `json:"bot_info"`
+	BotConfig *models.BotConfig `json:"bot_config"`
+	BotId     int               `json:"bot_id"`
 }
