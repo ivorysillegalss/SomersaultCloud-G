@@ -41,16 +41,16 @@ type BotConfig struct {
 
 // bot相关操作映射到sql中的结构体 害怕Bot直接调用会有错误 专门整了一个内部使用
 type BotToStruct struct {
-	BotId      int
-	isDelete   bool
-	isOfficial bool
+	ID         int  `gorm:"primaryKey column:bot_id"` // 明确指定BotId为主键
+	IsDelete   bool `gorm:"column:is_delete"`         // 导出字段，并可指定列名
+	IsOfficial bool `gorm:"column:is_official"`       // 导出字段，并可指定列名
 }
 
 // 写入映射结构体对象中
 func writeBotToStruct(isOfficial bool) *BotToStruct {
 	return &BotToStruct{
-		isDelete:   false,
-		isOfficial: isOfficial,
+		IsDelete:   false,
+		IsOfficial: isOfficial,
 	}
 }
 
@@ -59,7 +59,7 @@ func CreateBot(isOfficial bool) (int, error) {
 	if err := dao.DB.Table("bot").Create(botToStruct).Error; err != nil {
 		return -1, err
 	}
-	return botToStruct.BotId, nil
+	return botToStruct.ID, nil
 }
 
 func CreateBotInfo(botInfo *BotInfo) error {
@@ -95,7 +95,7 @@ func GetUnofficialBot(botId int) (*Bot, error) {
 	var bot Bot
 	var err error
 
-	err = dao.DB.Table("bot").Where("bot_id = ?", botId).Find(&bot).Error
+	err = dao.DB.Table("bot").Where("ID = ?", botId).Find(&bot).Error
 
 	botInfo, err1 := GetBotInfo(botId)
 	botConfig, err2 := GetBotConfig(botId)

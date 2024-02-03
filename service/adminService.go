@@ -42,5 +42,5 @@ func AdminCreateBot(dto dto.CreateBotDTO) error {
 		return err
 	}
 	//存入redis当中
-	return redisUtils.SetStruct(constant.OfficialBotPrefix, newBot)
+	return redisUtils.SetStruct(constant.OfficialBotPrefix+string(rune(botId)), newBot)
 }
