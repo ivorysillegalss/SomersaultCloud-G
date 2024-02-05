@@ -126,3 +126,10 @@ func GetOfficialBot(botId int) (*Bot, error) {
 	resBot, err := redisUtils.GetStruct[Bot](k)
 	return &resBot, err
 }
+
+// 非官方放到mysql的数据
+func UpdateUnofficialBot(bot *Bot) error {
+	//这里可以根据部分更新需求优化 TBD
+	err := dao.DB.Model(&bot).Where("bot_id = ?", bot.BotId).Updates(bot).Error
+	return err
+}

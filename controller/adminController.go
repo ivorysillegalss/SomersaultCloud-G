@@ -49,3 +49,21 @@ func AdminSaveNewBot(c *gin.Context) {
 		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.AdminSaveNewBotSuccess, "管理员创建新机器人成功", nil))
 	}
 }
+
+// 管理员更新机器人
+func AdminModifyBot(c *gin.Context) {
+	var bot *dto.UpdateBotDTO
+
+	resultDTO := dto.ResultDTO{}
+	if err := c.BindJSON(bot); err != nil {
+		// 检查参数解析是否出错
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.AdminModifyBotError, "管理员修改机器人失败", nil))
+	}
+
+	err := service.AdminUpdateBot(bot)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.AdminModifyBotError, "管理员修改机器人失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.FailResp(constant.AdminModifyBotSuccess, "管理员修改机器人成功", nil))
+	}
+}
