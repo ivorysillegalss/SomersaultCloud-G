@@ -21,3 +21,9 @@ type CreateBotDTO struct {
 	BotConfig *models.BotConfig `json:"bot_config"`
 	BotId     int               `json:"bot_id"`
 }
+
+// UpdateBotDTO 这个映射类和models里的bot没区别
+// 单独写多一个是因为不想controller和models层有耦合
+type UpdateBotDTO struct {
+	Bot *models.Bot `json:"bot"`
+}

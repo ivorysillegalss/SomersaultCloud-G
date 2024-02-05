@@ -20,4 +20,8 @@ const (
 	//AdminSaveNewBot 管理员创建新机器人
 	AdminSaveNewBotSuccess = 910
 	AdminSaveNewBotError   = 911
+
+	//AdminModifyBot 管理员修改机器人
+	AdminModifyBotSuccess = 920
+	AdminModifyBotError   = 921
 )
