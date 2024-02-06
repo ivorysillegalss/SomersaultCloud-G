@@ -57,7 +57,7 @@ func CallBot(c *gin.Context) {
 		return
 	}
 
-	generateMessage, err := service.DisposableChat(botDTO)
+	generateMessage, err := service.DisposableChat(&botDTO)
 	if err != nil {
 		// 调用机器人失败，返回500状态码
 		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.CallBotError, "调用机器人失败", nil))
