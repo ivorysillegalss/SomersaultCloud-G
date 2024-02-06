@@ -1,5 +1,10 @@
 package models
 
+import (
+	"bytes"
+	"sync"
+)
+
 // 用户基本信息 TODO
 type UserInfo struct {
 	UserId   int    `json:"id"  gorm:"primaryKey"`
@@ -7,8 +12,16 @@ type UserInfo struct {
 	Password string `json:"password"`
 }
 
-// 用户Chat相关信息 TODO
+// 用户Chat相关状态信息
 type UserChat struct {
-	UserId int `json:"id"`
-	ChatId int `json:"chat_id"  gorm:"primaryKey"`
+	UserId   int
+	Question struct {
+		Counter int64
+		Doing   bool
+	}
+	Answer struct {
+		Counter int64
+		Mu      sync.Mutex
+		Buffer  bytes.Buffer
+	}
 }
