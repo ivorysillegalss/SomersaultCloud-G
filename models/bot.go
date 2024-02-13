@@ -17,13 +17,13 @@ type TalkBot interface {
 
 // 自定义 bot的结构体
 type Bot struct {
-	*BotInfo
-	*BotConfig
-	BotId int `gorm:"primaryKey"`
+	*BotInfo   `json:"bot_info"`
+	*BotConfig `json:"bot_config"`
+	BotId      int `gorm:"primaryKey" json:"bot_id"`
 	//是否已经删除
-	IsDelete bool
+	IsDelete bool `json:"is_delete"`
 	//是否官方bot
-	IsOfficial bool
+	IsOfficial bool `json:"is_official"`
 }
 
 type BotInfo struct {
@@ -119,12 +119,44 @@ func ErrorBot() *Bot {
 	}
 }
 
+// redis映射类
+type BotToRedis struct {
+	BotName        string `json:"bot_name"`
+	BotAvatar      string `json:"bot_avatar"`
+	BotDescription string `json:"bot_description"`
+	InitPrompt     string `json:"init_prompt"`
+	Model          string `json:"model"`
+	BotId          int    `json:"bot_id"`
+	IsDelete       bool   `json:"is_delete"`
+	IsOfficial     bool   `json:"is_official"`
+}
+
 // 将官方机器人存到redis当中 如果调用的是官方的 直接从redis中取出
 func GetOfficialBot(botId int) (*Bot, error) {
 	botIdStr := string(rune(botId))
 	k := constant.OfficialBotPrefix + botIdStr
-	resBot, err := redisUtils.GetStruct[Bot](k)
-	return &resBot, err
+	resBot, err := redisUtils.GetStruct[BotToRedis](k)
+	bot := convertRedisBot(&resBot)
+	return bot, err
+}
+
+func convertRedisBot(bot *BotToRedis) *Bot {
+	return &Bot{
+		BotInfo: &BotInfo{
+			BotId:       bot.BotId,
+			Name:        bot.BotName,
+			Avatar:      bot.BotAvatar,
+			Description: bot.BotDescription,
+		},
+		BotConfig: &BotConfig{
+			BotId:      bot.BotId,
+			InitPrompt: bot.InitPrompt,
+			Model:      bot.InitPrompt,
+		},
+		BotId:      bot.BotId,
+		IsDelete:   bot.IsDelete,
+		IsOfficial: bot.IsOfficial,
+	}
 }
 
 // 非官方放到mysql的数据
