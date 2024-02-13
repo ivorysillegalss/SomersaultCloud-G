@@ -52,15 +52,16 @@ func AdminSaveNewBot(c *gin.Context) {
 
 // 管理员更新机器人
 func AdminModifyBot(c *gin.Context) {
-	var bot *dto.UpdateBotDTO
+	// 使用map[string]interface{}来动态接收数据
+	var data map[string]interface{}
 
 	resultDTO := dto.ResultDTO{}
-	if err := c.BindJSON(bot); err != nil {
+	if err := c.BindJSON(&data); err != nil {
 		// 检查参数解析是否出错
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.AdminModifyBotError, "管理员修改机器人失败", nil))
 	}
 
-	err := service.AdminUpdateBot(bot)
+	err := service.AdminUpdateBot(&data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.AdminModifyBotError, "管理员修改机器人失败", nil))
 	} else {
