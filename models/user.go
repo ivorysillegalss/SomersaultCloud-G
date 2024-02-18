@@ -2,6 +2,7 @@ package models
 
 import (
 	"bytes"
+	"strconv"
 	"sync"
 )
 
@@ -23,5 +24,26 @@ type UserChat struct {
 		Counter int64
 		Mu      sync.Mutex
 		Buffer  bytes.Buffer
+	}
+}
+
+func NewUserChat(userId string) *UserChat {
+	uid, _ := strconv.Atoi(userId)
+	return &UserChat{
+		UserId: uid,
+		Question: struct {
+			Counter int64
+			Doing   bool
+		}{
+			Counter: 0,
+			Doing:   false,
+		},
+		Answer: struct {
+			Counter int64
+			Mu      sync.Mutex
+			Buffer  bytes.Buffer
+		}{
+			Counter: 0,
+		},
 	}
 }

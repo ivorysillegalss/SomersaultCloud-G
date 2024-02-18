@@ -10,7 +10,8 @@ type InitDTO struct {
 
 // ExecuteBotDTO 调用ai功能映射
 type ExecuteBotDTO struct {
-	BotId int `json:"bot_id"`
+	UserId string `json:"user_id"`
+	BotId  int    `json:"bot_id"`
 	//提示词配置
 	Configs []string `json:"configs"`
 }

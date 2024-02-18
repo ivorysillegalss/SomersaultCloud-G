@@ -42,6 +42,11 @@ func AdminCreateBot(dto dto.CreateBotDTO) error {
 	if err != nil {
 		return err
 	}
+	//在redis中维护一个list 存储官方bot的id
+	err = redisUtils.Rpush(constant.OfficialBotIdList, botId)
+	if err != nil {
+		return err
+	}
 	//存入redis当中
 	return redisUtils.SetStruct(constant.OfficialBotPrefix+string(rune(botId)), newBot)
 }

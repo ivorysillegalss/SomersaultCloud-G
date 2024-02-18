@@ -14,5 +14,7 @@ const (
 	// OfficialBotPrefix 创建新机器人的前缀
 	OfficialBotPrefix = "OfficialBot"
 	// UserCachePrefix 用户chat缓存前缀
-	UserCachePrefix = "userCache"
+	UserCachePrefix = "UserCache"
+	// OfficialBotIdList redis中存储官方机器人id 维护的便于id查找的list
+	OfficialBotIdList = "OfficialBotIdList"
 )
