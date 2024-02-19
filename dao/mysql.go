@@ -24,3 +24,9 @@ func InitMySQL(cfg *setting.MySQLConfig) (err error) {
 	}
 	return DB.DB().Ping()
 }
+
+//// 返回一个数据库客户端实例，已经携带了相关的db信息（已包含了连接信息）
+//func NewDBClient(ctx context.Context) *gorm.DB {
+//	db := _db
+//	return db.WithContext(ctx)
+//}

@@ -27,6 +27,21 @@ func SetupRouter() *gin.Engine {
 	// router.Use(cors.New(config))
 	//此处注册跨域cors 中间件   默认配置
 
+	//用户注册和登录  ... 是分开还是放在一个group
+	//userGroup := r.Group("/user")
+	//{
+	//	//注册
+	//	userGroup.POST("/register", controller.AdminGetBot)
+	//	//登录
+	//	userGroup.GET("/login", controller.AdminSaveNewBot)
+	//}
+
+	//注册
+	r.POST("/register",
+		controller.Register)
+	//登录
+	r.POST("/login", controller.Login)
+
 	//测试接口
 	r.GET("/test", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{
