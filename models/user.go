@@ -1,6 +1,9 @@
 package models
 
 import (
+	"bytes"
+	"strconv"
+	"sync"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"mini-gpt/dao"
@@ -13,10 +16,39 @@ type UserInfo struct {
 	Password string `gorm:"column:pass_word" json:"password"`
 }
 
-// 用户Chat相关信息 TODO
+// 用户Chat相关状态信息
 type UserChat struct {
-	UserId uint `json:"id"`
-	ChatId int  `json:"chat_id"  gorm:"primaryKey"`
+	UserId   int
+	Question struct {
+		Counter int64
+		Doing   bool
+	}
+	Answer struct {
+		Counter int64
+		Mu      sync.Mutex
+		Buffer  bytes.Buffer
+	}
+}
+
+func NewUserChat(userId string) *UserChat {
+	uid, _ := strconv.Atoi(userId)
+	return &UserChat{
+		UserId: uid,
+		Question: struct {
+			Counter int64
+			Doing   bool
+		}{
+			Counter: 0,
+			Doing:   false,
+		},
+		Answer: struct {
+			Counter int64
+			Mu      sync.Mutex
+			Buffer  bytes.Buffer
+		}{
+			Counter: 0,
+		},
+	}
 }
 
 // 用于接受前端传来的：
