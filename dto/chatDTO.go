@@ -28,3 +28,15 @@ type CreateBotDTO struct {
 type UpdateBotDTO struct {
 	Bot *models.Bot `json:"bot"`
 }
+
+// AskDTO 这个映射类是问题的映射类
+type AskDTO struct {
+	Ask    *models.ChatAsk `json:"ask"`
+	UserId int             `json:"user_id"`
+}
+
+// CreateChatDTO 创建新chat时候的初始化机器人配置
+type CreateChatDTO struct {
+	UserId int `json:"user_id"`
+	BotId  int `json:"bot_id"`
+}

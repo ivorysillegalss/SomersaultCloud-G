@@ -17,4 +17,8 @@ const (
 	UserCachePrefix = "UserCache"
 	// OfficialBotIdList redis中存储官方机器人id 维护的便于id查找的list
 	OfficialBotIdList = "OfficialBotIdList"
+	// ChatCache redis中存储以往chat记录的缓存前缀
+	ChatCache = "ChatCache"
+	// ChatCacheExpire redis中存储chat记录的限时
+	ChatCacheExpire = 30 * time.Minute
 )

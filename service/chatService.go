@@ -49,14 +49,12 @@ func botConfigToApiRequest(config *models.BotConfig) *models.ApiRequestMessage {
 	}
 }
 
-// 一次性使用的bot调用方式 (没有历史记录功能的调用方法)
-func DisposableChat(dto *dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
-	botId := dto.BotId
-	botPromptConfigs := dto.Configs
+// 获取bot 有无历史记录通用代码
+func getBot(botId int) (*models.BotConfig, error) {
 	//获取redis中所保存的所有官方机器人的id集合
 	list, err2 := redisUtils.GetList(constant.OfficialBotIdList)
 	if err2 != nil {
-		return models.ErrorGeneration(), err2
+		return models.ErrorBotConfig(), err2
 	}
 	var config *models.BotConfig
 	var err error
@@ -67,16 +65,27 @@ func DisposableChat(dto *dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
 		if eachOfficialBotId > botId {
 			config, err = models.GetBotConfig(botId)
 			if err != nil {
-				return models.ErrorGeneration(), err
+				return models.ErrorBotConfig(), err
 			}
 		} else if eachOfficialBotId == botId {
 			//如果有这个官方机器人 就需要从redis中取它的配置
 			bot, err2 := models.GetOfficialBot(eachOfficialBotId)
 			config = bot.BotConfig
 			if err2 != nil {
-				return models.ErrorGeneration(), err
+				return models.ErrorBotConfig(), err
 			}
 		}
+	}
+	return config, nil
+}
+
+// 一次性使用的bot调用方式 (没有历史记录功能的调用方法)
+func DisposableChat(dto *dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
+	botId := dto.BotId
+	botPromptConfigs := dto.Configs
+	config, err2 := getBot(botId)
+	if err2 != nil {
+		return models.ErrorGeneration(), err2
 	}
 	//修改自定义配置
 	config.InitPrompt = updateCustomizeConfig(config.InitPrompt, botPromptConfigs)
@@ -111,4 +120,45 @@ func updateCustomizeConfig(defaultPrompt string, customize []string) string {
 	}
 
 	return replaced
+}
+
+func CreateChat(dto *dto.CreateChatDTO) (botId int, err error) {
+	return models.CreateNewChat(dto.UserId, dto.BotId)
+}
+
+// 具有上下文的chat方式
+func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
+	askInfo := ask.Ask
+	botId := askInfo.BotId
+	botConfig, err := getBot(botId)
+	if err != nil {
+		return models.ErrorGeneration(), err
+	}
+
+	//从redis缓存 或mysql中获取历史记录
+	history, err := models.GetChatHistoryForChat(askInfo.ChatId)
+	if err != nil {
+		return models.ErrorGeneration(), err
+	}
+
+	//往redis中更新缓存
+	err = redisUtils.SetStructWithExpire(constant.ChatCache+strconv.Itoa(askInfo.ChatId), history, constant.ChatCacheExpire)
+	if err != nil {
+		return models.ErrorGeneration(), err
+	}
+
+	updateContextPrompt()
+
+	//包装为请求体
+	botRequest := botConfigToApiRequest(botConfig)
+	completionResponse, err := api.Execute(strconv.Itoa(ask.UserId), botRequest)
+	if err != nil {
+		return models.ErrorGeneration(), err
+	}
+	generationMessage := completionResponseToGenerationMessage(completionResponse)
+	return generationMessage, nil
+}
+
+func updateContextPrompt() {
+
 }
