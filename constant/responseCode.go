@@ -24,4 +24,17 @@ const (
 	//AdminModifyBot 管理员修改机器人
 	AdminModifyBotSuccess = 920
 	AdminModifyBotError   = 921
+
+	//用户注册
+	RegisterSuccess = 1000
+	RegisterError   = 1001
+
+	//用户登录
+	LoginSuccess = 1010
+	LoginError   = 1011
+
+	//用户名和密码解析
+	UserGetError = 1021
+	//用户名或密码为空
+	UserExistNull = 1021
 )
