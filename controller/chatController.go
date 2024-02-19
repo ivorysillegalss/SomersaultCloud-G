@@ -27,6 +27,42 @@ func CreateChat(c *gin.Context) {
 	}
 }
 
+// 初始化新chat
+func InitNewChat(c *gin.Context) {
+	var createChatDTO dto.CreateChatDTO
+
+	resultDTO := dto.ResultDTO{}
+	if err := c.BindJSON(&createChatDTO); err != nil {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.StartChatError, "请求参数解析失败", nil))
+		return
+	}
+	chatId, err := service.CreateChat(&createChatDTO)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.StartChatError, "开启聊天失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.StartChatSuccess, "开启聊天成功", chatId))
+	}
+}
+
+// 使用chat
+func CreateNewChat(c *gin.Context) {
+	var askDTO dto.AskDTO
+
+	resultDTO := dto.ResultDTO{}
+	if err := c.BindJSON(&askDTO); err != nil {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.StartChatError, "请求参数解析失败", nil))
+		return
+	}
+	generateMessage, err := service.ContextChat(&askDTO)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.StartChatError, "开启聊天失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.StartChatSuccess, "开启聊天成功", generateMessage))
+	}
+}
+
 // 主页面渲染chat记录
 func InitChat(c *gin.Context) {
 	var initDTO dto.InitDTO

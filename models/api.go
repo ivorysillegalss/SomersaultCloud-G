@@ -55,6 +55,15 @@ func ErrorGeneration() *GenerateMessage {
 	}
 }
 
+// 加载bot配置错误
+func ErrorBotConfig() *BotConfig {
+	return &BotConfig{
+		BotId:      0,
+		InitPrompt: "",
+		Model:      "",
+	}
+}
+
 // 系统错误
 func ErrorCompletionResponse() *CompletionResponse {
 	return &CompletionResponse{
