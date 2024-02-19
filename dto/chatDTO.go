@@ -10,7 +10,8 @@ type InitDTO struct {
 
 // ExecuteBotDTO 调用ai功能映射
 type ExecuteBotDTO struct {
-	BotId int `json:"bot_id"`
+	UserId string `json:"user_id"`
+	BotId  int    `json:"bot_id"`
 	//提示词配置
 	Configs []string `json:"configs"`
 }
@@ -26,4 +27,16 @@ type CreateBotDTO struct {
 // 单独写多一个是因为不想controller和models层有耦合
 type UpdateBotDTO struct {
 	Bot *models.Bot `json:"bot"`
+}
+
+// AskDTO 这个映射类是问题的映射类
+type AskDTO struct {
+	Ask    *models.ChatAsk `json:"ask"`
+	UserId int             `json:"user_id"`
+}
+
+// CreateChatDTO 创建新chat时候的初始化机器人配置
+type CreateChatDTO struct {
+	UserId int `json:"user_id"`
+	BotId  int `json:"bot_id"`
 }

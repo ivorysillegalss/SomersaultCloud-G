@@ -49,6 +49,7 @@ func SetStructWithExpire(k string, vStruct any, ddl time.Duration) error {
 // String get 获取值 不返回剩余时间
 func Get(k string) (string, error) {
 	v, err := dao.Client.Get(dao.Ctx, k).Result()
+	//如果get不到需要的值 会返回redis.errNil
 	return v, err
 }
 
