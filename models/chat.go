@@ -24,8 +24,9 @@ type Chat struct {
 // Record 一次问答
 type Record struct {
 	RecordId        int `json:"record_id"`
-	chatAsks        *ChatAsk
-	chatGenerations *ChatGeneration
+	ChatAsks        *ChatAsk
+	ChatGenerations *ChatGeneration
+	Weights         float64
 }
 
 // ChatAsk 一次问题
@@ -38,9 +39,9 @@ type ChatAsk struct {
 
 // ChatGeneration 一次生成
 type ChatGeneration struct {
-	RecordId int `json:"record_id"`
-	ChatId   int `json:"chat_id"`
-	Message  int `json:"message"`
+	RecordId int    `json:"record_id"`
+	ChatId   int    `json:"chat_id"`
+	Message  string `json:"message"`
 }
 
 // ShowChatTitle 主页面展示已有chat的标题
