@@ -147,7 +147,8 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 		return models.ErrorGeneration(), err
 	}
 
-	updateContextPrompt()
+	//根据已有权重更新上下文提示词
+	botConfig.InitPrompt = updateContextPrompt(history, botConfig.InitPrompt)
 
 	//包装为请求体
 	botRequest := botConfigToApiRequest(botConfig)
@@ -156,9 +157,49 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 		return models.ErrorGeneration(), err
 	}
 	generationMessage := completionResponseToGenerationMessage(completionResponse)
+
+	//待完善逻辑：将生成的记录存放入数据库当中
+	//TODO
+
+	//更新权重的时机：新chat初始化 进行了新的问答（新record） 下方为第二种
+	//异步更新权重算法TBD
+	go calculateContextWeights(history)
+
 	return generationMessage, nil
 }
 
-func updateContextPrompt() {
+// 新思路：取数据的时候手动分配权重或更新权重
+//分配的时间复杂度On 根据权重进行上下文处理需要遍历 时间复杂度也为On 两者时间复杂度很高 效率相当低
 
+// 也许可以在用户调用的时候 在将历史记录存入数据库的时候 异步分配 更新权重
+// 总结就是 异步对权重进行分布处理
+// 把权重存进表里存储也许更合适 专门的一张表
+func calculateContextWeights(history *[]*models.Record) {
+	//需要根据已有记录的数量进行动态的内存分配
+}
+
+func updateContextPrompt(history *[]*models.Record, prompt string) (initPrompt string) {
+	//根据已有权重进行更新提示词 TODO  算法待补充
+
+	//这里先直接填充历史记录进入prompt
+	historyChat := *history
+	initPrompt = prompt
+	if len(historyChat) != 0 {
+		initPrompt = constant.HistoryChatPrompt
+		//直接将预处理话术和历史记录拼接的做法欠优 可能可以改进
+
+		//初始化聊天记录 告诉gpt以下是我和你的聊天记录
+		for i := range historyChat {
+			initPrompt += constant.UserRole + historyChat[i].ChatAsks.Message + "\n"
+			initPrompt += constant.GPTRole + historyChat[i].ChatGenerations.Message + "\n"
+		}
+
+	} else if len(historyChat) == 0 {
+		//这里可以分为两种情况 第一次聊天的时候就不用以上处理
+		//这里的做法很粗糙 一旦这个机器人的功能具有上下文 并且需要预处理
+		//需要在原始的initPrompt的基础上进行改进
+		return
+	}
+
+	return
 }

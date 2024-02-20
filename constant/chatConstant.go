@@ -5,7 +5,7 @@ import "time"
 const (
 	// DefaultMaxToken 不输入token时默认定义的token最大数量
 	DefaultMaxToken = 1000
-	// DefaultMaxLimitedTime 请求默认超时时间
+	// DefaultMaxLimitedTime 请求默认超时时间 方便调试默认关闭
 	DefaultMaxLimitedTime = time.Minute / 2
 	// ApiServerOpenAI OpenAI-API服务器默认网址
 	ApiServerOpenAI = "https://api.openai.com/v1/completions"
@@ -21,4 +21,10 @@ const (
 	ChatCache = "ChatCache"
 	// ChatCacheExpire redis中存储chat记录的限时
 	ChatCacheExpire = 30 * time.Minute
+	// HistoryChatPrompt 告诉chatGPT以往聊天记录的prompt模板 可改进
+	HistoryChatPrompt = "Here is the chat history which I have talked with you,please according to the history give me generation:"
+	// UserRole 用户角色
+	UserRole = "I have said:"
+	// GPTRole GPT角色
+	GPTRole = "and you have generated:"
 )
