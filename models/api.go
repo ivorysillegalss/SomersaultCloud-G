@@ -64,6 +64,12 @@ func ErrorBotConfig() *BotConfig {
 	}
 }
 
+// 调用api之后的状态
+type ExecuteStatus struct {
+	Status     string
+	StatusCode int
+}
+
 // 系统错误
 func ErrorCompletionResponse() *CompletionResponse {
 	return &CompletionResponse{
