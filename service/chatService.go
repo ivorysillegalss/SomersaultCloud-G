@@ -31,6 +31,9 @@ func LoadingChat(apiRequestMessage *models.ApiRequestMessage) (*models.GenerateM
 func completionResponseToGenerationMessage(completionResponse *models.CompletionResponse) *models.GenerateMessage {
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 	args := completionResponse.Choices
+	if args == nil {
+		return models.ErrorGeneration()
+	}
 	textBody := args[0]
 	generateMessage := models.GenerateMessage{
 		GenerateText: textBody.Text,
@@ -76,6 +79,7 @@ func getBot(botId int) (*models.BotConfig, error) {
 			}
 		}
 	}
+	config.BotId = botId
 	return config, nil
 }
 
@@ -105,17 +109,17 @@ func updateCustomizeConfig(defaultPrompt string, customize []string) string {
 	replaced := ""
 	placeholderIndex := 0
 
-	for i := 0; i < len(defaultPrompt); i++ {
-		if defaultPrompt[i] == constant.ReplaceCharFromDefaultToCustomize {
+	for _, runeValue := range defaultPrompt {
+		if runeValue == constant.ReplaceCharFromDefaultToCustomize {
 			if placeholderIndex < len(customize) {
 				replaced += customize[placeholderIndex]
 				placeholderIndex++
 			} else {
 				// 如果替换内容用尽，保留原始字符
-				replaced += string(defaultPrompt[i])
+				replaced += string(runeValue)
 			}
 		} else {
-			replaced += string(defaultPrompt[i])
+			replaced += string(runeValue)
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"mini-gpt/constant"
+	exception "mini-gpt/error"
 	"mini-gpt/models"
 	"mini-gpt/setting"
 	"mini-gpt/utils/redisUtils"
@@ -16,6 +17,7 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
+	"time"
 )
 
 //var logger = setting.GetLogger()
@@ -25,7 +27,7 @@ import (
 func optimizationPrompt(originalPrompt string) (reply string) {
 	originalPrompt = strings.TrimSpace(originalPrompt)
 	length := len([]rune(originalPrompt))
-
+	reply = originalPrompt
 	if length <= 1 {
 		reply = "请说详细些..."
 		return
@@ -34,6 +36,7 @@ func optimizationPrompt(originalPrompt string) (reply string) {
 		reply = "问题字数超出设定限制，请精简问题"
 		return
 	}
+
 	return
 }
 
@@ -150,6 +153,16 @@ func Execute(uid string, message *models.ApiRequestMessage) (*models.CompletionR
 		return models.ErrorCompletionResponse(), err
 	}
 
+	//判断状态是否正常运行
+	executeStatus := statusClarify(resp)
+	if executeStatus.StatusCode != constant.APIExecuteSuccessStatus {
+		return models.ErrorCompletionResponse(), &exception.ExecuteError{
+			ExecuteTime: time.Now(),
+			Status:      executeStatus.Status,
+			StatusCode:  executeStatus.StatusCode,
+		}
+	}
+
 	// 异步读取数据 同时将数据传输到对应用户的缓冲区当中
 	// 先改回同步
 	completions(userChat, resp.Body)
@@ -242,4 +255,12 @@ func decodeResp(chatJson string) (*models.CompletionResponse, error) {
 		}
 	}
 	return completionResponse, nil
+}
+
+// 判断状态
+func statusClarify(resp *http.Response) *models.ExecuteStatus {
+	return &models.ExecuteStatus{
+		Status:     resp.Status,
+		StatusCode: resp.StatusCode,
+	}
 }

@@ -27,4 +27,6 @@ const (
 	UserRole = "I have said:"
 	// GPTRole GPT角色
 	GPTRole = "and you have generated:"
+	// APIExecuteSuccessStatus 执行API成功后返回的状态码
+	APIExecuteSuccessStatus = 200
 )
