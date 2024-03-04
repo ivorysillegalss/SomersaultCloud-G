@@ -26,7 +26,7 @@ type Record struct {
 	RecordId        int `json:"record_id"`
 	ChatAsks        *ChatAsk
 	ChatGenerations *ChatGeneration
-	Weights         float64
+	//Weights         float64
 }
 
 // ChatAsk 一次问题
@@ -83,6 +83,8 @@ func GetChatHistoryForChat(chatId int) (*[]*Record, error) {
 	records, err := redisUtils.GetStruct[[]*Record](constant.ChatCache + strconv.Itoa(chatId))
 	//去redis里查
 
+	//此处可以优化逻辑
+
 	if errors.Is(redis.Nil, err) {
 		//redis中查不到的时候去mysql里查
 		if err := dao.DB.Joins("JOIN chat_generation ON chat_asks.record_id = chat_generation.record_id").Where("chat_id = ?", chatId).
@@ -96,4 +98,18 @@ func GetChatHistoryForChat(chatId int) (*[]*Record, error) {
 	}
 
 	return &records, nil
+}
+
+// 保存记录
+func SaveRecord(record *Record, chatId int) error {
+	if err := dao.DB.Table("chat_ask").Save(record.ChatAsks).Error; err != nil {
+		return err
+	}
+	if err := dao.DB.Table("chat_generation").Save(record.ChatGenerations).Error; err != nil {
+		return err
+	}
+	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).Update("last_update_time", time.Now().Unix()).Error; err != nil {
+		return err
+	}
+	return nil
 }
