@@ -162,14 +162,38 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 	}
 	generationMessage := completionResponseToGenerationMessage(completionResponse)
 
+	botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
+
 	//待完善逻辑：将生成的记录存放入数据库当中
-	//TODO
+	err = models.SaveRecord(&models.Record{
+		ChatAsks: askInfo,
+		ChatGenerations: &models.ChatGeneration{
+			RecordId: askInfo.RecordId,
+			ChatId:   askInfo.ChatId,
+			Message:  generationMessage.GenerateText,
+		},
+	}, askInfo.ChatId)
+
+	if err != nil {
+		return models.ErrorGeneration(), err
+	}
 
 	//更新权重的时机：新chat初始化 进行了新的问答（新record） 下方为第二种
 	//异步更新权重算法TBD
-	go calculateContextWeights(history)
+	//go calculateContextWeights(history)
 
 	return generationMessage, nil
+}
+
+// 查看是否有引用字段 若有则加入prompt
+func referenceToken(beforePrompt string, asks *dto.AskDTO) string {
+	referenceRecord := asks.ReferenceRecord
+	if !(referenceRecord != new(models.Record) && asks.ReferenceToken != constant.ZeroString) {
+		beforePrompt += constant.ReferenceRecordPrompt
+		beforePrompt += constant.UserRole + referenceRecord.ChatAsks.Message + "\n"
+		beforePrompt += constant.GPTRole + referenceRecord.ChatGenerations.Message + "\n"
+	}
+	return beforePrompt
 }
 
 // 新思路：取数据的时候手动分配权重或更新权重
@@ -193,9 +217,11 @@ func updateContextPrompt(history *[]*models.Record, prompt string) (initPrompt s
 		//直接将预处理话术和历史记录拼接的做法欠优 可能可以改进
 
 		//初始化聊天记录 告诉gpt以下是我和你的聊天记录
-		for i := range historyChat {
+		i := 0
+		for i < constant.ChatHistoryWeight {
 			initPrompt += constant.UserRole + historyChat[i].ChatAsks.Message + "\n"
 			initPrompt += constant.GPTRole + historyChat[i].ChatGenerations.Message + "\n"
+			i++
 		}
 
 	} else if len(historyChat) == 0 {

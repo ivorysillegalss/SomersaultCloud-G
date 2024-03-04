@@ -27,6 +27,10 @@ const (
 	UserRole = "I have said:"
 	// GPTRole GPT角色
 	GPTRole = "and you have generated:"
+	// ChatHistoryWeight 发送上下文历史记录的权重设置
+	ChatHistoryWeight = 3
 	// APIExecuteSuccessStatus 执行API成功后返回的状态码
 	APIExecuteSuccessStatus = 200
+	// ReferenceRecordPrompt 告诉chatGPT要他回复回应中的某个部分
+	ReferenceRecordPrompt = "Here is a record we have been talked,And I have confused about parts of your generation,please fairly and clearly explain about it and my question:"
 )
