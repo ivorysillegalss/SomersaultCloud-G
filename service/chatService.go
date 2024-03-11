@@ -62,7 +62,7 @@ func getBot(botId int) (*models.BotConfig, error) {
 	var config *models.BotConfig
 	var err error
 	//在list中 由于每一次更新新的机器人都是从rpush的 所以可以直接通过大小进行比较 从左往右即为从小到大
-	//如果目标的比所需的大 即表明没有这个官方机器人
+	//如果目标的比所需的大 即表明没有这个官方机器人 这里可以用哈希表优化
 	for i := range list {
 		eachOfficialBotId, _ := strconv.Atoi(list[i])
 		if eachOfficialBotId > botId {
@@ -70,6 +70,7 @@ func getBot(botId int) (*models.BotConfig, error) {
 			if err != nil {
 				return models.ErrorBotConfig(), err
 			}
+			break
 		} else if eachOfficialBotId == botId {
 			//如果有这个官方机器人 就需要从redis中取它的配置
 			bot, err2 := models.GetOfficialBot(eachOfficialBotId)
@@ -77,6 +78,7 @@ func getBot(botId int) (*models.BotConfig, error) {
 			if err2 != nil {
 				return models.ErrorBotConfig(), err
 			}
+			break
 		}
 	}
 	config.BotId = botId

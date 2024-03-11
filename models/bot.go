@@ -4,6 +4,7 @@ import (
 	"mini-gpt/constant"
 	"mini-gpt/dao"
 	"mini-gpt/utils/redisUtils"
+	"strconv"
 )
 
 // TalkBot 语言模型接口
@@ -133,7 +134,7 @@ type BotToRedis struct {
 
 // 将官方机器人存到redis当中 如果调用的是官方的 直接从redis中取出
 func GetOfficialBot(botId int) (*Bot, error) {
-	botIdStr := string(rune(botId))
+	botIdStr := strconv.Itoa(botId)
 	k := constant.OfficialBotPrefix + botIdStr
 	resBot, err := redisUtils.GetStruct[BotToRedis](k)
 	resBot.BotId = botId
@@ -184,5 +185,9 @@ func redisBotConvert(beforeBot *Bot) *BotToRedis {
 
 func SetOfficialBot(beforeBot *Bot) error {
 	redisBot := redisBotConvert(beforeBot)
-	return redisUtils.SetStruct(constant.OfficialBotPrefix+string(rune(beforeBot.BotId)), redisBot)
+	return redisUtils.SetStruct(constant.OfficialBotPrefix+strconv.Itoa(beforeBot.BotId), redisBot)
+}
+
+func CreateOfficialBot(bot *Bot) *BotToRedis {
+	return redisBotConvert(bot)
 }
