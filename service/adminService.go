@@ -7,6 +7,7 @@ import (
 	"mini-gpt/utils/redisUtils"
 	"mini-gpt/utils/reflectUtils"
 	"reflect"
+	"strconv"
 )
 
 // 管理员获取机器人信息
@@ -26,14 +27,15 @@ func GetBot(botId int, isOfficial int) (*models.Bot, error) {
 	return bot, nil
 }
 
-func adminCreateNewBot(botId int, dto dto.CreateBotDTO) *models.Bot {
-	return &models.Bot{
+func adminCreateNewBot(botId int, dto dto.CreateBotDTO) *models.BotToRedis {
+	bot := &models.Bot{
 		BotId:      botId,
 		BotInfo:    dto.BotInfo,
 		BotConfig:  dto.BotConfig,
 		IsDelete:   false,
 		IsOfficial: true,
 	}
+	return models.CreateOfficialBot(bot)
 }
 
 // 管理员创建新机器人
@@ -49,7 +51,7 @@ func AdminCreateBot(dto dto.CreateBotDTO) error {
 		return err
 	}
 	//存入redis当中
-	return redisUtils.SetStruct(constant.OfficialBotPrefix+string(rune(botId)), newBot)
+	return redisUtils.SetStruct(constant.OfficialBotPrefix+strconv.Itoa(botId), newBot)
 }
 
 func updateMapToModel(updatedBotMap *map[string]interface{}) *models.Bot {
