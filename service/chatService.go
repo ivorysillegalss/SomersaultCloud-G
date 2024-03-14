@@ -235,3 +235,7 @@ func updateContextPrompt(history *[]*models.Record, prompt string) (initPrompt s
 
 	return
 }
+
+func GetChatHistory(chatId int) ([]*models.Record, error) {
+	return models.GetChatHistory(chatId)
+}

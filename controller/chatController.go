@@ -7,6 +7,7 @@ import (
 	"mini-gpt/models"
 	"mini-gpt/service"
 	"net/http"
+	"strconv"
 )
 
 // 创建新chat
@@ -46,7 +47,7 @@ func InitNewChat(c *gin.Context) {
 }
 
 // 使用chat
-func CreateNewChat(c *gin.Context) {
+func CallContextChat(c *gin.Context) {
 	var askDTO dto.AskDTO
 
 	resultDTO := dto.ResultDTO{}
@@ -64,7 +65,7 @@ func CreateNewChat(c *gin.Context) {
 }
 
 // 主页面渲染chat记录
-func InitChat(c *gin.Context) {
+func InitChatHistory(c *gin.Context) {
 	var initDTO dto.InitDTO
 
 	resultDTO := dto.ResultDTO{}
@@ -101,4 +102,43 @@ func CallBot(c *gin.Context) {
 		// 调用机器人成功，返回200状态码
 		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.CallBotSuccess, "调用机器人成功", generateMessage))
 	}
+}
+
+// 获取聊天记录
+func GetChatHistory(c *gin.Context) {
+	chatIdStr := c.Param("chatId")
+	chatId, errChatID := strconv.Atoi(chatIdStr)
+	// 检查参数解析是否出错
+	resultDTO := dto.ResultDTO{}
+	if errChatID != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UserGetHistoryError, "参数解析失败", nil))
+		return
+	}
+
+	history, err := service.GetChatHistory(chatId)
+	if err != nil {
+		// 获取历史记录失败，返回500状态码
+		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.UserGetHistorySuccess, "获取聊天记录成功", nil))
+	} else {
+		// 获取历史记录成功，返回200状态码
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserGetHistoryError, "获取聊天记录失败", history))
+	}
+}
+
+// 限时密钥形式分享
+func ShareHistory(c *gin.Context) {
+	chatIdStr := c.Param("chatId")
+	durationDayStr := c.Param("ddl")
+	chatId, errChatID := strconv.Atoi(chatIdStr)
+	duration, errDuration := strconv.Atoi(durationDayStr)
+	// 检查参数解析是否出错
+	resultDTO := dto.ResultDTO{}
+	if errChatID != nil || errDuration != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UserShareHistoryError, "参数解析失败", nil))
+		return
+	}
+
+	secretKey := service.ShareChatHistory(chatId, duration)
+	// 生成分享的密钥返回
+	c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserShareHistorySuccess, "分享历史记录错误", secretKey))
 }

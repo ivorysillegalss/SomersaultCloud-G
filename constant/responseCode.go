@@ -13,6 +13,14 @@ const (
 	CallBotSuccess = 120
 	CallBotError   = 121
 
+	//UserGetHistory 用户获取历史记录
+	UserGetHistorySuccess = 130
+	UserGetHistoryError   = 131
+
+	//UserShareHistory 用户获取历史记录
+	UserShareHistorySuccess = 140
+	UserShareHistoryError   = 141
+
 	//AdminGetBot 管理员获取机器人信息
 	AdminGetBotSuccess = 900
 	AdminGetBotError   = 901

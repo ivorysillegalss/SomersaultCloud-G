@@ -55,18 +55,29 @@ func SetupRouter() *gin.Engine {
 	//原始请求格式 暂定如下
 	r.POST("/chat/new", controller.CreateChat)
 
-	//主页面模型
-	chatGroup := r.Group("/chat")
+	mainPageGroup := r.Group("/init")
 	{
 		//主页面查询的chat历史记录
-		chatGroup.GET("/init", controller.InitChat)
+		mainPageGroup.POST("/", controller.InitChatHistory)
+		//查询特定chat的历史记录
+		mainPageGroup.GET("/:chatId", controller.GetChatHistory)
+		//密钥分享chat记录
+		mainPageGroup.GET("/share/:chatId/:ddl", controller.ShareHistory)
+	}
+
+	//主页面模型
+	contextGroup := r.Group("/context")
+	{
+		//初始化上下文chat 返回一个id给客户端
+		contextGroup.POST("/init", controller.InitNewChat)
+		//真正调用gpt模型进行上下文交流
+		contextGroup.POST("/call", controller.CallContextChat)
 	}
 
 	//小机器人功能
 	botGroup := r.Group("/bot")
 	{
 		botGroup.POST("/", controller.CallBot)
-
 	}
 
 	//管理员功能
