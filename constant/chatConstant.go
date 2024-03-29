@@ -9,6 +9,8 @@ const (
 	DefaultMaxLimitedTime = time.Minute / 2
 	// ApiServerOpenAI OpenAI-API服务器默认网址
 	ApiServerOpenAI = "https://api.openai.com/v1/completions"
+	// DefaultModel 默认的模型
+	DefaultModel = "gpt-3.5-turbo-instruct"
 	// ReplaceCharFromDefaultToCustomize 自定义唯一标识符 选了个挺少见的 可优化算法
 	ReplaceCharFromDefaultToCustomize = '¶'
 	// OfficialBotPrefix 创建新机器人的前缀

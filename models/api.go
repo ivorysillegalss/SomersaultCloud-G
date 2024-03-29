@@ -92,3 +92,8 @@ func ExceptionCompletionResponse(exceptionMessage string) *CompletionResponse {
 		Choices:    *choices,
 	}
 }
+
+// 错误请求信息
+func ErrorApiRequestMessage() *ApiRequestMessage {
+	return new(ApiRequestMessage)
+}
