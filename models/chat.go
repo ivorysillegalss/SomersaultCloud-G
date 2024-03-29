@@ -142,7 +142,7 @@ func SaveRecord(record *Record, chatId int) error {
 // 获得聊天记录
 func GetChatHistory(chatId int) ([]*Record, error) {
 	var history []int
-	if err := dao.DB.Table("chat_record_id").Where("chat_id = ?", chatId).Find(&history).Error; err != nil {
+	if err := dao.DB.Table("record_info").Where("chat_id = ?", chatId).Find(&history).Error; err != nil {
 		return nil, err
 	}
 	var records []*Record

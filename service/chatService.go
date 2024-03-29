@@ -23,12 +23,12 @@ func LoadingChat(apiRequestMessage *models.ApiRequestMessage) (*models.GenerateM
 		logger.Error(err)
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := completionResponseToGenerationMessage(completionResponse)
+	generationMessage := simplyMessage(completionResponse)
 	return generationMessage, nil
 }
 
 // 将调用api结果包装为返回用户的结果
-func completionResponseToGenerationMessage(completionResponse *models.CompletionResponse) *models.GenerateMessage {
+func simplyMessage(completionResponse *models.CompletionResponse) *models.GenerateMessage {
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 	args := completionResponse.Choices
 	if args == nil {
@@ -101,7 +101,7 @@ func DisposableChat(dto *dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := completionResponseToGenerationMessage(completionResponse)
+	generationMessage := simplyMessage(completionResponse)
 	return generationMessage, nil
 }
 
@@ -132,13 +132,39 @@ func CreateChat(dto *dto.CreateChatDTO) (botId int, err error) {
 	return models.CreateNewChat(dto.UserId, dto.BotId)
 }
 
+// 使用默认的大模型
+func defaultContextModel(askDTO *dto.AskDTO) *models.BotConfig {
+	return &models.BotConfig{
+		BotId:      0,
+		InitPrompt: askDTO.Ask.Message,
+		Model:      constant.DefaultModel,
+	}
+}
+
+// 使用机器人上下文模型
+func otherContextModel(ask *dto.AskDTO) (*models.BotConfig, error) {
+	askInfo := ask.Ask
+	botId := askInfo.BotId
+
+	botConfig, err := getBot(botId)
+	if err != nil {
+		return models.ErrorBotConfig(), err
+	}
+
+	return botConfig, nil
+}
+
 // 具有上下文的chat方式
 func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 	askInfo := ask.Ask
 	botId := askInfo.BotId
-	botConfig, err := getBot(botId)
-	if err != nil {
-		return models.ErrorGeneration(), err
+
+	var botConfig *models.BotConfig
+	//如果是0 则代表使用默认的大模型
+	if botId == 0 {
+		botConfig = defaultContextModel(ask)
+	} else {
+		botConfig, _ = otherContextModel(ask)
 	}
 
 	//从redis缓存 或mysql中获取历史记录
@@ -153,20 +179,21 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 		return models.ErrorGeneration(), err
 	}
 
-	//根据已有权重更新上下文提示词
+	//根据已有权重（历史记录）更新上下文提示词
 	botConfig.InitPrompt = updateContextPrompt(history, botConfig.InitPrompt)
 
 	//包装为请求体
 	botRequest := botConfigToApiRequest(botConfig)
+
 	completionResponse, err := api.Execute(strconv.Itoa(ask.UserId), botRequest)
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := completionResponseToGenerationMessage(completionResponse)
+	generationMessage := simplyMessage(completionResponse)
 
 	botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
 
-	//待完善逻辑：将生成的记录存放入数据库当中
+	//将生成的记录存放入数据库当中
 	err = models.SaveRecord(&models.Record{
 		ChatAsks: askInfo,
 		ChatGenerations: &models.ChatGeneration{

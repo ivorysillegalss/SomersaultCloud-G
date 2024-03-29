@@ -2,11 +2,11 @@ package models
 
 import (
 	"bytes"
-	"strconv"
-	"sync"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"mini-gpt/dao"
+	"strconv"
+	"sync"
 )
 
 // 用户基本信息 TODO
