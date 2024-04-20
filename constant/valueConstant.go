@@ -5,6 +5,8 @@ const (
 	ZeroFloat  float64 = 0.0   // 浮点型的零值
 	ZeroBool   bool    = false // 布尔型的零值
 	ZeroString string  = ""    // 字符串的零值
+
+	FalseInt int = 0 // 表示无需此参数
 )
 
 var (

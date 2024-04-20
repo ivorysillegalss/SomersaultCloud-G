@@ -72,7 +72,17 @@ func ErrorRecord() *[]*Record {
 	return new([]*Record)
 }
 
-func GetChatHistoryForChat(chatId int) (*[]*Record, error) {
+// 默认大模型获取聊天记录
+func GetChatHistory4DefaultContext(chatId int) (*[]*Record, error) {
+	return getChatHistory(chatId, constant.ChatHistoryWeight)
+}
+
+// 获得聊天记录
+func GetChatHistory(chatId int) (*[]*Record, error) {
+	return getChatHistory(chatId, constant.FalseInt)
+}
+
+func getChatHistory(chatId int, weight int) (*[]*Record, error) {
 	//返回一个存放record结构体的 指针的切片的 指针
 
 	var records []*Record
@@ -86,6 +96,12 @@ func GetChatHistoryForChat(chatId int) (*[]*Record, error) {
 			return nil, err
 		}
 		for index, record := range records {
+
+			//如果获取了足够的历史记录 直接跳出 不再获取
+			if index == weight {
+				break
+			}
+
 			// 确保 ChatAsks 和 ChatGenerations 是指向结构体的指针
 			if records[index].ChatAsks == nil {
 				records[index].ChatAsks = &ChatAsk{}
@@ -142,17 +158,4 @@ func SaveRecord(record *Record, chatId int) error {
 		return err
 	}
 	return nil
-}
-
-// 获得聊天记录
-func GetChatHistory(chatId int) ([]*Record, error) {
-	var history []int
-	if err := dao.DB.Table("record_info").Where("chat_id = ?", chatId).Find(&history).Error; err != nil {
-		return nil, err
-	}
-	var records []*Record
-	if err := dao.DB.Raw("SELECT * FROM chat_ask JOIN chat_generation ON chat_ask.record_id = chat_generation.record_id WHERE chat_ask.chat_id = ?", chatId).Scan(&records).Limit(10).Order("recordId asc").Error; err != nil {
-		return nil, err
-	}
-	return records, nil
 }

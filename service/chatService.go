@@ -169,7 +169,7 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 	}
 
 	//从redis缓存 或mysql中获取历史记录
-	history, err := models.GetChatHistoryForChat(askInfo.ChatId)
+	history, err := models.GetChatHistory4DefaultContext(askInfo.ChatId)
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
@@ -274,6 +274,6 @@ func updateContextPrompt(history *[]*models.Record, prompt string) (initPrompt s
 	return
 }
 
-func GetChatHistory(chatId int) ([]*models.Record, error) {
+func GetChatHistory(chatId int) (*[]*models.Record, error) {
 	return models.GetChatHistory(chatId)
 }
