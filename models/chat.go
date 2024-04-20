@@ -35,7 +35,7 @@ type ChatAsk struct {
 	RecordId int    `json:"record_id"`
 	ChatId   int    `json:"chat_id"`
 	Message  string `json:"message"`
-	BotId    int    `json:"bot_id"`
+	BotId    int    `json:"bot_id" gorm:"-"`
 }
 
 // ChatGeneration 一次生成
@@ -75,28 +75,33 @@ func ErrorRecord() *[]*Record {
 func GetChatHistoryForChat(chatId int) (*[]*Record, error) {
 	//返回一个存放record结构体的 指针的切片的 指针
 
-	//var ask []*ChatAsk
-	//dao.DB.Table("chat_ask").Where("chat_id = ?", chatId).Find(&ask).Order("recordId asc")
-	//var generation []*ChatGeneration
-	//dao.DB.Table("chat_generation").Where("chat_id = ?", chatId).Find(&generation).Order("recordId asc")
 	var records []*Record
 
 	records, err := redisUtils.GetStruct[[]*Record](constant.ChatCache + strconv.Itoa(chatId))
 	//去redis里查
 
-	//此处可以优化逻辑
-
 	if errors.Is(redis.Nil, err) {
-
-		//redis中查不到的时候去mysql里查
-		//if err := dao.DB.Joins("JOIN chat_generation ON chat_ask.record_id = chat_generation.record_id").Where("chat_id = ?", chatId).
-		//	Find(&records).Limit(10).Order("recordId asc").Error; err != nil {
-		//	return ErrorRecord(), err
-		//}
-
-		err := dao.DB.Raw("SELECT * FROM chat_ask JOIN chat_generation ON chat_ask.record_id = chat_generation.record_id WHERE chat_ask.chat_id = ?", chatId).Scan(&records).Limit(10).Order("recordId asc").Error
+		err := dao.DB.Table("record_info").Where("chat_id = ?", chatId).Find(&records).Error
 		if err != nil {
-			// 处理错误
+			return nil, err
+		}
+		for index, record := range records {
+			// 确保 ChatAsks 和 ChatGenerations 是指向结构体的指针
+			if records[index].ChatAsks == nil {
+				records[index].ChatAsks = &ChatAsk{}
+			}
+			if records[index].ChatGenerations == nil {
+				records[index].ChatGenerations = &ChatGeneration{}
+			}
+
+			err := dao.DB.Table("chat_ask").Where("record_id = ?", record.RecordId).First(records[index].ChatAsks).Error
+			if err != nil {
+				return ErrorRecord(), nil
+			}
+			err = dao.DB.Table("chat_generation").Where("record_id = ?", record.RecordId).First(records[index].ChatGenerations).Error
+			if err != nil {
+				return ErrorRecord(), nil
+			}
 		}
 
 	} else if err != nil && !errors.Is(redis.Nil, err) {
@@ -118,14 +123,14 @@ func SaveRecord(record *Record, chatId int) error {
 	r := &recordToStruct{
 		ChatId: record.ChatAsks.ChatId,
 	}
-	if err := dao.DB.Table("chat_record_id").Save(r).Error; err != nil {
+	if err := dao.DB.Table("record_info").Create(r).Error; err != nil {
 		return err
 	}
 
 	//由上方将recordId写入数据库 主键回显获得ID 赋值给ask及generation两张表
 
-	record.ChatAsks.RecordId = record.RecordId
-	record.ChatGenerations.RecordId = record.RecordId
+	record.ChatAsks.RecordId = r.ID
+	record.ChatGenerations.RecordId = r.ID
 
 	if err := dao.DB.Table("chat_ask").Save(record.ChatAsks).Error; err != nil {
 		return err

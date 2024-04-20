@@ -3,6 +3,10 @@ package constant
 import "time"
 
 const (
+	// JumpOutToken 跳出获取历史记录的token数量
+	JumpOutToken = 1000
+	// DefaultContextModel 默认的上下文大模型
+	DefaultContextModel = 0
 	// DefaultMaxToken 不输入token时默认定义的token最大数量
 	DefaultMaxToken = 1000
 	// DefaultMaxLimitedTime 请求默认超时时间 方便调试默认关闭
@@ -29,6 +33,8 @@ const (
 	UserRole = "I have said:"
 	// GPTRole GPT角色
 	GPTRole = "and you have generated:"
+	// NowAsk 当前的一次询问
+	NowAsk = "And Here is my question this time:  "
 	// ChatHistoryWeight 发送上下文历史记录的权重设置
 	ChatHistoryWeight = 3
 	// APIExecuteSuccessStatus 执行API成功后返回的状态码
