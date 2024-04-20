@@ -1,6 +1,7 @@
 package service
 
 import (
+	"math"
 	"mini-gpt/api"
 	"mini-gpt/constant"
 	"mini-gpt/dto"
@@ -161,7 +162,7 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 
 	var botConfig *models.BotConfig
 	//如果是0 则代表使用默认的大模型
-	if botId == 0 {
+	if botId == constant.DefaultContextModel {
 		botConfig = defaultContextModel(ask)
 	} else {
 		botConfig, _ = otherContextModel(ask)
@@ -174,13 +175,16 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 	}
 
 	//往redis中更新缓存
-	err = redisUtils.SetStructWithExpire(constant.ChatCache+strconv.Itoa(askInfo.ChatId), history, constant.ChatCacheExpire)
+	//err = redisUtils.SetStructWithExpire(constant.ChatCache+strconv.Itoa(askInfo.ChatId), history, constant.ChatCacheExpire)
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
 
 	//根据已有权重（历史记录）更新上下文提示词
 	botConfig.InitPrompt = updateContextPrompt(history, botConfig.InitPrompt)
+
+	//更新引用功能
+	botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
 
 	//包装为请求体
 	botRequest := botConfigToApiRequest(botConfig)
@@ -191,8 +195,6 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 	}
 	generationMessage := simplyMessage(completionResponse)
 
-	botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
-
 	//将生成的记录存放入数据库当中
 	err = models.SaveRecord(&models.Record{
 		ChatAsks: askInfo,
@@ -202,7 +204,11 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 			Message:  generationMessage.GenerateText,
 		},
 	}, askInfo.ChatId)
+	if err != nil {
+		return models.ErrorGeneration(), err
+	}
 
+	//err = redisUtils.SetStructWithExpire(constant.ChatCache+strconv.Itoa(askInfo.ChatId), history, constant.ChatCacheExpire)
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
@@ -217,7 +223,7 @@ func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
 // 查看是否有引用字段 若有则加入prompt
 func referenceToken(beforePrompt string, asks *dto.AskDTO) string {
 	referenceRecord := asks.ReferenceRecord
-	if !(referenceRecord != new(models.Record) && asks.ReferenceToken != constant.ZeroString) {
+	if referenceRecord != new(models.Record) && asks.ReferenceToken != constant.ZeroString {
 		beforePrompt += constant.ReferenceRecordPrompt
 		beforePrompt += constant.UserRole + referenceRecord.ChatAsks.Message + "\n"
 		beforePrompt += constant.GPTRole + referenceRecord.ChatGenerations.Message + "\n"
@@ -240,26 +246,31 @@ func updateContextPrompt(history *[]*models.Record, prompt string) (initPrompt s
 
 	//这里先直接填充历史记录进入prompt
 	historyChat := *history
-	initPrompt = prompt
-	if len(historyChat) != 0 {
-		initPrompt = constant.HistoryChatPrompt
-		//直接将预处理话术和历史记录拼接的做法欠优 可能可以改进
 
-		//初始化聊天记录 告诉gpt以下是我和你的聊天记录
-		i := 0
-		for i < constant.ChatHistoryWeight {
-			initPrompt += constant.UserRole + historyChat[i].ChatAsks.Message + "\n"
-			initPrompt += constant.GPTRole + historyChat[i].ChatGenerations.Message + "\n"
-			i++
-		}
-
-	} else if len(historyChat) == 0 {
-		//这里可以分为两种情况 第一次聊天的时候就不用以上处理
-		//这里的做法很粗糙 一旦这个机器人的功能具有上下文 并且需要预处理
-		//需要在原始的initPrompt的基础上进行改进
+	if len(historyChat) == 0 {
+		initPrompt = prompt
 		return
 	}
 
+	initPrompt = constant.HistoryChatPrompt
+	//直接将预处理话术和历史记录拼接的做法欠优 可能可以改进
+
+	//初始化聊天记录 告诉gpt以下是我和你的聊天记录
+	currentlyHistoryWeight := math.Min(constant.ChatHistoryWeight, float64(len(historyChat)))
+	var i float64
+	i = 0
+	for i < currentlyHistoryWeight {
+		initPrompt += constant.UserRole + historyChat[int(i)].ChatAsks.Message + "\n"
+		initPrompt += constant.GPTRole + historyChat[int(i)].ChatGenerations.Message + "\n"
+
+		if len(initPrompt) > constant.JumpOutToken {
+			break
+		}
+
+		i++
+	}
+
+	initPrompt += constant.NowAsk + prompt
 	return
 }
 
