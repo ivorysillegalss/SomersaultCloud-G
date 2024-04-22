@@ -3,12 +3,17 @@ package service
 import (
 	"github.com/google/uuid"
 	"mini-gpt/models"
+	utils "mini-gpt/utils/jwt"
 	"mini-gpt/utils/redisUtils"
 	"time"
 )
 
 // 渲染主页chat标题等
-func InitMainPage(userId int) ([]*models.Chat, error) {
+func InitMainPage(tokenString string) ([]*models.Chat, error) {
+	userId, err2 := utils.DecodeToId(tokenString)
+	if err2 != nil {
+		return nil, err2
+	}
 	chatTitles, err := models.ShowChatTitle(userId)
 	return chatTitles, err
 }

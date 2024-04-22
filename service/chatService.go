@@ -7,6 +7,7 @@ import (
 	"mini-gpt/dto"
 	"mini-gpt/models"
 	"mini-gpt/setting"
+	utils "mini-gpt/utils/jwt"
 	"mini-gpt/utils/redisUtils"
 	"strconv"
 )
@@ -129,8 +130,12 @@ func updateCustomizeConfig(defaultPrompt string, customize []string) string {
 	return replaced
 }
 
-func CreateChat(dto *dto.CreateChatDTO) (botId int, err error) {
-	return models.CreateNewChat(dto.UserId, dto.BotId)
+func CreateChat(dto *dto.CreateChatDTO, tokenString string) (botId int, err error) {
+	userId, err := utils.DecodeToId(tokenString)
+	if err != nil {
+		return constant.ZeroInt, err
+	}
+	return models.CreateNewChat(userId, dto.BotId)
 }
 
 // 使用默认的大模型
@@ -156,7 +161,14 @@ func otherContextModel(ask *dto.AskDTO) (*models.BotConfig, error) {
 }
 
 // 具有上下文的chat方式
-func ContextChat(ask *dto.AskDTO) (*models.GenerateMessage, error) {
+func ContextChat(ask *dto.AskDTO, tokenString string) (*models.GenerateMessage, error) {
+
+	userId, err2 := utils.DecodeToId(tokenString)
+	if err2 != nil {
+		return nil, err2
+	}
+	ask.UserId = userId
+
 	askInfo := ask.Ask
 	botId := askInfo.BotId
 
