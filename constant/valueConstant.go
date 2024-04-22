@@ -6,7 +6,7 @@ const (
 	ZeroBool   bool    = false // 布尔型的零值
 	ZeroString string  = ""    // 字符串的零值
 
-	FalseInt int = 0 // 表示无需此参数
+	FalseInt int = -1 // 表示无需此参数
 )
 
 var (

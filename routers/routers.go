@@ -49,7 +49,7 @@ func SetupRouter() *gin.Engine {
 	mainPageGroup := r.Group("/init")
 	{
 		//主页面查询的chat历史记录
-		mainPageGroup.POST("/", controller.InitChatHistory)
+		mainPageGroup.GET("/", controller.InitChatHistory)
 		//查询特定chat的历史记录
 		mainPageGroup.GET("/:chatId", controller.GetChatHistory)
 		//密钥分享chat记录

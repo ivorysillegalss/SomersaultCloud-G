@@ -33,12 +33,13 @@ func InitNewChat(c *gin.Context) {
 	var createChatDTO dto.CreateChatDTO
 
 	resultDTO := dto.ResultDTO{}
+	tokenString := c.Request.Header.Get("token")
 	if err := c.BindJSON(&createChatDTO); err != nil {
 		// 解析请求体失败，返回400状态码
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.StartChatError, "请求参数解析失败", nil))
 		return
 	}
-	chatId, err := service.CreateChat(&createChatDTO)
+	chatId, err := service.CreateChat(&createChatDTO, tokenString)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.StartChatError, "开启聊天失败", nil))
 	} else {
@@ -51,12 +52,13 @@ func CallContextChat(c *gin.Context) {
 	var askDTO dto.AskDTO
 
 	resultDTO := dto.ResultDTO{}
+	tokenString := c.Request.Header.Get("token")
 	if err := c.BindJSON(&askDTO); err != nil {
 		// 解析请求体失败，返回400状态码
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.StartChatError, "请求参数解析失败", nil))
 		return
 	}
-	generateMessage, err := service.ContextChat(&askDTO)
+	generateMessage, err := service.ContextChat(&askDTO, tokenString)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.StartChatError, "开启聊天失败", nil))
 	} else {
@@ -66,16 +68,16 @@ func CallContextChat(c *gin.Context) {
 
 // 主页面渲染chat记录
 func InitChatHistory(c *gin.Context) {
-	var initDTO dto.InitDTO
 
 	resultDTO := dto.ResultDTO{}
-	if err := c.BindJSON(&initDTO); err != nil {
+	tokenString := c.Request.Header.Get("token")
+	if tokenString == constant.ZeroString {
 		// 解析请求体失败，返回400状态码
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.ShowChatHistoryError, "请求参数解析失败", nil))
 		return
 	}
 
-	chats, err := service.InitMainPage(initDTO.UserId)
+	chats, err := service.InitMainPage(tokenString)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.ShowChatHistoryError, "渲染聊天记录失败", nil))
 	} else {
@@ -118,10 +120,10 @@ func GetChatHistory(c *gin.Context) {
 	history, err := service.GetChatHistory(chatId)
 	if err != nil {
 		// 获取历史记录失败，返回500状态码
-		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.UserGetHistorySuccess, "获取聊天记录成功", nil))
+		c.JSON(http.StatusInternalServerError, resultDTO.FailResp(constant.UserGetHistorySuccess, "获取聊天记录失败", nil))
 	} else {
 		// 获取历史记录成功，返回200状态码
-		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserGetHistoryError, "获取聊天记录失败", history))
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserGetHistoryError, "获取聊天记录成功", history))
 	}
 }
 

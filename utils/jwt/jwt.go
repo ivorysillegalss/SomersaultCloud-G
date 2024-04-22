@@ -7,12 +7,9 @@ import (
 	"mini-gpt/setting"
 )
 
-var mySigningKey = []byte(setting.Conf.JwtSecretKey)
-
 // 解析JWT
 func parseJWT(tokenString string) (*jwt.Token, error) {
-	// 解析并验证JWT。注意：确保提供一个key function来验证签名算法
-	//token, err := jwt.Parse(tokenString, verifySignature)
+	// 解析并验证JWT。
 	token, err := jwt.Parse(tokenString, verifySignature)
 	if err != nil {
 		return nil, err
@@ -25,7 +22,9 @@ func verifySignature(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}
-	return mySigningKey, nil
+	signature := []byte(setting.Conf.JwtSecretKey)
+	//从配置文件中读取数字签名 可以放在全局变量那 但是会读不到值
+	return signature, nil
 }
 
 func DecodeToId(tokenString string) (int, error) {
@@ -36,13 +35,10 @@ func DecodeToId(tokenString string) (int, error) {
 	}
 
 	var intId int
-
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		fmt.Println(claims)
 		// 可以直接访问claims里的信息，例如用户ID
 		if id, ok := claims["uid"].(float64); ok {
 			intId = int(id)
-			fmt.Println(intId)
 		}
 	} else {
 		fmt.Println("Invalid token")
