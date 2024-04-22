@@ -46,7 +46,7 @@ func initLog() {
 	}
 	Logger.SetOutput(file)
 
-	Logger.Warn("a")
+	//Logger.Warn("a")
 
 	defer func(file *os.File) {
 		err := file.Close()
