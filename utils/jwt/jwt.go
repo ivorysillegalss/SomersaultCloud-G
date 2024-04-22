@@ -1,48 +1,52 @@
-package util
+package utils
 
 import (
-	"os"
-	"time"
-
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"mini-gpt/constant"
+	"mini-gpt/setting"
 )
 
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+var mySigningKey = []byte(setting.Conf.JwtSecretKey)
 
-type Claims struct {
-	Id        uint   `json:"id"`
-	Username  string `json:"username"`
-	Authority int    `json:"authority"`
-	jwt.StandardClaims
-}
-
-// GenerateToken 签发用户Token
-func GenerateToken(id uint, username string, authority int) (string, error) {
-	nowTime := time.Now()
-	expireTime := nowTime.Add(24 * time.Hour)
-	claims := Claims{
-		Id:        id,
-		Username:  username,
-		Authority: authority,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expireTime.Unix(),
-			Issuer:    "to-do-list",
-		},
+// 解析JWT
+func parseJWT(tokenString string) (*jwt.Token, error) {
+	// 解析并验证JWT。注意：确保提供一个key function来验证签名算法
+	//token, err := jwt.Parse(tokenString, verifySignature)
+	token, err := jwt.Parse(tokenString, verifySignature)
+	if err != nil {
+		return nil, err
 	}
-	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := tokenClaims.SignedString(jwtSecret)
-	return token, err
+	return token, nil
 }
 
-// ParseToken 验证用户token
-func ParseToken(token string) (*Claims, error) {
-	tokenClaims, err := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
-	})
-	if tokenClaims != nil {
-		if claims, ok := tokenClaims.Claims.(*Claims); ok && tokenClaims.Valid {
-			return claims, nil
+func verifySignature(token *jwt.Token) (interface{}, error) {
+	// 确保token的签名算法是我们期望的
+	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+	}
+	return mySigningKey, nil
+}
+
+func DecodeToId(tokenString string) (int, error) {
+	token, err := parseJWT(tokenString)
+	if err != nil {
+		fmt.Println("Error parsing token:", err)
+		return constant.FalseInt, err
+	}
+
+	var intId int
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		fmt.Println(claims)
+		// 可以直接访问claims里的信息，例如用户ID
+		if id, ok := claims["uid"].(float64); ok {
+			intId = int(id)
+			fmt.Println(intId)
 		}
+	} else {
+		fmt.Println("Invalid token")
+		return constant.FalseInt, err
 	}
-	return nil, err
+	return intId, nil
 }

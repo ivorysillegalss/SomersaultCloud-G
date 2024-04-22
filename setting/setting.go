@@ -21,6 +21,7 @@ type AppConfig struct {
 	*LogrusConfig `ini:"logrus"`
 	*ApiConfig    `ini:"api"`
 	*RedisConfig  `ini:"redis"`
+	JwtSecretKey  string `ini:"jwtSK"`
 }
 
 type ApiConfig struct {
