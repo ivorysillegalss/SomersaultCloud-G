@@ -43,3 +43,9 @@ type CreateChatDTO struct {
 	UserId int `json:"user_id"`
 	BotId  int `json:"bot_id"`
 }
+
+type ChatDTO struct {
+	InputPrompt string `json:"prompt"`
+	Model       string `json:"model"`
+	MaxToken    int    `json:"max_token"`
+}

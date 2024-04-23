@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"mini-gpt/constant"
 	"mini-gpt/dto"
-	"mini-gpt/models"
 	"mini-gpt/service"
 	"net/http"
 	"strconv"
@@ -12,8 +11,7 @@ import (
 
 // 创建新chat
 func CreateChat(c *gin.Context) {
-	var chatMessage models.ApiRequestMessage
-
+	var chatMessage dto.ChatDTO
 	resultDTO := dto.ResultDTO{}
 	if err := c.BindJSON(&chatMessage); err != nil {
 		// 解析请求体失败，返回400状态码

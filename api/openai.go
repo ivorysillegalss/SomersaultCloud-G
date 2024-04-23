@@ -99,7 +99,7 @@ func getUser(userId string) *models.UserChat {
 }
 
 // 优化 异步读取数据流
-func Execute(uid string, message *models.ApiRequestMessage) (*models.CompletionResponse, error) {
+func Execute(uid string, message models.ApiRequestMessage, model string) (models.BaseModel, error) {
 	//应该在外部传入调用者的标识逻辑 UserChat等
 	var logger = setting.GetLogger()
 
@@ -107,7 +107,7 @@ func Execute(uid string, message *models.ApiRequestMessage) (*models.CompletionR
 	//设置超时时间限制 若一次请求超出此事件则驳回时间 取消掉
 	//defer cancel()
 
-	message.InputPrompt = optimizationPrompt(message.InputPrompt)
+	//message.InputPrompt = optimizationPrompt(message.InputPrompt)
 	//优化prompt 这里这么写可能不太好 后期可能需要优化 （根据不同的情况决定是否需要对prompt进行优化）
 
 	userChat := getUser(uid)
@@ -140,7 +140,7 @@ func Execute(uid string, message *models.ApiRequestMessage) (*models.CompletionR
 
 	//构造请求头
 	client := setProxy()
-	req, err := encodeReq(message)
+	req, err := encodeReq(message, model)
 	if err != nil {
 		logger.Error(err)
 		return models.ErrorCompletionResponse(), err
@@ -174,7 +174,7 @@ func Execute(uid string, message *models.ApiRequestMessage) (*models.CompletionR
 	chatJson := userChat.Answer.Buffer.String()
 	userChat.Answer.Buffer.Reset()
 
-	completionResponse, err := decodeResp(chatJson)
+	completionResponse, err := decodeResp(chatJson, "gpt-3.5-turbo-instruct")
 	//反序列化
 	if err != nil {
 		logger.Error("Error decoding JSON:", err)
@@ -200,21 +200,16 @@ func setProxy() *http.Client {
 }
 
 // 构造请求头
-func encodeReq(reqMessage *models.ApiRequestMessage) (*http.Request, error) {
+func encodeReq(reqMessage models.ApiRequestMessage, model string) (*http.Request, error) {
 
-	//这个判空的过程可以优化在结构体 models层中
-	if reqMessage.MaxToken == 0 {
-		reqMessage.MaxToken = constant.DefaultMaxToken
-	}
+	var err error
+	var jsonData []byte
 
-	// 构造请求体
-	data := models.CompletionRequest{
-		Model: reqMessage.Model,
-		//Model:     "gpt-3.5-turbo-instruct", // 替换为当前可用的模型
-		Prompt:    reqMessage.InputPrompt,
-		MaxTokens: reqMessage.MaxToken,
+	if model == constant.DefaultModel {
+		jsonData, err = models.EncodeChatCompletionJsonData(reqMessage)
+	} else if model == constant.InstructModel {
+		jsonData, err = models.EncodeTextCompletionJsonData(reqMessage)
 	}
-	jsonData, err := json.Marshal(data)
 
 	if err != nil {
 		//logger.Error(err)
@@ -239,12 +234,13 @@ func encodeReq(reqMessage *models.ApiRequestMessage) (*http.Request, error) {
 }
 
 // 解码响应信息
-func decodeResp(chatJson string) (*models.CompletionResponse, error) {
+func decodeResp(chatJson string, modelString string) (models.BaseModel, error) {
 	reader := strings.NewReader(chatJson)
 	// 创建json.Decoder实例
 	decoder := json.NewDecoder(reader)
 	// 创建一个变量，用于存储解码后的数据
-	var completionResponse *models.CompletionResponse
+	//将其解码的前提是知道他用的是什么模型 哈希表存储 TODO
+	var completionResponse *models.TextCompletionResponse
 	for {
 		if err := decoder.Decode(&completionResponse); err == io.EOF {
 			// io.EOF 表示已经到达输入流的末尾

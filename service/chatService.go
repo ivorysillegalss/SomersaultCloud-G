@@ -16,21 +16,48 @@ import (
 //正常来说应该全局变量的 但是由于代码的先后执行问题先放到下面的函数中
 
 // 最初始的调用方式
-func LoadingChat(apiRequestMessage *models.ApiRequestMessage) (*models.GenerateMessage, error) {
+// func LoadingChat(apiRequestMessage *models.ApiRequestMessage) (*models.GenerateMessage, error) {
+func LoadingChat(dto *dto.ChatDTO) (*models.GenerateMessage, error) {
+
+	apiRequestMessage := &models.ChatCompletionRequest{
+		CompletionRequest: models.CompletionRequest{
+			MaxTokens: dto.MaxToken,
+			Model:     dto.Model,
+		},
+		Messages: nil,
+		//TODO 组装消息记录
+	}
 
 	var logger = setting.GetLogger()
-
-	completionResponse, err := api.Execute("-1", apiRequestMessage)
+	completionResponse, err := api.Execute("-1", apiRequestMessage, dto.Model)
 	if err != nil {
 		logger.Error(err)
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := simplyMessage(completionResponse)
+
+	modelType := api.ModelsMap.Models[dto.Model]
+	//在这里判断它的类型 并根据不同类型的响应信息格式进行处理
+
+	generationMessage := simplyMessage(completionResponse, modelType)
 	return generationMessage, nil
 }
 
-// 将调用api结果包装为返回用户的结果
-func simplyMessage(completionResponse *models.CompletionResponse) *models.GenerateMessage {
+// 简化包装信息
+func simplyMessage(completionResponse models.BaseModel, modelType string) *models.GenerateMessage {
+	var generationMessage *models.GenerateMessage
+	if modelType == constant.InstructModel {
+		if textCompletionResponse, ok := completionResponse.(*models.TextCompletionResponse); ok {
+			generationMessage = simplyTextCompletionMessage(textCompletionResponse)
+		} else if chatCompletionResponse, ok := completionResponse.(*models.ChatCompletionResponse); ok {
+			generationMessage = simplyChatCompletionMessage(chatCompletionResponse)
+		}
+		//这里可以拓展 设计模式优化
+	}
+	return generationMessage
+}
+
+// 将instruct模型调用api结果包装为返回用户的结果
+func simplyTextCompletionMessage(completionResponse *models.TextCompletionResponse) *models.GenerateMessage {
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 	args := completionResponse.Choices
 	if args == nil {
@@ -44,13 +71,43 @@ func simplyMessage(completionResponse *models.CompletionResponse) *models.Genera
 	return &generateMessage
 }
 
+// 转换chat模型调用结果
+func simplyChatCompletionMessage(completionResponse *models.ChatCompletionResponse) *models.GenerateMessage {
+	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
+	args := completionResponse.Choices
+	if args == nil {
+		return models.ErrorGeneration()
+	}
+	textBody := args[0]
+	generateMessage := models.GenerateMessage{
+		GenerateText: textBody.Message.Content,
+		FinishReason: textBody.FinishReason,
+	}
+	return &generateMessage
+}
+
 // 将botConfig配置包装为调用api所需请求体
-func botConfigToApiRequest(config *models.BotConfig) *models.ApiRequestMessage {
-	return &models.ApiRequestMessage{
-		InputPrompt: config.InitPrompt,
-		Model:       config.Model,
-		//暂定最大字符串不能修改
-		MaxToken: constant.DefaultMaxToken,
+func botConfigToApiRequest(config *models.BotConfig) models.ApiRequestMessage {
+	//return &models.ApiRequestMessage{
+	//	InputPrompt: config.InitPrompt,
+	//	Model:       config.Model,
+	//	//暂定最大字符串不能修改
+	//	MaxToken: constant.DefaultMaxToken,
+	//}
+	//TODO 改不动了 这里先默认是上下文大模型
+	m := models.Message{
+		Role:    constant.UserRole,
+		Content: "",
+	}
+	var msgs []models.Message
+	_ = append(msgs, m)
+
+	return &models.ChatCompletionRequest{
+		CompletionRequest: models.CompletionRequest{
+			MaxTokens: constant.DefaultMaxToken,
+			Model:     config.Model,
+		},
+		Messages: msgs,
 	}
 }
 
@@ -99,11 +156,11 @@ func DisposableChat(dto *dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
 	config.InitPrompt = updateCustomizeConfig(config.InitPrompt, botPromptConfigs)
 	//包装为请求体
 	botRequest := botConfigToApiRequest(config)
-	completionResponse, err := api.Execute(dto.UserId, botRequest)
+	completionResponse, err := api.Execute(dto.UserId, botRequest, config.Model)
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := simplyMessage(completionResponse)
+	generationMessage := simplyMessage(completionResponse, constant.DefaultModel)
 	return generationMessage, nil
 }
 
@@ -143,7 +200,8 @@ func defaultContextModel(askDTO *dto.AskDTO) *models.BotConfig {
 	return &models.BotConfig{
 		BotId:      0,
 		InitPrompt: askDTO.Ask.Message,
-		Model:      constant.DefaultModel,
+		//Model:      constant.DefaultModel,
+		Model: constant.InstructModel,
 	}
 }
 
@@ -201,11 +259,11 @@ func ContextChat(ask *dto.AskDTO, tokenString string) (*models.GenerateMessage, 
 	//包装为请求体
 	botRequest := botConfigToApiRequest(botConfig)
 
-	completionResponse, err := api.Execute(strconv.Itoa(ask.UserId), botRequest)
+	completionResponse, err := api.Execute(strconv.Itoa(ask.UserId), botRequest, botConfig.Model)
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := simplyMessage(completionResponse)
+	generationMessage := simplyMessage(completionResponse, constant.DefaultModel)
 
 	//将生成的记录存放入数据库当中
 	err = models.SaveRecord(&models.Record{
