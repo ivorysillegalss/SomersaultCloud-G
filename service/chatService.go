@@ -16,15 +16,20 @@ import (
 //正常来说应该全局变量的 但是由于代码的先后执行问题先放到下面的函数中
 
 // 最初始的调用方式
-// func LoadingChat(apiRequestMessage *models.ApiRequestMessage) (*models.GenerateMessage, error) {
 func LoadingChat(dto *dto.ChatDTO) (*models.GenerateMessage, error) {
+	m := &models.Message{
+		Role:    constant.UserRole,
+		Content: dto.InputPrompt,
+	}
+	var msgs []models.Message
+	_ = append(msgs, *m)
 
 	apiRequestMessage := &models.ChatCompletionRequest{
 		CompletionRequest: models.CompletionRequest{
 			MaxTokens: dto.MaxToken,
 			Model:     dto.Model,
 		},
-		Messages: nil,
+		Messages: msgs,
 		//TODO 组装消息记录
 	}
 
@@ -88,13 +93,7 @@ func simplyChatCompletionMessage(completionResponse *models.ChatCompletionRespon
 
 // 将botConfig配置包装为调用api所需请求体
 func botConfigToApiRequest(config *models.BotConfig) models.ApiRequestMessage {
-	//return &models.ApiRequestMessage{
-	//	InputPrompt: config.InitPrompt,
-	//	Model:       config.Model,
-	//	//暂定最大字符串不能修改
-	//	MaxToken: constant.DefaultMaxToken,
-	//}
-	//TODO 改不动了 这里先默认是上下文大模型
+	//TODO 改不动了 这里先默认是上下文大模型 并且只有一次性能用
 	m := models.Message{
 		Role:    constant.UserRole,
 		Content: "",
@@ -251,13 +250,13 @@ func ContextChat(ask *dto.AskDTO, tokenString string) (*models.GenerateMessage, 
 	}
 
 	//根据已有权重（历史记录）更新上下文提示词
-	botConfig.InitPrompt = updateContextPrompt(history, botConfig.InitPrompt)
+	botRequest := updateContextPrompt(history, botConfig)
 
 	//更新引用功能
-	botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
+	//botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
 
 	//包装为请求体
-	botRequest := botConfigToApiRequest(botConfig)
+	//botRequest := botConfigToApiRequest(botConfig)
 
 	completionResponse, err := api.Execute(strconv.Itoa(ask.UserId), botRequest, botConfig.Model)
 	if err != nil {
@@ -311,7 +310,47 @@ func calculateContextWeights(history *[]*models.Record) {
 	//需要根据已有记录的数量进行动态的内存分配
 }
 
-func updateContextPrompt(history *[]*models.Record, prompt string) (initPrompt string) {
+// updateContextPrompt 针对上下文模型 包装信息且加载历史记录
+func updateContextPrompt(history *[]*models.Record, botConfig *models.BotConfig) *models.ChatCompletionRequest {
+	//这里先直接填充历史记录进入prompt
+	var msgs []models.Message
+
+	historyChat := *history
+	currentlyHistoryWeight := math.Min(constant.ChatHistoryWeight, float64(len(historyChat)))
+
+	var i float64
+	i = 0
+	for i < currentlyHistoryWeight {
+		user := &models.Message{
+			Role:    constant.UserRole,
+			Content: historyChat[int(i)].ChatAsks.Message,
+		}
+		_ = append(msgs, *user)
+		asst := &models.Message{
+			Role:    constant.GPTRole,
+			Content: historyChat[int(i)].ChatGenerations.Message,
+		}
+		_ = append(msgs, *asst)
+		i++
+	}
+
+	last := &models.Message{
+		Role:    constant.UserRole,
+		Content: botConfig.InitPrompt,
+	}
+
+	_ = append(msgs, *last)
+	return &models.ChatCompletionRequest{
+		CompletionRequest: models.CompletionRequest{
+			MaxTokens: constant.DefaultMaxToken,
+			Model:     botConfig.Model,
+		},
+		Messages: msgs,
+	}
+}
+
+// updateTextCompletionPrompt 只对文本补全的引擎有用
+func updateTextCompletionPrompt(history *[]*models.Record, prompt string) (initPrompt string) {
 	//根据已有权重进行更新提示词 TODO  算法待补充
 
 	//这里先直接填充历史记录进入prompt
