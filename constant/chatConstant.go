@@ -12,12 +12,12 @@ const (
 	// DefaultMaxLimitedTime 请求默认超时时间 方便调试默认关闭
 	DefaultMaxLimitedTime = time.Minute / 2
 	// ApiServerOpenAI OpenAI-API服务器默认网址
-	ApiServerOpenAI = "https://api.openai.com/v1/completions"
-	//ApiServerOpenAI = "https://api.openai.com/v1/chat/completions"
+	//ApiServerOpenAI = "https://api.openai.com/v1/completions"
+	ApiServerOpenAI = "https://api.openai.com/v1/chat/completions"
 	// InstructModel 初始模型
 	InstructModel = "gpt-3.5-turbo-instruct"
 	// DefaultModel 默认模型
-	DefaultModel = "gpt-3.5-turbo"
+	DefaultModel = "gpt-3.5-turbo-0125"
 	// ReplaceCharFromDefaultToCustomize 自定义唯一标识符 选了个挺少见的 可优化算法
 	ReplaceCharFromDefaultToCustomize = '¶'
 	// OfficialBotPrefix 创建新机器人的前缀
@@ -33,7 +33,7 @@ const (
 	// HistoryChatPrompt 告诉chatGPT以往聊天记录的prompt模板 可改进
 	HistoryChatPrompt = "Here is the chat history which I have talked with you,please according to the history give me generation:"
 	// UserRole 用户角色
-	UserRole = "user:"
+	UserRole = "user"
 	// GPTRole GPT角色
 	GPTRole = "assistant"
 	// NowAsk 当前的一次询问

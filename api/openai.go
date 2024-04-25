@@ -174,7 +174,7 @@ func Execute(uid string, message models.ApiRequestMessage, model string) (models
 	chatJson := userChat.Answer.Buffer.String()
 	userChat.Answer.Buffer.Reset()
 
-	completionResponse, err := decodeResp(chatJson, "gpt-3.5-turbo-instruct")
+	completionResponse, err := decodeResp(chatJson, constant.DefaultModel)
 	//反序列化
 	if err != nil {
 		logger.Error("Error decoding JSON:", err)
@@ -218,6 +218,8 @@ func encodeReq(reqMessage models.ApiRequestMessage, model string) (*http.Request
 
 	// 发送请求
 	req, err := http.NewRequest("POST", constant.ApiServerOpenAI, bytes.NewBuffer(jsonData))
+	//这里先默认为chat的端点 需要修改
+
 	if err != nil {
 		//logger.Error(err)
 		return new(http.Request), err
@@ -240,7 +242,25 @@ func decodeResp(chatJson string, modelString string) (models.BaseModel, error) {
 	decoder := json.NewDecoder(reader)
 	// 创建一个变量，用于存储解码后的数据
 	//将其解码的前提是知道他用的是什么模型 哈希表存储 TODO
-	var completionResponse *models.TextCompletionResponse
+
+	//丑陋 TODO
+	a := 0
+	if modelString == constant.DefaultModel {
+		a = 1
+	} else if modelString == constant.InstructModel {
+		a = 2
+	}
+
+	var completionResponse models.BaseModel
+	if a == 1 {
+		completionResponse, _ = completionResponse.(*models.ChatCompletionResponse)
+		//给空指针分配内存
+		completionResponse = new(models.ChatCompletionResponse)
+	} else if a == 2 {
+		completionResponse, _ = completionResponse.(*models.TextCompletionResponse)
+		completionResponse = new(models.TextCompletionResponse)
+	}
+
 	for {
 		if err := decoder.Decode(&completionResponse); err == io.EOF {
 			// io.EOF 表示已经到达输入流的末尾

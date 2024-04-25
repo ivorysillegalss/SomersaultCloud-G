@@ -17,12 +17,12 @@ import (
 
 // 最初始的调用方式
 func LoadingChat(dto *dto.ChatDTO) (*models.GenerateMessage, error) {
-	m := &models.Message{
+	m := models.Message{
 		Role:    constant.UserRole,
 		Content: dto.InputPrompt,
 	}
 	var msgs []models.Message
-	_ = append(msgs, *m)
+	msgs = append(msgs, m)
 
 	apiRequestMessage := &models.ChatCompletionRequest{
 		CompletionRequest: models.CompletionRequest{
@@ -40,23 +40,28 @@ func LoadingChat(dto *dto.ChatDTO) (*models.GenerateMessage, error) {
 		return models.ErrorGeneration(), err
 	}
 
-	modelType := api.ModelsMap.Models[dto.Model]
+	//modelType := api.ModelsMap.Models[dto.Model]
 	//在这里判断它的类型 并根据不同类型的响应信息格式进行处理
 
-	generationMessage := simplyMessage(completionResponse, modelType)
+	//这里的YAML配置读不进来 TODO
+	//先默认是普通大模型
+	generationMessage := simplyMessage(completionResponse, constant.DefaultModel)
 	return generationMessage, nil
 }
 
 // 简化包装信息
 func simplyMessage(completionResponse models.BaseModel, modelType string) *models.GenerateMessage {
 	var generationMessage *models.GenerateMessage
+	//修改为类型绑定 TODO
 	if modelType == constant.InstructModel {
 		if textCompletionResponse, ok := completionResponse.(*models.TextCompletionResponse); ok {
 			generationMessage = simplyTextCompletionMessage(textCompletionResponse)
-		} else if chatCompletionResponse, ok := completionResponse.(*models.ChatCompletionResponse); ok {
-			generationMessage = simplyChatCompletionMessage(chatCompletionResponse)
 		}
 		//这里可以拓展 设计模式优化
+	} else if modelType == constant.DefaultModel {
+		if chatCompletionResponse, ok := completionResponse.(*models.ChatCompletionResponse); ok {
+			generationMessage = simplyChatCompletionMessage(chatCompletionResponse)
+		}
 	}
 	return generationMessage
 }
@@ -199,8 +204,8 @@ func defaultContextModel(askDTO *dto.AskDTO) *models.BotConfig {
 	return &models.BotConfig{
 		BotId:      0,
 		InitPrompt: askDTO.Ask.Message,
-		//Model:      constant.DefaultModel,
-		Model: constant.InstructModel,
+		Model:      constant.DefaultModel,
+		//Model: constant.InstructModel,
 	}
 }
 
@@ -325,12 +330,12 @@ func updateContextPrompt(history *[]*models.Record, botConfig *models.BotConfig)
 			Role:    constant.UserRole,
 			Content: historyChat[int(i)].ChatAsks.Message,
 		}
-		_ = append(msgs, *user)
+		msgs = append(msgs, *user)
 		asst := &models.Message{
 			Role:    constant.GPTRole,
 			Content: historyChat[int(i)].ChatGenerations.Message,
 		}
-		_ = append(msgs, *asst)
+		msgs = append(msgs, *asst)
 		i++
 	}
 
@@ -339,7 +344,7 @@ func updateContextPrompt(history *[]*models.Record, botConfig *models.BotConfig)
 		Content: botConfig.InitPrompt,
 	}
 
-	_ = append(msgs, *last)
+	msgs = append(msgs, *last)
 	return &models.ChatCompletionRequest{
 		CompletionRequest: models.CompletionRequest{
 			MaxTokens: constant.DefaultMaxToken,

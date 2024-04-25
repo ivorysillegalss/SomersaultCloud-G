@@ -67,7 +67,18 @@ type TextCompletionResponse struct {
 
 // chat模型响应数据格式
 type ChatCompletionResponse struct {
-	CompletionResponse
+	//CompletionResponse
+
+	Id         string `json:"id"`
+	Object     string `json:"object"`
+	CreateTime int64  `json:"created"`
+	Model      string `json:"model"`
+	Usage      struct {
+		PromptTokens     int64 `json:"prompt_tokens"`
+		CompletionTokens int64 `json:"completion_tokens"`
+		TotalTokens      int64 `json:"total_tokens"`
+	} `json:"usage"`
+
 	Choices []struct {
 		Index   int `json:"index"`
 		Message struct {
