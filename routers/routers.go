@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"mini-gpt/controller"
 	"mini-gpt/setting"
@@ -21,17 +20,35 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	//注册路由
 
-	r.Use(cors.Default())
-	// config := cors.DefaultConfig()
-	// config.AllowAllOrigins = true
-	// router.Use(cors.New(config))
-	//此处注册跨域cors 中间件   默认配置
+	// CORS 中间件配置
+	r.Use(func(c *gin.Context) {
+		// 设置允许访问的源，"*" 表示允许所有源，你也可以指定具体的域名
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		// 设置允许的请求方法
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+		// 设置允许的头部，注意添加你的自定义头部 "token"
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, token")
+		// 设置浏览器是否应该包含凭证
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// 如果是OPTIONS请求，直接返回200
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+		} else {
+			c.Next()
+		}
+	})
 
 	////注册
 	//r.POST("/register",
 	//	controller.Register)
 	////登录
 	//r.POST("/login", controller.Login)
+
+	//
+	//r.OPTIONS("/", func(context *gin.Context) {
+	//	context.
+	//})
 
 	//测试接口
 	r.GET("/test", func(context *gin.Context) {
@@ -52,8 +69,17 @@ func SetupRouter() *gin.Engine {
 		mainPageGroup.GET("/", controller.InitChatHistory)
 		//查询特定chat的历史记录
 		mainPageGroup.GET("/:chatId", controller.GetChatHistory)
+	}
+
+	//历史记录相关的接口 目前只有分享
+	//收藏重命名 TBD
+	historyGroup := r.Group("/history")
+	{
 		//密钥分享chat记录
-		mainPageGroup.GET("/share/:chatId/:ddl", controller.ShareHistory)
+		historyGroup.GET("/share/:chatId", controller.ShareHistoryWithSk)
+		//密钥获取chat记录 已登录状态下
+		historyGroup.GET("/share/get/:sk", controller.GetSharedHistoryWithSk)
+		//密钥获取chat记录 未登录状态下
 	}
 
 	//主页面模型

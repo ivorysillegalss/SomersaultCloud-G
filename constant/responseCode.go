@@ -20,6 +20,7 @@ const (
 	//UserShareHistory 用户获取历史记录
 	UserShareHistorySuccess = 140
 	UserShareHistoryError   = 141
+	UserShareHistoryNil     = 142
 
 	//AdminGetBot 管理员获取机器人信息
 	AdminGetBotSuccess = 900

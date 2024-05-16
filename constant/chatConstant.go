@@ -44,4 +44,6 @@ const (
 	APIExecuteSuccessStatus = 200
 	// ReferenceRecordPrompt 告诉chatGPT要他回复回应中的某个部分
 	ReferenceRecordPrompt = "Here is a record we have been talked,And I have confused about parts of your generation,please fairly and clearly explain about it and my question:"
+	// DefaultShareSecretKeyDestroyTime 默认分享密钥存活时间
+	DefaultShareSecretKeyDestroyTime = 24 * time.Hour * 3
 )
