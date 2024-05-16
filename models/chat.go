@@ -36,6 +36,7 @@ type ChatAsk struct {
 	ChatId   int    `json:"chat_id"`
 	Message  string `json:"message"`
 	BotId    int    `json:"bot_id" gorm:"-"`
+	Time     int64  `json:"time"`
 }
 
 // ChatGeneration 一次生成
@@ -43,6 +44,7 @@ type ChatGeneration struct {
 	RecordId int    `json:"record_id"`
 	ChatId   int    `json:"chat_id"`
 	Message  string `json:"message"`
+	Time     int64  `json:"time"`
 }
 
 // ShowChatTitle 主页面展示已有chat的标题
@@ -144,9 +146,12 @@ func SaveRecord(record *Record, chatId int) error {
 	}
 
 	//由上方将recordId写入数据库 主键回显获得ID 赋值给ask及generation两张表
-
 	record.ChatAsks.RecordId = r.ID
 	record.ChatGenerations.RecordId = r.ID
+
+	//设置时间戳
+	record.ChatAsks.Time = time.Now().Unix()
+	record.ChatGenerations.Time = time.Now().Unix()
 
 	if err := dao.DB.Table("chat_ask").Save(record.ChatAsks).Error; err != nil {
 		return err
@@ -155,6 +160,21 @@ func SaveRecord(record *Record, chatId int) error {
 		return err
 	}
 	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).Update("last_update_time", time.Now().Unix()).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetBotIdByChatId(chatId int) (*Chat, error) {
+	var chat Chat
+	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).First(&chat).Error; err != nil {
+		return nil, err
+	}
+	return &chat, nil
+}
+
+func UpdateSharedHistoryUser(cloneChatID int, userId int) error {
+	if err := dao.DB.Table("chat").Where("chat_id = ?", cloneChatID).Update("user_id", userId).Error; err != nil {
 		return err
 	}
 	return nil
