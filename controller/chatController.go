@@ -150,21 +150,32 @@ func ShareHistoryWithSk(c *gin.Context) {
 // 根据对应的密钥解析 并获取历史记录
 func GetSharedHistoryWithSk(c *gin.Context) {
 	skStr := c.Param("sk")
-	tokenString := c.Request.Header.Get("token")
-
 	resultDTO := dto.ResultDTO{}
-	if tokenString == constant.ZeroString {
-		// 解析请求体失败，返回400状态码
-		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.ShowChatHistoryError, "请求参数解析失败", nil))
-		return
-	}
-	err := service.DecodeSk(skStr, tokenString)
+	chatValue, err := service.DecodeSk(skStr)
 	// 生成分享的密钥返回
 	if errors.Is(err, redis.Nil) {
 		c.JSON(http.StatusOK, resultDTO.FailResp(constant.UserShareHistoryNil, "分享密钥不存在或已过期", nil))
 	} else if err != nil {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UserShareHistoryError, "分享历史记录错误", nil))
 	} else {
-		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserShareHistorySuccess, "分享历史记录成功", nil))
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserShareHistorySuccess, "分享历史记录成功", chatValue))
+	}
+}
+
+// 在原有的历史记录上继续聊天
+func ContinueSharedChat(c *gin.Context) {
+	skStr := c.Param("sk")
+	tokenString := c.Request.Header.Get("token")
+	resultDTO := dto.ResultDTO{}
+	if skStr == constant.ZeroString || tokenString == constant.ZeroString {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UserGetSharedHistoryError, "请求参数解析失败", nil))
+		return
+	}
+	cloneChatId, err := service.UpdateSharedChat(tokenString, skStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UserGetHistoryError, "使用分享历史记录失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserGetSharedHistorySuccess, "使用分享历史记录成功", dto.ShareDTO{CloneChatId: cloneChatId}))
 	}
 }
