@@ -75,11 +75,15 @@ func SetupRouter() *gin.Engine {
 	//收藏重命名 TBD
 	historyGroup := r.Group("/history")
 	{
-		//密钥分享chat记录
-		historyGroup.GET("/share/:chatId", controller.ShareHistoryWithSk)
-		//密钥获取chat记录 已登录状态下
-		historyGroup.GET("/share/get/:sk", controller.GetSharedHistoryWithSk)
-		//密钥获取chat记录 未登录状态下
+		historyShareGroup := historyGroup.Group("/share")
+		{
+			//密钥分享chat记录
+			historyShareGroup.GET("/:chatId", controller.ShareHistoryWithSk)
+			//密钥获取chat记录 预览
+			historyShareGroup.GET("/get/:sk", controller.GetSharedHistoryWithSk)
+			//依据分享所得chat记录 继续聊天
+			historyShareGroup.POST("/get/:sk", controller.ContinueSharedChat)
+		}
 	}
 
 	//主页面模型

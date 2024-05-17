@@ -49,3 +49,7 @@ type ChatDTO struct {
 	Model       string `json:"model"`
 	MaxToken    int    `json:"max_token"`
 }
+
+type ShareDTO struct {
+	CloneChatId int `json:"clone_chat_id"`
+}

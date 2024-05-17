@@ -22,6 +22,10 @@ const (
 	UserShareHistoryError   = 141
 	UserShareHistoryNil     = 142
 
+	//UserGetSharedHistory 用户获取分享时的历史记录
+	UserGetSharedHistorySuccess = 150
+	UserGetSharedHistoryError   = 151
+
 	//AdminGetBot 管理员获取机器人信息
 	AdminGetBotSuccess = 900
 	AdminGetBotError   = 901

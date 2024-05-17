@@ -13,13 +13,13 @@ import (
 // 一次Chat
 type Chat struct {
 	//这里将chatId直接更名为ID 方便gorm进行主键回显
-	ID             int       `json:"chat_id"  gorm:"primaryKey"`
-	UserId         int       `json:"user_id"`
-	BotId          int       `json:"bot_id"`
-	Title          string    `json:"title"`
-	LastUpdateTime int64     `json:"last_update_time"`
-	IsDelete       bool      `json:"is_delete"`
-	Records        *[]Record `json:"records"`
+	ID             int        `json:"chat_id"  gorm:"primaryKey;column:chat_id"`
+	UserId         int        `json:"user_id"`
+	BotId          int        `json:"bot_id"`
+	Title          string     `json:"title"`
+	LastUpdateTime int64      `json:"last_update_time"`
+	IsDelete       bool       `json:"is_delete"`
+	Records        *[]*Record `json:"records" gorm:"-"`
 }
 
 // Record 一次问答
@@ -178,4 +178,12 @@ func UpdateSharedHistoryUser(cloneChatID int, userId int) error {
 		return err
 	}
 	return nil
+}
+
+func GetChatInfo(chatId int) (*Chat, error) {
+	var chat Chat
+	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).First(&chat).Error; err != nil {
+		return nil, err
+	}
+	return &chat, nil
 }
