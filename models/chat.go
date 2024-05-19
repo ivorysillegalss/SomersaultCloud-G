@@ -187,3 +187,10 @@ func GetChatInfo(chatId int) (*Chat, error) {
 	}
 	return &chat, nil
 }
+
+func UpdateChatTitle(chatId int, title string) error {
+	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).Update("title", title).Error; err != nil {
+		return err
+	}
+	return nil
+}

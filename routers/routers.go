@@ -93,6 +93,8 @@ func SetupRouter() *gin.Engine {
 		contextGroup.POST("/init", controller.InitNewChat)
 		//真正调用gpt模型进行上下文交流
 		contextGroup.POST("/call", controller.CallContextChat)
+		//在chat一次之后 根据已有的历史记录获取一个标题
+		contextGroup.GET("/title", controller.InitialTitle)
 	}
 
 	//小机器人功能
@@ -113,6 +115,13 @@ func SetupRouter() *gin.Engine {
 			//管理员更新现有机器人
 			adminBotGroup.PUT("/", controller.AdminModifyBot)
 		}
+	}
+
+	//RPC接口
+	rpcGroup := r.Group("/rpc")
+	{
+		//接受一段json数据 发起api调用并返回对应的标题作为字符串
+		rpcGroup.Group("/title", controller.Rpc4Title)
 	}
 	return r
 }
