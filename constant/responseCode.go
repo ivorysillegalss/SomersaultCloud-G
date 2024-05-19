@@ -26,6 +26,10 @@ const (
 	UserGetSharedHistorySuccess = 150
 	UserGetSharedHistoryError   = 151
 
+	//UpdateTitle 更新标题
+	UpdateTitleSuccess = 160
+	UpdateTitleError   = 161
+
 	//AdminGetBot 管理员获取机器人信息
 	AdminGetBotSuccess = 900
 	AdminGetBotError   = 901
@@ -38,16 +42,7 @@ const (
 	AdminModifyBotSuccess = 920
 	AdminModifyBotError   = 921
 
-	//用户注册
-	RegisterSuccess = 1000
-	RegisterError   = 1001
-
-	//用户登录
-	LoginSuccess = 1010
-	LoginError   = 1011
-
-	//用户名和密码解析
-	UserGetError = 1021
-	//用户名或密码为空
-	UserExistNull = 1021
+	//Rpc4Title rpc获取标题
+	Rpc4TitleSuccess = 930
+	Rpc4TitleError   = 931
 )

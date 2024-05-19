@@ -179,3 +179,20 @@ func ContinueSharedChat(c *gin.Context) {
 		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UserGetSharedHistorySuccess, "使用分享历史记录成功", dto.ShareDTO{CloneChatId: cloneChatId}))
 	}
 }
+
+// 更新标题
+func InitialTitle(c *gin.Context) {
+	var titleDTO dto.TitleDTO
+	resultDTO := dto.ResultDTO{}
+	if err := c.BindJSON(&titleDTO); err != nil {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UpdateTitleError, "更新标题失败", nil))
+		return
+	}
+	title, err := service.UpdateTitle(&titleDTO)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UpdateTitleError, "更新标题失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UpdateTitleSuccess, "更新标题成功", title))
+	}
+}

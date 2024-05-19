@@ -53,3 +53,9 @@ type ChatDTO struct {
 type ShareDTO struct {
 	CloneChatId int `json:"clone_chat_id"`
 }
+
+type TitleDTO struct {
+	Messages []models.Message `json:"messages"`
+	Title    string           `json:"title"`
+	ChatId   int              `json:"chat_id"`
+}

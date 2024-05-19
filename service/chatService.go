@@ -55,19 +55,19 @@ func simplyMessage(completionResponse models.BaseModel, modelType string) *model
 	//修改为类型绑定 TODO
 	if modelType == constant.InstructModel {
 		if textCompletionResponse, ok := completionResponse.(*models.TextCompletionResponse); ok {
-			generationMessage = simplyTextCompletionMessage(textCompletionResponse)
+			generationMessage = SimplyTextCompletionMessage(textCompletionResponse)
 		}
 		//这里可以拓展 设计模式优化
 	} else if modelType == constant.DefaultModel {
 		if chatCompletionResponse, ok := completionResponse.(*models.ChatCompletionResponse); ok {
-			generationMessage = simplyChatCompletionMessage(chatCompletionResponse)
+			generationMessage = SimplyChatCompletionMessage(chatCompletionResponse)
 		}
 	}
 	return generationMessage
 }
 
 // 将instruct模型调用api结果包装为返回用户的结果
-func simplyTextCompletionMessage(completionResponse *models.TextCompletionResponse) *models.GenerateMessage {
+func SimplyTextCompletionMessage(completionResponse *models.TextCompletionResponse) *models.GenerateMessage {
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 	args := completionResponse.Choices
 	if args == nil {
@@ -82,7 +82,7 @@ func simplyTextCompletionMessage(completionResponse *models.TextCompletionRespon
 }
 
 // 转换chat模型调用结果
-func simplyChatCompletionMessage(completionResponse *models.ChatCompletionResponse) *models.GenerateMessage {
+func SimplyChatCompletionMessage(completionResponse *models.ChatCompletionResponse) *models.GenerateMessage {
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 	args := completionResponse.Choices
 	if args == nil {
@@ -390,4 +390,24 @@ func updateTextCompletionPrompt(history *[]*models.Record, prompt string) (initP
 
 func GetChatHistory(chatId int) (*[]*models.Record, error) {
 	return models.GetChatHistory(chatId)
+}
+
+// 在进行一次聊天之后 返回对应的chat的标题
+func UpdateTitle(history *dto.TitleDTO) (*dto.TitleDTO, error) {
+	messages := history.Messages
+	concludedTitle, err := api.ConcludeTitle(&messages)
+
+	err = models.UpdateChatTitle(history.ChatId, concludedTitle)
+
+	//没问题就换异步 TODO
+	//go asyncUpdateTitle(history.ChatId, concludedTitle)
+
+	if err != nil {
+		return nil, err
+	}
+	return &dto.TitleDTO{Title: concludedTitle}, nil
+}
+
+func asyncUpdateTitle(chatId int, concludedTitle string) {
+	_ = models.UpdateChatTitle(chatId, concludedTitle)
 }

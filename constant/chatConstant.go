@@ -9,6 +9,8 @@ const (
 	DefaultContextModel = 0
 	// DefaultMaxToken 不输入token时默认定义的token最大数量
 	DefaultMaxToken = 1000
+	//DefaultAdminUID 默认的管理员uid （官方调试所用uid）
+	DefaultAdminUID = "0"
 	// DefaultMaxLimitedTime 请求默认超时时间 方便调试默认关闭
 	DefaultMaxLimitedTime = time.Minute / 2
 	// ApiServerOpenAI OpenAI-API服务器默认网址
@@ -32,12 +34,16 @@ const (
 	ChatCacheExpire = 30 * time.Minute
 	// HistoryChatPrompt 告诉chatGPT以往聊天记录的prompt模板 可改进
 	HistoryChatPrompt = "Here is the chat history which I have talked with you,please according to the history give me generation:"
+	// SystemRole 系统角色
+	SystemRole = "system"
 	// UserRole 用户角色
 	UserRole = "user"
 	// GPTRole GPT角色
 	GPTRole = "assistant"
 	// NowAsk 当前的一次询问
 	NowAsk = "And Here is my question this time:  "
+	// Conclude2TitlePrompt 根据一次的历史记录总结出一个标题的提示词
+	Conclude2TitlePrompt = "TBD"
 	// ChatHistoryWeight 发送上下文历史记录的权重设置
 	ChatHistoryWeight = 3
 	// APIExecuteSuccessStatus 执行API成功后返回的状态码

@@ -217,7 +217,7 @@ func encodeReq(reqMessage models.ApiRequestMessage, model string) (*http.Request
 	}
 
 	// 发送请求
-	req, err := http.NewRequest("POST", constant.ApiServerOpenAI, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodPost, constant.ApiServerOpenAI, bytes.NewBuffer(jsonData))
 	//这里先默认为chat的端点 需要修改
 
 	if err != nil {
