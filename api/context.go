@@ -12,15 +12,25 @@ func ConcludeTitle(msg *[]models.Message) (string, error) {
 
 	//拼接提示词 & 聊天记录
 	messages := *msg
-	prompt4Title := models.Message{
-		Role:    constant.UserRole,
+	titleSystemPromptMessage := models.Message{
+		Role:    constant.SystemRole,
 		Content: constant.Conclude2TitlePrompt,
 	}
-	messages = append(messages, prompt4Title)
+
+	titleInputPrompt := "<" + messages[0].Role + ":" + messages[0].Content +
+		messages[1].Role + ":" + messages[1].Content + ">"
+
+	titleInputPromptMessage := models.Message{
+		Role:    constant.UserRole,
+		Content: titleInputPrompt,
+	}
+
+	var titlePromptMessage []models.Message
+	titlePromptMessage = append(titlePromptMessage, titleSystemPromptMessage, titleInputPromptMessage)
 
 	//拼接提问模型
 	history := &models.ChatCompletionRequest{
-		Messages: messages,
+		Messages: titlePromptMessage,
 		CompletionRequest: models.CompletionRequest{
 			MaxTokens: constant.DefaultMaxToken,
 			Model:     constant.DefaultModel,
