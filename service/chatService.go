@@ -393,11 +393,11 @@ func GetChatHistory(chatId int) (*[]*models.Record, error) {
 }
 
 // 在进行一次聊天之后 返回对应的chat的标题
-func UpdateTitle(history *dto.TitleDTO) (*dto.TitleDTO, error) {
-	messages := history.Messages
+func UpdateInitTitle(historyDTO *dto.TitleDTO) (*dto.TitleDTO, error) {
+	messages := historyDTO.Messages
 	concludedTitle, err := api.ConcludeTitle(&messages)
 
-	err = models.UpdateChatTitle(history.ChatId, concludedTitle)
+	err = models.UpdateChatTitle(historyDTO.ChatId, concludedTitle)
 
 	//没问题就换异步 TODO
 	//go asyncUpdateTitle(history.ChatId, concludedTitle)
@@ -406,6 +406,15 @@ func UpdateTitle(history *dto.TitleDTO) (*dto.TitleDTO, error) {
 		return nil, err
 	}
 	return &dto.TitleDTO{Title: concludedTitle}, nil
+}
+
+// 更新现有的标题
+func UpdateCurrentTitle(currentTitleDTO *dto.TitleDTO) error {
+	err := models.UpdateChatTitle(currentTitleDTO.ChatId, currentTitleDTO.Title)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func asyncUpdateTitle(chatId int, concludedTitle string) {
