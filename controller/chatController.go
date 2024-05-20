@@ -180,7 +180,7 @@ func ContinueSharedChat(c *gin.Context) {
 	}
 }
 
-// 更新标题
+// 根据第一次chat的内容更新标题
 func InitialTitle(c *gin.Context) {
 	var titleDTO dto.TitleDTO
 	resultDTO := dto.ResultDTO{}
@@ -189,10 +189,27 @@ func InitialTitle(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UpdateTitleError, "更新标题失败", nil))
 		return
 	}
-	title, err := service.UpdateTitle(&titleDTO)
+	title, err := service.UpdateInitTitle(&titleDTO)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UpdateTitleError, "更新标题失败", nil))
 	} else {
 		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UpdateTitleSuccess, "更新标题成功", title))
+	}
+}
+
+// 根据用户的输出更新标题
+func UpdateTitle(c *gin.Context) {
+	var titleDTO dto.TitleDTO
+	resultDTO := dto.ResultDTO{}
+	if err := c.BindJSON(&titleDTO); err != nil {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UpdateTitleError, "更新标题失败", nil))
+		return
+	}
+	err := service.UpdateCurrentTitle(&titleDTO)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.UpdateTitleError, "更新标题失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UpdateTitleSuccess, "更新标题成功", nil))
 	}
 }
