@@ -3,8 +3,10 @@ package api
 import (
 	"mini-gpt/constant"
 	"mini-gpt/models"
-	"mini-gpt/service"
 )
+
+//此类本意是想处理所有类中响应信息的 目前只有openai一个接口
+//暂时只有这一接口的方法
 
 func ConcludeTitle(msg *[]models.Message) (string, error) {
 
@@ -32,6 +34,53 @@ func ConcludeTitle(msg *[]models.Message) (string, error) {
 	}
 
 	response := baseModel.(*models.ChatCompletionResponse)
-	completionMessage := service.SimplyChatCompletionMessage(response)
+	completionMessage := simplyChatCompletionMessage(response)
 	return completionMessage.GenerateText, nil
+}
+
+// 将instruct模型调用api结果包装为返回用户的结果
+func simplyTextCompletionMessage(completionResponse *models.TextCompletionResponse) *models.GenerateMessage {
+	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
+	args := completionResponse.Choices
+	if args == nil {
+		return models.ErrorGeneration()
+	}
+	textBody := args[0]
+	generateMessage := models.GenerateMessage{
+		GenerateText: textBody.Text,
+		FinishReason: textBody.FinishReason,
+	}
+	return &generateMessage
+}
+
+// 转换chat模型调用结果
+func simplyChatCompletionMessage(completionResponse *models.ChatCompletionResponse) *models.GenerateMessage {
+	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
+	args := completionResponse.Choices
+	if args == nil {
+		return models.ErrorGeneration()
+	}
+	textBody := args[0]
+	generateMessage := models.GenerateMessage{
+		GenerateText: textBody.Message.Content,
+		FinishReason: textBody.FinishReason,
+	}
+	return &generateMessage
+}
+
+// 简化包装信息
+func SimplyMessage(completionResponse models.BaseModel, modelType string) *models.GenerateMessage {
+	var generationMessage *models.GenerateMessage
+	//修改为类型绑定 TODO
+	if modelType == constant.InstructModel {
+		if textCompletionResponse, ok := completionResponse.(*models.TextCompletionResponse); ok {
+			generationMessage = simplyTextCompletionMessage(textCompletionResponse)
+		}
+		//这里可以拓展 设计模式优化
+	} else if modelType == constant.DefaultModel {
+		if chatCompletionResponse, ok := completionResponse.(*models.ChatCompletionResponse); ok {
+			generationMessage = simplyChatCompletionMessage(chatCompletionResponse)
+		}
+	}
+	return generationMessage
 }

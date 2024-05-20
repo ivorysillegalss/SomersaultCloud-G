@@ -45,55 +45,8 @@ func LoadingChat(dto *dto.ChatDTO) (*models.GenerateMessage, error) {
 
 	//这里的YAML配置读不进来 TODO
 	//先默认是普通大模型
-	generationMessage := simplyMessage(completionResponse, constant.DefaultModel)
+	generationMessage := api.SimplyMessage(completionResponse, constant.DefaultModel)
 	return generationMessage, nil
-}
-
-// 简化包装信息
-func simplyMessage(completionResponse models.BaseModel, modelType string) *models.GenerateMessage {
-	var generationMessage *models.GenerateMessage
-	//修改为类型绑定 TODO
-	if modelType == constant.InstructModel {
-		if textCompletionResponse, ok := completionResponse.(*models.TextCompletionResponse); ok {
-			generationMessage = SimplyTextCompletionMessage(textCompletionResponse)
-		}
-		//这里可以拓展 设计模式优化
-	} else if modelType == constant.DefaultModel {
-		if chatCompletionResponse, ok := completionResponse.(*models.ChatCompletionResponse); ok {
-			generationMessage = SimplyChatCompletionMessage(chatCompletionResponse)
-		}
-	}
-	return generationMessage
-}
-
-// 将instruct模型调用api结果包装为返回用户的结果
-func SimplyTextCompletionMessage(completionResponse *models.TextCompletionResponse) *models.GenerateMessage {
-	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
-	args := completionResponse.Choices
-	if args == nil {
-		return models.ErrorGeneration()
-	}
-	textBody := args[0]
-	generateMessage := models.GenerateMessage{
-		GenerateText: textBody.Text,
-		FinishReason: textBody.FinishReason,
-	}
-	return &generateMessage
-}
-
-// 转换chat模型调用结果
-func SimplyChatCompletionMessage(completionResponse *models.ChatCompletionResponse) *models.GenerateMessage {
-	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
-	args := completionResponse.Choices
-	if args == nil {
-		return models.ErrorGeneration()
-	}
-	textBody := args[0]
-	generateMessage := models.GenerateMessage{
-		GenerateText: textBody.Message.Content,
-		FinishReason: textBody.FinishReason,
-	}
-	return &generateMessage
 }
 
 // 将botConfig配置包装为调用api所需请求体
@@ -164,7 +117,7 @@ func DisposableChat(dto *dto.ExecuteBotDTO) (*models.GenerateMessage, error) {
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := simplyMessage(completionResponse, constant.DefaultModel)
+	generationMessage := api.SimplyMessage(completionResponse, constant.DefaultModel)
 	return generationMessage, nil
 }
 
@@ -267,7 +220,7 @@ func ContextChat(ask *dto.AskDTO, tokenString string) (*models.GenerateMessage, 
 	if err != nil {
 		return models.ErrorGeneration(), err
 	}
-	generationMessage := simplyMessage(completionResponse, constant.DefaultModel)
+	generationMessage := api.SimplyMessage(completionResponse, constant.DefaultModel)
 
 	//将生成的记录存放入数据库当中
 	err = models.SaveRecord(&models.Record{
