@@ -9,6 +9,8 @@ const (
 	DefaultContextModel = 0
 	// DefaultMaxToken 不输入token时默认定义的token最大数量
 	DefaultMaxToken = 1000
+	// DefaultTitle 默认标题
+	DefaultTitle = "init"
 	//DefaultAdminUID 默认的管理员uid （官方调试所用uid）
 	DefaultAdminUID = "0"
 	// DefaultMaxLimitedTime 请求默认超时时间 方便调试默认关闭
@@ -42,10 +44,6 @@ const (
 	GPTRole = "assistant"
 	// NowAsk 当前的一次询问
 	NowAsk = "And Here is my question this time:  "
-	// Conclude2TitlePrompt 根据一次的历史记录总结出一个标题的提示词
-	Conclude2TitlePrompt = "#Content#\n你是一个标题总结员，你总能很完美且精炼的将一段话的内容总结成一个标题。\n" +
-		"#Objective# \n现在给你一段对话，请你将对话的内容总结成一个标题,标题要求能够让人知道这段对话的大致内容。直接输出一个标题，不用输出其他的内容。" +
-		"\n#Style# \n言简意赅\n#Tone# \n正式\n#input# \n<一段对话>"
 	// ChatHistoryWeight 发送上下文历史记录的权重设置
 	ChatHistoryWeight = 3
 	// APIExecuteSuccessStatus 执行API成功后返回的状态码

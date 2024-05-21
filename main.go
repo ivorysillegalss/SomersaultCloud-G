@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"mini-gpt/dao"
+	"mini-gpt/prompt"
 	"mini-gpt/routers"
 	"mini-gpt/setting"
 )
@@ -33,8 +34,11 @@ func main() {
 
 	//上方代码顺序不能改变 日志框架文件路径在配置文件中 数据库初始化中使用了日志框架
 
-	// 模型绑定 service层 此处仅测试
-	//dao.DB.AutoMigrate(&models.Todo{})
+	//测试所用
+	prompt.SetOpenaiTitlePrompt()
+
+	prompt.LoadPrompt()
+	//注册redis后加载已有的prompt
 
 	// 注册路由
 	r := routers.SetupRouter()

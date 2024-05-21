@@ -90,11 +90,11 @@ func SetupRouter() *gin.Engine {
 	contextGroup := r.Group("/context")
 	{
 		//初始化上下文chat 返回一个id给客户端
-		contextGroup.POST("/init", controller.InitNewChat)
+		contextGroup.POST("/prompt", controller.InitNewChat)
 		//真正调用gpt模型进行上下文交流
 		contextGroup.POST("/call", controller.CallContextChat)
 		//在chat一次之后 根据已有的历史记录获取一个标题
-		contextGroup.POST("/title/init", controller.InitialTitle)
+		contextGroup.POST("/title/prompt", controller.InitialTitle)
 		//根据用户的输入更新标题
 		contextGroup.POST("/title", controller.UpdateTitle)
 	}

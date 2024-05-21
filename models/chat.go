@@ -59,7 +59,7 @@ func CreateNewChat(userId int, botId int) (int, error) {
 	chat := &Chat{
 		UserId:         userId,
 		BotId:          botId,
-		Title:          "init",
+		Title:          constant.DefaultTitle,
 		LastUpdateTime: time.Now().Unix(),
 		IsDelete:       false,
 	}

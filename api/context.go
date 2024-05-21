@@ -3,6 +3,7 @@ package api
 import (
 	"mini-gpt/constant"
 	"mini-gpt/models"
+	"mini-gpt/prompt"
 )
 
 //此类本意是想处理所有类中响应信息的 目前只有openai一个接口
@@ -13,10 +14,12 @@ func ConcludeTitle(msg *[]models.Message) (string, error) {
 	//拼接提示词 & 聊天记录
 	messages := *msg
 	titleSystemPromptMessage := models.Message{
-		Role:    constant.SystemRole,
-		Content: constant.Conclude2TitlePrompt,
+		Role: constant.SystemRole,
+		//从存储提示词的map中取出对应的提示词
+		Content: prompt.OpenaiPrompt[constant.Conclude2TitlePrompt],
 	}
 
+	//处理prompt格式
 	titleInputPrompt := "<" + messages[0].Role + ":" + messages[0].Content +
 		messages[1].Role + ":" + messages[1].Content + ">"
 

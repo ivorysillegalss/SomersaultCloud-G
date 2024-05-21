@@ -7,6 +7,8 @@ const (
 	ZeroString string  = ""    // 字符串的零值
 
 	FalseInt int = -1 // 表示无需此参数
+
+	Infix = ":" // 中缀
 )
 
 var (
