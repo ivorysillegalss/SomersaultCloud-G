@@ -350,10 +350,10 @@ func UpdateInitTitle(historyDTO *dto.TitleDTO) (*dto.TitleDTO, error) {
 	messages := historyDTO.Messages
 	concludedTitle, err := api.ConcludeTitle(&messages)
 
-	err = models.UpdateChatTitle(historyDTO.ChatId, concludedTitle)
+	//err = models.UpdateChatTitle(historyDTO.ChatId, concludedTitle)
 
 	//没问题就换异步 TODO
-	//go asyncUpdateTitle(history.ChatId, concludedTitle)
+	go api.AsyncUpdateTitle(historyDTO.ChatId, concludedTitle)
 
 	if err != nil {
 		return nil, err
@@ -368,8 +368,4 @@ func UpdateCurrentTitle(currentTitleDTO *dto.TitleDTO) error {
 		return err
 	}
 	return nil
-}
-
-func asyncUpdateTitle(chatId int, concludedTitle string) {
-	_ = models.UpdateChatTitle(chatId, concludedTitle)
 }

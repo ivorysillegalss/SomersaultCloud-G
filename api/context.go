@@ -97,3 +97,7 @@ func SimplyMessage(completionResponse models.BaseModel, modelType string) *model
 	}
 	return generationMessage
 }
+
+func AsyncUpdateTitle(chatId int, concludedTitle string) {
+	_ = models.UpdateChatTitle(chatId, concludedTitle)
+}

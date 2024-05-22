@@ -13,7 +13,7 @@ import (
 // 一次Chat
 type Chat struct {
 	//这里将chatId直接更名为ID 方便gorm进行主键回显
-	ID             int        `json:"chat_id"  gorm:"primaryKey;column:chat_id"`
+	ID             int        `json:"chat_id"  gorm:"primaryKey"`
 	UserId         int        `json:"user_id"`
 	BotId          int        `json:"bot_id"`
 	Title          string     `json:"title"`
