@@ -194,3 +194,17 @@ func UpdateChatTitle(chatId int, title string) error {
 	}
 	return nil
 }
+
+func LogicalDelete(chatId int) error {
+	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).Update("title", constant.LogicalDelete).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func UnLogicalDelete(chatId int) error {
+	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).Update("title", constant.UnLogicalDelete).Error; err != nil {
+		return err
+	}
+	return nil
+}

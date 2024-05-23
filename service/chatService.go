@@ -363,9 +363,15 @@ func UpdateInitTitle(historyDTO *dto.TitleDTO) (*dto.TitleDTO, error) {
 
 // 更新现有的标题
 func UpdateCurrentTitle(currentTitleDTO *dto.TitleDTO) error {
-	err := models.UpdateChatTitle(currentTitleDTO.ChatId, currentTitleDTO.Title)
-	if err != nil {
-		return err
-	}
-	return nil
+	return models.UpdateChatTitle(currentTitleDTO.ChatId, currentTitleDTO.Title)
+}
+
+// 逻辑删除对应的历史记录
+func LogicalDelHistory(chatId int) error {
+	return models.LogicalDelete(chatId)
+}
+
+// 解除逻辑删除
+func RemoveLogicalDelHistory(chatId int) error {
+	return models.UnLogicalDelete(chatId)
 }

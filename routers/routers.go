@@ -71,7 +71,7 @@ func SetupRouter() *gin.Engine {
 		mainPageGroup.GET("/:chatId", controller.GetChatHistory)
 	}
 
-	//历史记录相关的接口 目前只有分享
+	//历史记录相关的接口 目前只有分享 & 删除
 	//收藏重命名 TBD
 	historyGroup := r.Group("/history")
 	{
@@ -83,6 +83,11 @@ func SetupRouter() *gin.Engine {
 			historyShareGroup.GET("/get/:sk", controller.GetSharedHistoryWithSk)
 			//依据分享所得chat记录 继续聊天
 			historyShareGroup.POST("/get/:sk", controller.ContinueSharedChat)
+
+			// 移入回收站 逻辑删除
+			historyShareGroup.GET("/del/:chatId", controller.DelChatHistory)
+			//从回收站中移出 （解除逻辑删除状态）
+			historyShareGroup.GET("/del/remove/:chatId", controller.RemoveRecycled)
 		}
 	}
 

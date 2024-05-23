@@ -59,3 +59,8 @@ type TitleDTO struct {
 	Title    string           `json:"title"`
 	ChatId   int              `json:"chat_id"`
 }
+
+// 设计删除功能的通用dto
+type DelDTO struct {
+	ChatId int `json:"chat_id"`
+}
