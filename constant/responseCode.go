@@ -30,6 +30,14 @@ const (
 	UpdateTitleSuccess = 160
 	UpdateTitleError   = 161
 
+	//LogicalDelete 逻辑删除
+	LogicalDeleteSuccess = 170
+	LogicalDeleteError   = 171
+
+	//RemoveRecycled 取消逻辑删除
+	RemoveRecycledSuccess = 170
+	RemoveRecycledError   = 171
+
 	//AdminGetBot 管理员获取机器人信息
 	AdminGetBotSuccess = 900
 	AdminGetBotError   = 901

@@ -213,3 +213,39 @@ func UpdateTitle(c *gin.Context) {
 		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.UpdateTitleSuccess, "更新标题成功", nil))
 	}
 }
+
+// 删除对应的历史记录（回收站 & 逻辑删除）
+func DelChatHistory(c *gin.Context) {
+	chatIdStr := c.Param("chatId")
+	resultDTO := &dto.ResultDTO{}
+	chatId, err := strconv.Atoi(chatIdStr)
+	if err != nil {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.LogicalDeleteError, "记录放入回收站失败", nil))
+		return
+	}
+	err = service.LogicalDelHistory(chatId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.LogicalDeleteError, "记录放入回收站失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.LogicalDeleteSuccess, "记录放入回收站成功", nil))
+	}
+}
+
+// 从回收站中移除
+func RemoveRecycled(c *gin.Context) {
+	chatIdStr := c.Param("chatId")
+	resultDTO := &dto.ResultDTO{}
+	chatId, err := strconv.Atoi(chatIdStr)
+	if err != nil {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.RemoveRecycledError, "记录移出回收站失败", nil))
+		return
+	}
+	err = service.RemoveLogicalDelHistory(chatId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.RemoveRecycledError, "记录移出回收站失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.RemoveRecycledSuccess, "记录移出回收站成功", nil))
+	}
+}

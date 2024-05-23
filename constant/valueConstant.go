@@ -9,6 +9,9 @@ const (
 	FalseInt int = -1 // 表示无需此参数
 
 	Infix = ":" // 中缀
+
+	LogicalDelete   = 1
+	UnLogicalDelete = 0
 )
 
 var (
