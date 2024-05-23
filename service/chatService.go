@@ -155,7 +155,7 @@ func CreateChat(dto *dto.CreateChatDTO, tokenString string) (botId int, err erro
 // 使用默认的大模型
 func defaultContextModel(askDTO *dto.AskDTO) *models.BotConfig {
 	return &models.BotConfig{
-		BotId:      0,
+		BotId:      constant.DefaultContextModel,
 		InitPrompt: askDTO.Ask.Message,
 		Model:      constant.DefaultModel,
 		//Model: constant.InstructModel,
@@ -165,7 +165,12 @@ func defaultContextModel(askDTO *dto.AskDTO) *models.BotConfig {
 // 使用机器人上下文模型
 func otherContextModel(ask *dto.AskDTO) (*models.BotConfig, error) {
 	askInfo := ask.Ask
+
 	botId := askInfo.BotId
+	if ask.Adjustment {
+		//TODO 异常未处理
+		botId, _ = models.GetAdjustmentBotId(botId)
+	}
 
 	botConfig, err := getBot(botId)
 	if err != nil {
@@ -207,8 +212,13 @@ func ContextChat(ask *dto.AskDTO, tokenString string) (*models.GenerateMessage, 
 		return models.ErrorGeneration(), err
 	}
 
-	//根据已有权重（历史记录）更新上下文提示词
-	botRequest := updateContextPrompt(history, botConfig)
+	var botRequest *models.ChatCompletionRequest
+	if ask.Adjustment {
+		botRequest = updateAdjustmentPrompt(history, botConfig, askInfo)
+	} else {
+		//根据已有权重（历史记录）更新上下文提示词
+		botRequest = updateContextPrompt(history, botConfig)
+	}
 
 	//更新引用功能
 	//botConfig.InitPrompt = referenceToken(botConfig.InitPrompt, ask)
@@ -245,6 +255,31 @@ func ContextChat(ask *dto.AskDTO, tokenString string) (*models.GenerateMessage, 
 	//go calculateContextWeights(history)
 
 	return generationMessage, nil
+}
+
+func updateAdjustmentPrompt(h *[]*models.Record, config *models.BotConfig, info *models.ChatAsk) *models.ChatCompletionRequest {
+	history := *h
+	var messages []models.Message
+	systemPrompt := &models.Message{
+		Role:    constant.SystemRole,
+		Content: config.InitPrompt,
+	}
+	generateMessage := history[0].ChatGenerations.Message
+
+	//TODO 这里先写死吧 以评语的为标准 没想到有什么替换占位符（面向微调）好的方法
+	adjustmentPrompt := &models.Message{
+		Role: constant.UserRole,
+		Content: "[" + generateMessage + "]" + "\n" +
+			"<" + info.Message + ">",
+	}
+	messages = append(messages, *systemPrompt, *adjustmentPrompt)
+
+	return &models.ChatCompletionRequest{
+		CompletionRequest: models.CompletionRequest{
+			Model: constant.DefaultModel, MaxTokens: constant.DefaultMaxToken,
+		},
+		Messages: messages,
+	}
 }
 
 // 查看是否有引用字段 若有则加入prompt

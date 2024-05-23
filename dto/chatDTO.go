@@ -31,8 +31,9 @@ type UpdateBotDTO struct {
 
 // AskDTO 这个映射类是问题的映射类
 type AskDTO struct {
-	Ask    *models.ChatAsk `json:"ask"`
-	UserId int             `json:"user_id"`
+	Ask        *models.ChatAsk `json:"ask"`
+	UserId     int             `json:"user_id"`
+	Adjustment bool            `json:"adjustment"`
 	//下方的 Reference是指引用
 	ReferenceToken  string         `json:"reference_token"`
 	ReferenceRecord *models.Record `json:"reference_record"`
