@@ -19,3 +19,7 @@ var (
 	ZeroMap   map[string]int = nil // 映射的零值
 	ZeroPtr   *int           = nil // 指针的零值
 )
+
+const (
+	RecordNotFoundError = "record not found"
+)

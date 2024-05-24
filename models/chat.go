@@ -113,11 +113,12 @@ func getChatHistory(chatId int, weight int) (*[]*Record, error) {
 			}
 
 			err := dao.DB.Table("chat_ask").Where("record_id = ?", record.RecordId).First(records[index].ChatAsks).Error
-			if err != nil {
+			//如果同一段chat在数据库中没找到记录 有可能是这个机器人这一次不需要问题
+			if err != nil && err.Error() != constant.RecordNotFoundError {
 				return ErrorRecord(), nil
 			}
 			err = dao.DB.Table("chat_generation").Where("record_id = ?", record.RecordId).First(records[index].ChatGenerations).Error
-			if err != nil {
+			if err != nil && err.Error() != constant.RecordNotFoundError {
 				return ErrorRecord(), nil
 			}
 		}
