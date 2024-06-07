@@ -84,6 +84,8 @@ func SetupRouter() *gin.Engine {
 			//依据分享所得chat记录 继续聊天
 			historyShareGroup.POST("/get/:sk", controller.ContinueSharedChat)
 
+			// 展示回收站
+			historyGroup.GET("/del/show", controller.ShowRecycledChat)
 			// 移入回收站 逻辑删除
 			historyShareGroup.GET("/del/:chatId", controller.DelChatHistory)
 			//从回收站中移出 （解除逻辑删除状态）

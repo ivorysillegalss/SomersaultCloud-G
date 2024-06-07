@@ -217,6 +217,7 @@ func UpdateTitle(c *gin.Context) {
 // 删除对应的历史记录（回收站 & 逻辑删除）
 func DelChatHistory(c *gin.Context) {
 	chatIdStr := c.Param("chatId")
+	tokenString := c.Request.Header.Get("token")
 	resultDTO := &dto.ResultDTO{}
 	chatId, err := strconv.Atoi(chatIdStr)
 	if err != nil {
@@ -224,7 +225,7 @@ func DelChatHistory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.LogicalDeleteError, "记录放入回收站失败", nil))
 		return
 	}
-	err = service.LogicalDelHistory(chatId)
+	err = service.LogicalDelHistory(chatId, tokenString)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.LogicalDeleteError, "记录放入回收站失败", nil))
 	} else {
@@ -235,6 +236,7 @@ func DelChatHistory(c *gin.Context) {
 // 从回收站中移除
 func RemoveRecycled(c *gin.Context) {
 	chatIdStr := c.Param("chatId")
+	tokenString := c.Request.Header.Get("token")
 	resultDTO := &dto.ResultDTO{}
 	chatId, err := strconv.Atoi(chatIdStr)
 	if err != nil {
@@ -242,10 +244,27 @@ func RemoveRecycled(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.RemoveRecycledError, "记录移出回收站失败", nil))
 		return
 	}
-	err = service.RemoveLogicalDelHistory(chatId)
+	err = service.RemoveLogicalDelHistory(chatId, tokenString)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.RemoveRecycledError, "记录移出回收站失败", nil))
 	} else {
 		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.RemoveRecycledSuccess, "记录移出回收站成功", nil))
+	}
+}
+
+// 展示回收站中的chat记录
+func ShowRecycledChat(c *gin.Context) {
+	tokenString := c.Request.Header.Get("token")
+	resultDTO := &dto.ResultDTO{}
+	if tokenString == constant.ZeroString {
+		// 解析请求体失败，返回400状态码
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.ShowRecycledError, "展示回收站失败", nil))
+		return
+	}
+	err := service.ShowRecycled(tokenString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, resultDTO.FailResp(constant.ShowRecycledError, "展示回收站失败", nil))
+	} else {
+		c.JSON(http.StatusOK, resultDTO.SuccessResp(constant.ShowRecycledSuccess, "展示回收站成功", nil))
 	}
 }
