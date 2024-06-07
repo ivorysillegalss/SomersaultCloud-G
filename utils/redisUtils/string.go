@@ -84,3 +84,11 @@ func GetWithExpire(k string) (string, time.Duration, error) {
 	}
 	return v, ddl, nil
 }
+
+func Del(k ...string) error {
+	return dao.Client.Del(dao.Ctx, k...).Err()
+}
+
+func TTL(k string) error {
+	return dao.Client.TTL(dao.Ctx, k).Err()
+}

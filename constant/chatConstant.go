@@ -52,4 +52,12 @@ const (
 	ReferenceRecordPrompt = "Here is a record we have been talked,And I have confused about parts of your generation,please fairly and clearly explain about it and my question:"
 	// DefaultShareSecretKeyDestroyTime 默认分享密钥存活时间
 	DefaultShareSecretKeyDestroyTime = 24 * time.Hour * 3
+	// DefaultRecycledTime 回收站存放时间 超过此时间将被回收 实际运行值为30 多出来的一天是给定时任务进行删除的
+	DefaultRecycledTime = 31
+	//DefaultRecycledDeleteTTL 执行定时任务的时间
+	DefaultRecycledDeleteTTL = 1
+	// DefaultRecycledPrefix 回收站中放入redis的前缀
+	DefaultRecycledPrefix = "recycled_"
+	// DefaultRecycledList 回收站的逻辑表
+	DefaultRecycleListPrefix = "recycled_list_"
 )

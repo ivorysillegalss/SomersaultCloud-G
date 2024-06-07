@@ -166,14 +166,6 @@ func SaveRecord(record *Record, chatId int) error {
 	return nil
 }
 
-func GetBotIdByChatId(chatId int) (*Chat, error) {
-	var chat Chat
-	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).First(&chat).Error; err != nil {
-		return nil, err
-	}
-	return &chat, nil
-}
-
 func UpdateSharedHistoryUser(cloneChatID int, userId int) error {
 	if err := dao.DB.Table("chat").Where("chat_id = ?", cloneChatID).Update("user_id", userId).Error; err != nil {
 		return err
@@ -182,11 +174,18 @@ func UpdateSharedHistoryUser(cloneChatID int, userId int) error {
 }
 
 func GetChatInfo(chatId int) (*Chat, error) {
+	//var chat Chat
+	//if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).First(&chat).Error; err != nil {
+	//	return nil, err
+	//}
+	//return &chat, nil
 	var chat Chat
-	if err := dao.DB.Table("chat").Where("chat_id = ?", chatId).First(&chat).Error; err != nil {
+	sql := "SELECT * FROM chat WHERE chat_id = ? LIMIT 1"
+	if err := dao.DB.Raw(sql, chatId).Scan(&chat).Error; err != nil {
 		return nil, err
 	}
 	return &chat, nil
+
 }
 
 func UpdateChatTitle(chatId int, title string) error {
@@ -208,4 +207,16 @@ func UnLogicalDelete(chatId int) error {
 		return err
 	}
 	return nil
+}
+
+// 删一条chat 及其信息和记录
+func DelWholeChat(chatId int) {
+	var records []Record
+	_ = dao.DB.Table("chat").Where("chat_id = ?", chatId).Delete(nil).Error
+	_ = dao.DB.Table("record_info").Where("chat_id = ?", chatId).Find(&records).Error
+	_ = dao.DB.Table("record_info").Where("chat_id = ?", chatId).Delete(nil).Error
+	for _, v := range records {
+		dao.DB.Table("chat_ask").Where("record_id = ?", v.RecordId).Delete(nil)
+		dao.DB.Table("chat_generation").Where("record_id = ?", v.RecordId).Delete(nil)
+	}
 }

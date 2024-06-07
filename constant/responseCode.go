@@ -30,6 +30,10 @@ const (
 	UpdateTitleSuccess = 160
 	UpdateTitleError   = 161
 
+	//ShowRecycled 展示回收站
+	ShowRecycledSuccess = 170
+	ShowRecycledError   = 171
+
 	//LogicalDelete 逻辑删除
 	LogicalDeleteSuccess = 170
 	LogicalDeleteError   = 171

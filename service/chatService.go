@@ -1,6 +1,8 @@
 package service
 
 import (
+	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 	"math"
 	"mini-gpt/api"
 	"mini-gpt/constant"
@@ -402,11 +404,45 @@ func UpdateCurrentTitle(currentTitleDTO *dto.TitleDTO) error {
 }
 
 // 逻辑删除对应的历史记录
-func LogicalDelHistory(chatId int) error {
+func LogicalDelHistory(chatId int, tokenString string) error {
+	userId, _ := utils.DecodeToId(tokenString)
+	//TODO 可优化 redis expire 自动删除
+	_ = redisUtils.Rpush(constant.DefaultRecycleListPrefix+strconv.Itoa(userId), chatId)
+
+	info, _ := models.GetChatInfo(chatId)
+	_ = redisUtils.SetStructWithExpire(constant.DefaultRecycledPrefix+strconv.Itoa(chatId), info, constant.DefaultRecycledTime)
 	return models.LogicalDelete(chatId)
 }
 
 // 解除逻辑删除
-func RemoveLogicalDelHistory(chatId int) error {
+func RemoveLogicalDelHistory(chatId int, tokenString string) error {
+	userId, _ := utils.DecodeToId(tokenString)
+	go redisUtils.LRemFirst(constant.DefaultRecycleListPrefix+strconv.Itoa(userId), chatId)
+	go redisUtils.Del(constant.DefaultRecycledPrefix + strconv.Itoa(chatId))
 	return models.UnLogicalDelete(chatId)
+}
+
+// 查看回收站中内容 （已逻辑回收的东西）
+func ShowRecycled(tokenString string) *[]models.Chat {
+	userId, _ := utils.DecodeToId(tokenString)
+	recycledKey := constant.DefaultRecycleListPrefix + strconv.Itoa(userId)
+	recycledList, _ := redisUtils.GetList(recycledKey)
+	var chatRecycle []models.Chat
+	index := 0
+
+	//TODO 惰性删除优化
+	//TODO 目前是将所有逻辑删除的键 根据 前缀拼接userId 有一个list 并且每一个list都在redis中对应有chat的缓存
+	// 获取缓存的时候 如果有就正常加载 如果没有就说明已经过了删除时间了 直接异步删除 并Lrem掉这个键
+	// 虽然丑陋 但好像效率还行？  可以用定时任务或其他进行优化
+	for _, v := range recycledList {
+		chat, err := redisUtils.GetStruct[*models.Chat](constant.DefaultRecycledPrefix + v)
+		if errors.Is(redis.Nil, err) {
+			go redisUtils.LRemFirst(recycledKey, v)
+			i, _ := strconv.Atoi(v)
+			go models.DelWholeChat(i)
+		} else if err == nil {
+			chatRecycle[index] = *chat
+		}
+	}
+	return &chatRecycle
 }
