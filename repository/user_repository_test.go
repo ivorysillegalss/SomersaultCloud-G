@@ -3,10 +3,10 @@ package repository_test
 import (
 	"context"
 	"errors"
+	mocks2 "github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mongo/mocks"
 	"testing"
 
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/domain"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/mongo/mocks"
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,11 +15,11 @@ import (
 
 func TestCreate(t *testing.T) {
 
-	var databaseHelper *mocks.Database
-	var collectionHelper *mocks.Collection
+	var databaseHelper *mocks2.Database
+	var collectionHelper *mocks2.Collection
 
-	databaseHelper = &mocks.Database{}
-	collectionHelper = &mocks.Collection{}
+	databaseHelper = &mocks2.Database{}
+	collectionHelper = &mocks2.Collection{}
 
 	collectionName := domain.CollectionUser
 

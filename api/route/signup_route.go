@@ -1,12 +1,12 @@
 package route
 
 import (
+	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mongo"
 	"time"
 
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/api/controller"
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/bootstrap"
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/domain"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/mongo"
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/repository"
 	"github.com/amitshekhariitbhu/go-backend-clean-architecture/usecase"
 	"github.com/gin-gonic/gin"
