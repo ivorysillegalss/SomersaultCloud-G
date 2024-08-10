@@ -23,7 +23,7 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(env.ContextTimeout))
 	defer cancel()
 
-	script, err := ioutil.LoadLuaScript("increment.lua")
+	script, err := ioutil.LoadLuaScript("lua/increment.lua")
 	if err != nil {
 		return common.FalseInt
 	}
