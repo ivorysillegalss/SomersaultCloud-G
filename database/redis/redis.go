@@ -15,6 +15,7 @@ type Client interface {
 	SetStruct(ctx context.Context, k string, vStruct any) error
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
+	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
 }
 
 type redisClient struct {
@@ -60,6 +61,15 @@ func (r *redisClient) GetStruct(ctx context.Context, k string, targetStruct any)
 		return err
 	}
 	return nil
+}
+
+// ExecuteLuaScript 执行lua脚本 保证操作原子性
+func (r *redisClient) ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error) {
+	result, err := r.rcl.Eval(ctx, luaScript, []string{k}).Result()
+	if err != nil {
+		return nil, err
+	}
+	return result, err
 }
 
 type InitRedisApplication struct {

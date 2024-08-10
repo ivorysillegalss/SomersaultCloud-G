@@ -8,10 +8,15 @@ import (
 
 type Client interface {
 	Ping() error
+	Gorm() *gorm.DB
 }
 
 type mysqlClient struct {
 	gorm *gorm.DB
+}
+
+func (mc *mysqlClient) Gorm() *gorm.DB {
+	return mc.gorm
 }
 
 func (mc *mysqlClient) Ping() error {

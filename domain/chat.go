@@ -39,8 +39,10 @@ type ChatGeneration struct {
 type ChatRepository interface {
 	CacheGetNewestChatId(ctx context.Context) int
 	CacheInsertNewChat(ctx context.Context, id int)
+	CacheLuaInsertNewChatId(ctx context.Context, luaScript string, k string) (int, error)
+	DbInsertNewChatId(ctx context.Context, token int, id int)
 }
 
 type ChatUseCase interface {
-	InitChat(ctx context.Context) int
+	InitChat(ctx context.Context, token string, botId int) int
 }

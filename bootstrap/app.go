@@ -5,6 +5,7 @@ import (
 	"SomersaultCloud/database/mysql"
 	"SomersaultCloud/database/redis"
 	"SomersaultCloud/internal/tokenutil"
+	"SomersaultCloud/usecase"
 )
 
 type Application struct {
@@ -29,6 +30,7 @@ func App() Application {
 	app.Databases.Mysql = NewMysqlDatabase(app.Env)
 
 	tokenutil.NewInternalApplicationConfig(app.Env)
+	usecase.NewUseCaseApplicationConfig(app.Env)
 
 	return *app
 }
