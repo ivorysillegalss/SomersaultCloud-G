@@ -1,4 +1,4 @@
-module github.com/amitshekhariitbhu/go-backend-clean-architecture
+module SomersaultCloud
 
 go 1.19
 
