@@ -1,9 +1,14 @@
 package usecase
 
 import (
+	"SomersaultCloud/constant/cache"
+	"SomersaultCloud/constant/common"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/internal/ioutil"
+	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/repository"
 	"context"
+	"time"
 )
 
 type chatUseCase struct {
@@ -14,9 +19,26 @@ func NewChatUseCase() domain.ChatUseCase {
 	return &chatUseCase{chatRepository: repository.NewChatRepository()}
 }
 
-func (c chatUseCase) InitChat(ctx context.Context) int {
-	id := c.chatRepository.CacheGetNewestChatId(ctx)
-	c.chatRepository.CacheInsertNewChat(ctx, id)
-	//	TODO 线程不安全 lua保证原子性
-	return id + 1
+func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(env.ContextTimeout))
+	defer cancel()
+
+	script, err := ioutil.LoadLuaScript("increment.lua")
+	if err != nil {
+		return common.FalseInt
+	}
+
+	chatId, err := c.chatRepository.CacheLuaInsertNewChatId(ctx, script, cache.NewestChatIdKey)
+	if err != nil {
+		return common.FalseInt
+	}
+
+	id, err := tokenutil.DecodeToId(token)
+	if err != nil {
+		return common.FalseInt
+	}
+	go c.chatRepository.DbInsertNewChatId(ctx, id, botId)
+	// TODO mq异步写入MYSQL
+
+	return chatId
 }
