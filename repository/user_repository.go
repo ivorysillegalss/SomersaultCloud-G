@@ -1,10 +1,9 @@
 package repository
 
 import (
+	"SomersaultCloud/database/mongo"
+	"SomersaultCloud/domain"
 	"context"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mongo"
-
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/domain"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"

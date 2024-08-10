@@ -2,11 +2,19 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/redis/go-redis/v9"
+	"time"
 )
 
 type Client interface {
 	Ping(ctx context.Context) error
+	Set(ctx context.Context, k string, v any) error
+	SetExpire(ctx context.Context, k string, v any, ddl time.Duration) error
+	Get(ctx context.Context, k string) (string, error)
+	SetStruct(ctx context.Context, k string, vStruct any) error
+	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
+	GetStruct(ctx context.Context, k string, targetStruct any) error
 }
 
 type redisClient struct {
@@ -16,6 +24,42 @@ type redisClient struct {
 func (r *redisClient) Ping(ctx context.Context) error {
 	_, err := r.rcl.Ping(ctx).Result()
 	return err
+}
+
+func (r *redisClient) Set(ctx context.Context, k string, v any) error {
+	return r.rcl.Set(ctx, k, v, 0).Err()
+}
+
+func (r *redisClient) SetExpire(ctx context.Context, k string, v any, ddl time.Duration) error {
+	return r.rcl.Set(ctx, k, v, ddl).Err()
+}
+
+func (r *redisClient) Get(ctx context.Context, k string) (string, error) {
+	return r.rcl.Get(ctx, k).Result()
+}
+
+func (r *redisClient) SetStruct(ctx context.Context, k string, vStruct any) error {
+	vJsonData, _ := json.Marshal(vStruct)
+	return r.Set(ctx, k, vJsonData)
+}
+
+func (r *redisClient) SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error {
+	vJsonData, _ := json.Marshal(vStruct)
+	return r.SetExpire(ctx, k, vJsonData, ddl)
+}
+
+// GetStruct 获取自定义结构体
+func (r *redisClient) GetStruct(ctx context.Context, k string, targetStruct any) error {
+	vJsonData, err := r.rcl.Get(ctx, k).Result() // 获取存储的 JSON 字符串
+	if err != nil {
+		return err
+	}
+	// 将 JSON 字符串反序列化为结构体
+	err = json.Unmarshal([]byte(vJsonData), targetStruct)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type InitRedisApplication struct {
