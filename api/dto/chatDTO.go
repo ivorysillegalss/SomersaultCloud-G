@@ -21,9 +21,9 @@ type AskDTO struct {
 	Ask        *domain.ChatAsk `json:"ask"`
 	UserId     int             `json:"user_id"`
 	Adjustment bool            `json:"adjustment"`
-	//下方的 Reference是指引用
-	ReferenceToken  string         `json:"reference_token"`
-	ReferenceRecord *domain.Record `json:"reference_record"`
+	////下方的 Reference是指引用
+	//ReferenceToken  string         `json:"reference_token"`
+	//ReferenceRecord *domain.Record `json:"reference_record"`
 }
 
 // CreateChatDTO 创建新chat时候的初始化机器人配置

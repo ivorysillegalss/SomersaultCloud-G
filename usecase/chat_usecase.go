@@ -13,6 +13,7 @@ import (
 
 type chatUseCase struct {
 	chatRepository domain.ChatRepository
+	chatTask       domain.ChatTask
 }
 
 func NewChatUseCase() domain.ChatUseCase {

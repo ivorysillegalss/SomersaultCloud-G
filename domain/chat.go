@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"SomersaultCloud/api/middleware/taskchain"
+	"context"
+)
 
 type Chat struct {
 	ID             int        `json:"chat_id"  gorm:"primaryKey"`
@@ -39,10 +42,23 @@ type ChatGeneration struct {
 type ChatRepository interface {
 	CacheGetNewestChatId(ctx context.Context) int
 	CacheInsertNewChat(ctx context.Context, id int)
+
 	CacheLuaInsertNewChatId(ctx context.Context, luaScript string, k string) (int, error)
 	DbInsertNewChatId(ctx context.Context, token int, id int)
+
+	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
+	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
 }
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
+}
+
+type ChatTask interface {
+	PreCheckDataTask(tc *taskchain.TaskContext)
+	GetHistoryTask(tc taskchain.TaskContext)
+	AdjustmentTask(tc taskchain.TaskContext)
+	AssembleReqTask(tc *taskchain.TaskContext)
+	CallApiTask(tc *taskchain.TaskContext)
+	ParseRespTask(tc *taskchain.TaskContext)
 }

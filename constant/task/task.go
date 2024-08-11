@@ -9,4 +9,7 @@ const (
 
 	ExecutingCode    = 1
 	ExecutingMessage = "责任链执行中"
+
+	InvalidDataFormatMessage = "数据格式错误"
+	HistoryRetrievalFailed   = "历史记录调取失败"
 )
