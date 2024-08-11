@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -16,6 +17,7 @@ type Client interface {
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
+	IsEmpty(err error) bool
 }
 
 type redisClient struct {
@@ -70,6 +72,10 @@ func (r *redisClient) ExecuteLuaScript(ctx context.Context, luaScript string, k 
 		return nil, err
 	}
 	return result, err
+}
+
+func (r *redisClient) IsEmpty(err error) bool {
+	return errors.Is(err, redis.Nil)
 }
 
 type InitRedisApplication struct {

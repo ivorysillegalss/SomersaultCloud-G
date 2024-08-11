@@ -21,5 +21,6 @@ var (
 )
 
 const (
-	RecordNotFoundError = "record not found"
+	RecordNotFoundError  = "record not found"
+	HistoryDefaultWeight = 5
 )
