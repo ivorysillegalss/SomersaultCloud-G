@@ -4,9 +4,10 @@ import (
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/db"
-	"SomersaultCloud/database/mysql"
-	"SomersaultCloud/database/redis"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/lru"
+	"SomersaultCloud/infrastructure/mysql"
+	"SomersaultCloud/infrastructure/redis"
 	"context"
 	"encoding/json"
 	"strconv"
@@ -56,9 +57,10 @@ func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (histo
 	return &h, false, nil
 }
 
-func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context) {
-	//c.redis.Lru(ctx, cache.ContextLruMaxCapacity, cache.ListType).Add(ctx)
-	//TODO
+func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, k string, v string) error {
+	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
+	err := newLru.Add(ctx, k, v)
+	return err
 }
 
 // DbGetHistory TODO db中数据流式更新flink 更新入Hbase等

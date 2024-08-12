@@ -3,9 +3,9 @@ package repository
 import (
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
-	"SomersaultCloud/database/mysql"
-	"SomersaultCloud/database/redis"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/mysql"
+	"SomersaultCloud/infrastructure/redis"
 	"context"
 	"strconv"
 )
