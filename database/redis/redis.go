@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"SomersaultCloud/constant/cache"
+	"SomersaultCloud/internal/ioutil"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,15 +15,89 @@ type Client interface {
 	Set(ctx context.Context, k string, v any) error
 	SetExpire(ctx context.Context, k string, v any, ddl time.Duration) error
 	Get(ctx context.Context, k string) (string, error)
+	LRange(ctx context.Context, k string, start int, end int) ([]string, error)
 	SetStruct(ctx context.Context, k string, vStruct any) error
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
+	ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error
 	IsEmpty(err error) bool
+	Lru(ctx context.Context, maxCapacity int, dataType int) Lru
 }
 
 type redisClient struct {
 	rcl *redis.Client
+}
+
+func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) Lru {
+	if dataType == cache.ListType {
+		return &redisLuaLruList{maxCapacity: maxCapacity}
+	}
+	//TODO 丰富实现的数据类型
+	panic("error")
+}
+
+// Lru 接口定义
+type Lru interface {
+	List(ctx context.Context, k string) ([]string, error)
+	Add(ctx context.Context, k, value string) error
+	Remove(ctx context.Context, k string, v string) error
+	isExist(ctx context.Context, k string, v string) (bool, error)
+	//Get(ctx context.Context, field string) (string, error)
+}
+
+// redisLuaLruList 实现
+type redisLuaLruList struct {
+	rcl         *redis.Client
+	r           Client
+	maxCapacity int
+}
+
+func (r *redisLuaLruList) Remove(ctx context.Context, k string, v string) error {
+	//Not Recommend 不推荐使用
+
+	// 使用 LREM 命令移除列表中的指定元素
+	_, err := r.rcl.LRem(ctx, k, 0, v).Result()
+	if err != nil {
+		return err
+	}
+
+	// 同时移除 LRU 集合中的该元素
+	_, err = r.rcl.ZRem(ctx, k+":lru", v).Result()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *redisLuaLruList) isExist(ctx context.Context, k string, v string) (bool, error) {
+	//Not Recommend 不推荐使用
+	// 获取列表的所有元素
+	list, err := r.rcl.LRange(ctx, k, 0, -1).Result()
+	if err != nil {
+		return false, err
+	}
+
+	// 遍历列表，检查是否存在目标值
+	for _, value := range list {
+		if value == v {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (r *redisLuaLruList) List(ctx context.Context, k string) ([]string, error) {
+	return r.r.LRange(ctx, k, 0, -1)
+}
+
+func (r *redisLuaLruList) Add(ctx context.Context, key, value string) error {
+	luaScript, err := ioutil.LoadLuaScript("lua/listlru.lua")
+	//	TODO
+	err = r.r.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + ":lru"}, value, r.maxCapacity)
+	return err
 }
 
 func (r *redisClient) Ping(ctx context.Context) error {
@@ -39,6 +115,10 @@ func (r *redisClient) SetExpire(ctx context.Context, k string, v any, ddl time.D
 
 func (r *redisClient) Get(ctx context.Context, k string) (string, error) {
 	return r.rcl.Get(ctx, k).Result()
+}
+
+func (r *redisClient) LRange(ctx context.Context, k string, start int, end int) ([]string, error) {
+	return r.rcl.LRange(ctx, k, int64(start), int64(end)).Result()
 }
 
 func (r *redisClient) SetStruct(ctx context.Context, k string, vStruct any) error {
@@ -72,6 +152,11 @@ func (r *redisClient) ExecuteLuaScript(ctx context.Context, luaScript string, k 
 		return nil, err
 	}
 	return result, err
+}
+
+func (r *redisClient) ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error {
+	_, err := r.rcl.Eval(ctx, luaScript, keys, args).Result()
+	return err
 }
 
 func (r *redisClient) IsEmpty(err error) bool {

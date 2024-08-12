@@ -40,14 +40,22 @@ type ChatGeneration struct {
 }
 
 type ChatRepository interface {
+	// CacheGetNewestChatId 获取最新chatId 不能保证原子性 弃用
 	CacheGetNewestChatId(ctx context.Context) int
+	// CacheInsertNewChat 增加新Id 不能保证原子性 弃用
 	CacheInsertNewChat(ctx context.Context, id int)
 
+	// CacheLuaInsertNewChatId lua脚本保证高并发时获取chatId的一致性
 	CacheLuaInsertNewChatId(ctx context.Context, luaScript string, k string) (int, error)
+	// DbInsertNewChatId 异步使用 存入SQL持久化方法
 	DbInsertNewChatId(ctx context.Context, token int, id int)
 
+	// CacheGetHistory 从缓存中取出历史记录 存的时候确保最大条数 取时无需注意
 	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
+	// DbGetHistory miss缓存 从DB中获取历史记录
 	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
+
+	CacheLuaLruPutHistory(ctx context.Context)
 }
 
 type ChatUseCase interface {
