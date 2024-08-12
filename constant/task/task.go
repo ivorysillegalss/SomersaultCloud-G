@@ -10,6 +10,8 @@ const (
 	ExecutingCode    = 1
 	ExecutingMessage = "责任链执行中"
 
-	InvalidDataFormatMessage = "数据格式错误"
+	InvalidDataFormatMessage = "消息格式错误"
+	InvalidDataMarshal       = "数据转码错误"
 	HistoryRetrievalFailed   = "历史记录调取失败"
+	BotRetrievalFailed       = "机器人相关信息调取失败"
 )

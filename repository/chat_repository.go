@@ -47,7 +47,7 @@ func (c *chatRepository) CacheLuaInsertNewChatId(ctx context.Context, luaScript 
 
 func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (history *[]*domain.Record, isCache bool, isErr error) {
 	var h []*domain.Record
-	err := c.redis.GetStruct(ctx, strconv.Itoa(chatId), h)
+	err := c.redis.GetStruct(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), h)
 	if c.redis.IsEmpty(err) {
 		return nil, true, nil
 	}
