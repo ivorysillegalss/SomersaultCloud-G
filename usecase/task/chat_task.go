@@ -3,13 +3,16 @@ package task
 import (
 	"SomersaultCloud/api/dto"
 	"SomersaultCloud/api/middleware/taskchain"
+	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/internal/checkutil"
 	"SomersaultCloud/repository"
 	"context"
+	"encoding/json"
 	"github.com/thoas/go-funk"
+	"strconv"
 )
 
 // 责任链任务实现
@@ -19,11 +22,14 @@ type chatTask struct {
 }
 
 type AskContextData struct {
-	chatId  int
-	userId  int
-	message string
-	botId   int
-	history *[]*domain.Record
+	chatId         int
+	userId         int
+	message        string
+	botId          int
+	History        *[]*domain.Record
+	Prompt         string
+	Model          string
+	HistoryMessage *[]domain.Message
 }
 
 func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
@@ -34,11 +40,11 @@ func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 	botIdCheck := checkutil.IsLegalID(ask.BotId, common.FalseInt, c.botRepository.CacheGetMaxBotId(context.Background()))
 	message := ask.Message
 	msgCheck := funk.NotEmpty(message)
-
 	if !(msgCheck && chatIdCheck && botIdCheck) {
 		tc.InterruptExecute(task.InvalidDataFormatMessage)
 		return
 	}
+
 	tc.TaskContextData.botId = ask.BotId
 	tc.TaskContextData.chatId = ask.ChatId
 	tc.TaskContextData.userId = askDTO.UserId
@@ -59,22 +65,41 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 	//TODO 目前查DB后需要截取历史记录 实现数据流式更新后可取消
 	if isCache {
 		history, err = c.chatRepository.DbGetHistory(context.Background(), tc.TaskContextData.chatId)
+		if err != nil {
+			tc.InterruptExecute(task.HistoryRetrievalFailed)
+			return
+		}
 
 		// 截取数据
 		if len(*history) >= common.HistoryDefaultWeight {
 			*history = (*history)[:common.HistoryDefaultWeight]
 		}
-
 	}
 
 	// 2.1 回写缓存
-	//TODO
+	jsonHistory, err := json.Marshal(*history)
 	if err != nil {
-		tc.InterruptExecute(task.HistoryRetrievalFailed)
+		tc.InterruptExecute(task.InvalidDataMarshal)
 		return
 	}
 
-	tc.TaskContextData.history = history
+	err = c.chatRepository.CacheLuaLruPutHistory(context.Background(), cache.ChatHistory+common.Infix+strconv.Itoa(tc.TaskContextData.chatId), string(jsonHistory))
+	if err != nil {
+		//TODO 存缓存失败 记录日志 无需打断链子 (还没接入日志)
+	}
+
+	tc.TaskContextData.History = history
+}
+
+func (c *chatTask) GetBotTask(tc taskchain.TaskContext) {
+	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), tc.TaskContextData.botId)
+	if botConfig == nil {
+		tc.InterruptExecute(task.BotRetrievalFailed)
+		return
+	}
+
+	tc.TaskContextData.Prompt = botConfig.InitPrompt
+	tc.TaskContextData.Model = botConfig.Model
 }
 
 func (c *chatTask) AdjustmentTask(tc taskchain.TaskContext) {
@@ -83,7 +108,7 @@ func (c *chatTask) AdjustmentTask(tc taskchain.TaskContext) {
 }
 
 func (c *chatTask) AssembleReqTask(tc *taskchain.TaskContext) {
-
+	panic("a")
 }
 
 func (c *chatTask) CallApiTask(tc *taskchain.TaskContext) {

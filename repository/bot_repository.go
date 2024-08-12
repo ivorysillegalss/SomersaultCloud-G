@@ -18,7 +18,6 @@ type botRepository struct {
 func (b *botRepository) CacheGetBotHistory(ctx context.Context, chatId int) *[]*domain.Record {
 	var a []*domain.Record
 	err := b.redis.GetStruct(ctx, cache.ChatHistory+strconv.Itoa(chatId), a)
-	//TODO 写历史记录的时候 记得滑动窗口维护最大条数
 	if err != nil {
 		return nil
 	}

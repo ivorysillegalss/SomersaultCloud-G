@@ -23,4 +23,10 @@ var (
 const (
 	RecordNotFoundError  = "record not found"
 	HistoryDefaultWeight = 5
+	// SystemRole 系统角色
+	SystemRole = "system"
+	// UserRole 用户角色
+	UserRole = "user"
+	// GPTRole GPT角色
+	GPTRole = "assistant"
 )
