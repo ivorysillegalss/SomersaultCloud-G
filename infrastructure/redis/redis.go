@@ -1,8 +1,8 @@
 package redis
 
 import (
-	"SomersaultCloud/constant/cache"
-	"SomersaultCloud/internal/ioutil"
+	"SomersaultCloud/constant/common"
+	"SomersaultCloud/infrastructure/lru"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,89 +15,38 @@ type Client interface {
 	Set(ctx context.Context, k string, v any) error
 	SetExpire(ctx context.Context, k string, v any, ddl time.Duration) error
 	Get(ctx context.Context, k string) (string, error)
+
 	LRange(ctx context.Context, k string, start int, end int) ([]string, error)
+	LRem(ctx context.Context, k string, count int, v any) (int64, error)
+
+	ZRem(ctx context.Context, k string, vs ...any) (int64, error)
+	ZScore(ctx context.Context, k string, member string) (isExist bool, score int)
+
 	SetStruct(ctx context.Context, k string, vStruct any) error
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
+
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
 	ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error
+
 	IsEmpty(err error) bool
-	Lru(ctx context.Context, maxCapacity int, dataType int) Lru
+
+	// Lru 此调用方式不太合理 哪有从redis里面调用lru的 有也是从lru里面调用redis实现
+	Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru
 }
 
 type redisClient struct {
 	rcl *redis.Client
 }
 
-func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) Lru {
-	if dataType == cache.ListType {
-		return &redisLuaLruList{maxCapacity: maxCapacity}
-	}
-	//TODO 丰富实现的数据类型
-	panic("error")
-}
+func NewRedisClient(r *InitRedisApplication) (Client, error) {
 
-// Lru 接口定义
-type Lru interface {
-	List(ctx context.Context, k string) ([]string, error)
-	Add(ctx context.Context, k, value string) error
-	Remove(ctx context.Context, k string, v string) error
-	isExist(ctx context.Context, k string, v string) (bool, error)
-	//Get(ctx context.Context, field string) (string, error)
-}
+	client := redis.NewClient(&redis.Options{
+		Addr:     r.UserAddr,
+		Password: r.Password,
+	})
 
-// redisLuaLruList 实现
-type redisLuaLruList struct {
-	rcl         *redis.Client
-	r           Client
-	maxCapacity int
-}
-
-func (r *redisLuaLruList) Remove(ctx context.Context, k string, v string) error {
-	//Not Recommend 不推荐使用
-
-	// 使用 LREM 命令移除列表中的指定元素
-	_, err := r.rcl.LRem(ctx, k, 0, v).Result()
-	if err != nil {
-		return err
-	}
-
-	// 同时移除 LRU 集合中的该元素
-	_, err = r.rcl.ZRem(ctx, k+":lru", v).Result()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *redisLuaLruList) isExist(ctx context.Context, k string, v string) (bool, error) {
-	//Not Recommend 不推荐使用
-	// 获取列表的所有元素
-	list, err := r.rcl.LRange(ctx, k, 0, -1).Result()
-	if err != nil {
-		return false, err
-	}
-
-	// 遍历列表，检查是否存在目标值
-	for _, value := range list {
-		if value == v {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func (r *redisLuaLruList) List(ctx context.Context, k string) ([]string, error) {
-	return r.r.LRange(ctx, k, 0, -1)
-}
-
-func (r *redisLuaLruList) Add(ctx context.Context, key, value string) error {
-	luaScript, err := ioutil.LoadLuaScript("lua/listlru.lua")
-	//	TODO
-	err = r.r.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + ":lru"}, value, r.maxCapacity)
-	return err
+	return &redisClient{rcl: client}, nil
 }
 
 func (r *redisClient) Ping(ctx context.Context) error {
@@ -145,6 +94,23 @@ func (r *redisClient) GetStruct(ctx context.Context, k string, targetStruct any)
 	return nil
 }
 
+func (r *redisClient) ZRem(ctx context.Context, k string, vs ...any) (int64, error) {
+	return r.rcl.ZRem(ctx, k, vs).Result()
+}
+
+// ZScore 获取指定元素的分数 Zset
+func (r *redisClient) ZScore(ctx context.Context, k string, member string) (isExist bool, score int) {
+	result, err := r.rcl.ZScore(ctx, k, member).Result()
+	if r.IsEmpty(err) {
+		return false, common.FalseInt
+	}
+	return true, int(result)
+}
+
+func (r *redisClient) LRem(ctx context.Context, k string, count int, v any) (int64, error) {
+	return r.rcl.LRem(ctx, k, int64(count), v).Result()
+}
+
 // ExecuteLuaScript 执行lua脚本 保证操作原子性
 func (r *redisClient) ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error) {
 	result, err := r.rcl.Eval(ctx, luaScript, []string{k}).Result()
@@ -175,12 +141,6 @@ func NewRedisApplication(addr string, password string) *InitRedisApplication {
 	}
 }
 
-func NewRedisClient(r *InitRedisApplication) (Client, error) {
-
-	client := redis.NewClient(&redis.Options{
-		Addr:     r.UserAddr,
-		Password: r.Password,
-	})
-
-	return &redisClient{rcl: client}, nil
+func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru {
+	return lru.NewLru(maxCapacity, dataType, r)
 }

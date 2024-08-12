@@ -1,9 +1,9 @@
 package bootstrap
 
 import (
-	"SomersaultCloud/database/mongo"
-	"SomersaultCloud/database/mysql"
-	"SomersaultCloud/database/redis"
+	"SomersaultCloud/infrastructure/mongo"
+	"SomersaultCloud/infrastructure/mysql"
+	"SomersaultCloud/infrastructure/redis"
 	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/usecase"
 )

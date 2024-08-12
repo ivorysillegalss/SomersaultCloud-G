@@ -55,7 +55,7 @@ type ChatRepository interface {
 	// DbGetHistory miss缓存 从DB中获取历史记录
 	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
 
-	CacheLuaLruPutHistory(ctx context.Context)
+	CacheLuaLruPutHistory(ctx context.Context, k string, v string) error
 }
 
 type ChatUseCase interface {
