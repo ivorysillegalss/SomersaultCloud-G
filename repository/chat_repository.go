@@ -19,7 +19,6 @@ type chatRepository struct {
 	mysql mysql.Client
 }
 
-// CacheGetNewestChatId 获取最新chatId 不能保证原子性 弃用
 func (c *chatRepository) CacheGetNewestChatId(ctx context.Context) int {
 	newestId, err := c.redis.Get(ctx, cache.NewestChatIdKey)
 	if err != nil {
@@ -32,13 +31,11 @@ func (c *chatRepository) CacheGetNewestChatId(ctx context.Context) int {
 	return newId
 }
 
-// CacheInsertNewChat 增加新Id 不能保证原子性 弃用
 func (c *chatRepository) CacheInsertNewChat(ctx context.Context, id int) {
 	_ = c.redis.Set(ctx, cache.NewestChatIdKey, id+1)
 	// MQ异步写入sql lua改进 暂时无用
 }
 
-// CacheLuaInsertNewChatId lua脚本保证高并发时获取chatId的一致性
 func (c *chatRepository) CacheLuaInsertNewChatId(ctx context.Context, luaScript string, k string) (int, error) {
 	res, err := c.redis.ExecuteLuaScript(ctx, luaScript, k)
 	if err != nil {
@@ -47,7 +44,6 @@ func (c *chatRepository) CacheLuaInsertNewChatId(ctx context.Context, luaScript 
 	return res.(int), nil
 }
 
-// CacheGetHistory 从缓存中取出历史记录 存的时候确保最大条数 取时无需注意
 func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (history *[]*domain.Record, isCache bool, isErr error) {
 	var h []*domain.Record
 	err := c.redis.GetStruct(ctx, strconv.Itoa(chatId), h)
@@ -60,8 +56,12 @@ func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (histo
 	return &h, false, nil
 }
 
-// DbGetHistory miss缓存 从DB中获取历史记录
-// TODO db中数据流式更新flink 更新入Hbase等
+func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context) {
+	//c.redis.Lru(ctx, cache.ContextLruMaxCapacity, cache.ListType).Add(ctx)
+	//TODO
+}
+
+// DbGetHistory TODO db中数据流式更新flink 更新入Hbase等
 //
 //	目前的架构一旦db获取历史记录 就是全部获取 初步思路是定时任务 mq以某个时间段为界限（eg7天） 将数据流式更新
 //	保证不出现大Key等 主要是为了提高查询效率
@@ -82,7 +82,6 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 	return &h, nil
 }
 
-// DbInsertNewChatId 异步使用 存入SQL持久化方法
 func (c *chatRepository) DbInsertNewChatId(ctx context.Context, userId int, botId int) {
 	chat := &domain.Chat{
 		UserId:         userId,

@@ -55,7 +55,7 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 		return
 	}
 
-	// 2. 缓存miss db找 & 回写缓存
+	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录 实现数据流式更新后可取消
 	if isCache {
 		history, err = c.chatRepository.DbGetHistory(context.Background(), tc.TaskContextData.chatId)
@@ -67,6 +67,8 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 
 	}
 
+	// 2.1 回写缓存
+	//TODO
 	if err != nil {
 		tc.InterruptExecute(task.HistoryRetrievalFailed)
 		return
