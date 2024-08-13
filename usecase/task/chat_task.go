@@ -7,6 +7,7 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/handler"
 	"SomersaultCloud/internal/checkutil"
 	"SomersaultCloud/repository"
 	"context"
@@ -30,6 +31,8 @@ type AskContextData struct {
 	Prompt         string
 	Model          string
 	HistoryMessage *[]domain.Message
+	executor       domain.LanguageModelExecutor
+	conn           domain.ConnectionConfig
 }
 
 func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
@@ -108,11 +111,24 @@ func (c *chatTask) AdjustmentTask(tc taskchain.TaskContext) {
 }
 
 func (c *chatTask) AssembleReqTask(tc *taskchain.TaskContext) {
-	panic("a")
+	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
+	executor := handler.NewLanguageModelExecutor(0)
+
+	tc.TaskContextData.executor = executor
+	tc.TaskContextData.HistoryMessage = executor.AssemblePrompt(tc.TaskContextData)
+	//无需判空 因为第一次聊情况下就是没有历史记录的
+
+	request := executor.EncodeReq(tc.TaskContextData)
+	if request == nil {
+		tc.InterruptExecute(task.ReqDataMarshalFailed)
+	}
+	client := executor.ConfigureProxy(tc.TaskContextData)
+	tc.TaskContextData.conn = *domain.NewConnection(client, request)
 }
 
 func (c *chatTask) CallApiTask(tc *taskchain.TaskContext) {
-
+	//TODO 线程池 & 消息队列
+	tc.TaskContextData.executor.Execute(tc.TaskContextData)
 }
 func (c *chatTask) ParseRespTask(tc *taskchain.TaskContext) {
 

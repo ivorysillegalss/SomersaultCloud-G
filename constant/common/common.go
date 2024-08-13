@@ -29,4 +29,6 @@ const (
 	UserRole = "user"
 	// GPTRole GPT角色
 	GPTRole = "assistant"
+	// ApiServerOpenAI OpenAI-API服务器默认网址
+	ApiServerOpenAI = "https://api.openai.com/v1/chat/completions"
 )

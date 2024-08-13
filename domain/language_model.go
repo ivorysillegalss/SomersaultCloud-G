@@ -2,7 +2,8 @@ package domain
 
 import (
 	"SomersaultCloud/api/middleware/taskchain"
-	"SomersaultCloud/constant/common"
+	"net/http"
+	"time"
 )
 
 // 目前思路：所有模型的所有任一请求方式 都需要实现下方languagemodel
@@ -10,64 +11,12 @@ import (
 // TODO 处理返回的数据格式
 type LanguageModelExecutor interface {
 	AssemblePrompt(tc *taskchain.TaskContextData) *[]Message
-	EncodeReq(tc *taskchain.TaskContextData) LanguageModelRequest
+	EncodeReq(tc *taskchain.TaskContextData) *http.Request
+	// ConfigureProxy 非必实现 根据api是否被墙
+	ConfigureProxy(tc *taskchain.TaskContextData) *http.Client
 	Execute(tc *taskchain.TaskContextData) LanguageModelResponse
 	// ParseResp TODO
 	ParseResp(tc *taskchain.TaskContextData) ParsedResponse
-}
-
-func NewLanguageModelExecutor(id int) LanguageModelExecutor {
-	return &OpenaiChatLanguageChatModelExecutor{}
-}
-
-type OpenaiChatLanguageChatModelExecutor struct {
-}
-
-// AssemblePrompt 组装prompt
-// TODO 这个架构上或许可以改进 现在每调用一次都需要 转5次消息格式
-//
-//	一思路是将他转成哈希
-func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *taskchain.TaskContextData) *[]Message {
-	var msgs []Message
-	historyChat := *tc.History
-	var i float64
-	i = 0
-	for i < common.HistoryDefaultWeight {
-		user := &Message{
-			Role:    common.UserRole,
-			Content: historyChat[int(i)].ChatAsks.Message,
-		}
-		msgs = append(msgs, *user)
-		asst := &Message{
-			Role:    common.GPTRole,
-			Content: historyChat[int(i)].ChatGenerations.Message,
-		}
-		msgs = append(msgs, *asst)
-		i++
-	}
-	last := &Message{
-		Role:    common.UserRole,
-		Content: tc.Prompt,
-	}
-	msgs = append(msgs, *last)
-	return &msgs
-}
-
-func (o OpenaiChatLanguageChatModelExecutor) EncodeReq(tc *taskchain.TaskContextData) LanguageModelRequest {
-	return &OpenaiChatLanguageChatModelRequest{
-		Message: *tc.HistoryMessage,
-		Model:   tc.Model,
-	}
-}
-
-func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextData) LanguageModelResponse {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (o OpenaiChatLanguageChatModelExecutor) ParseResp(tc *taskchain.TaskContextData) ParsedResponse {
-	//TODO implement me
-	panic("implement me")
 }
 
 type ParsedResponse struct {
@@ -79,23 +28,24 @@ type LanguageModelResponse interface {
 type LanguageModelRequest interface {
 	//MaxTokens int    `json:"max_tokens"`
 	//Model string `json:"model"`
-	req()
+	Req()
 }
-
-type OpenaiChatLanguageChatModelRequest struct {
-	Message []Message `json:"messages"`
-	Model   string    `json:"model"`
-	//TODO 此处可丰富详细参数 见openai api doc
-}
-
-func (o *OpenaiChatLanguageChatModelRequest) req() {}
-
-//type ChatCompletionRequest struct {
-//	LanguageModelRequest
-//	Messages []Message `json:"messages"`
-//}
 
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type ConnectionConfig struct {
+	time    time.Time
+	client  *http.Client
+	request *http.Request
+}
+
+func NewConnection(client *http.Client, r *http.Request) *ConnectionConfig {
+	return &ConnectionConfig{
+		time:    time.Time{},
+		client:  client,
+		request: r,
+	}
 }
