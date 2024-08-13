@@ -3,17 +3,15 @@ package route
 import (
 	"time"
 
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/api/middleware"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/bootstrap"
+	"SomersaultCloud/api/middleware"
+	"SomersaultCloud/bootstrap"
 	"github.com/gin-gonic/gin"
 )
 
 func Setup(env *bootstrap.Env, timeout time.Duration, db bootstrap.Databases, gin *gin.Engine) {
-	//publicRouter := gin.Group("")
+	publicRouter := gin.Group("")
 	// All Public APIs
-	//NewSignupRouter(env, timeout, db, publicRouter)
-	//NewLoginRouter(env, timeout, db, publicRouter)
-	//NewRefreshTokenRouter(env, timeout, db, publicRouter)
+	NewChatRouter(publicRouter)
 
 	protectedRouter := gin.Group("")
 

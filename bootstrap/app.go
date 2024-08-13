@@ -1,9 +1,11 @@
 package bootstrap
 
 import (
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mongo"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mysql"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/redis"
+	"SomersaultCloud/infrastructure/mongo"
+	"SomersaultCloud/infrastructure/mysql"
+	"SomersaultCloud/infrastructure/redis"
+	"SomersaultCloud/internal/tokenutil"
+	"SomersaultCloud/usecase"
 )
 
 type Application struct {
@@ -17,6 +19,8 @@ type Databases struct {
 	Mysql mysql.Client
 }
 
+// 依赖注入大本营！TODO 使用wire进行改造
+
 func App() Application {
 	app := &Application{}
 	app.Env = NewEnv()
@@ -24,6 +28,9 @@ func App() Application {
 	app.Databases.Mongo = NewMongoDatabase(app.Env)
 	app.Databases.Redis = NewRedisDatabase(app.Env)
 	app.Databases.Mysql = NewMysqlDatabase(app.Env)
+
+	tokenutil.NewInternalApplicationConfig(app.Env)
+	usecase.NewUseCaseApplicationConfig(app.Env)
 
 	return *app
 }

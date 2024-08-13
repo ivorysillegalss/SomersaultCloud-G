@@ -1,11 +1,11 @@
 package bootstrap
 
 import (
+	"SomersaultCloud/infrastructure/mongo"
+	"SomersaultCloud/infrastructure/mysql"
+	"SomersaultCloud/infrastructure/redis"
 	"context"
 	"fmt"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mongo"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/mysql"
-	"github.com/amitshekhariitbhu/go-backend-clean-architecture/database/redis"
 	"log"
 	"time"
 )
