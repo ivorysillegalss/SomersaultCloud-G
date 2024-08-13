@@ -14,4 +14,5 @@ const (
 	InvalidDataMarshal       = "数据转码错误"
 	HistoryRetrievalFailed   = "历史记录调取失败"
 	BotRetrievalFailed       = "机器人相关信息调取失败"
+	ReqDataMarshalFailed     = "请求序列化失败"
 )

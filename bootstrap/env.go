@@ -31,7 +31,8 @@ type Env struct {
 	AccessTokenSecret      string `mapstructure:"ACCESS_TOKEN_SECRET"`
 	RefreshTokenSecret     string `mapstructure:"REFRESH_TOKEN_SECRET"`
 
-	JwtSecretToken string `mapstructure:"JWT_SECRET_KEY"`
+	JwtSecretToken     string `mapstructure:"JWT_SECRET_KEY"`
+	ApiOpenaiSecretKey string `mapstructure:"API_OPENAI_SECRET_KEY"`
 }
 
 func NewEnv() *Env {
