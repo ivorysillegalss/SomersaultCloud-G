@@ -3,11 +3,14 @@ package handler
 import (
 	"SomersaultCloud/api/middleware/taskchain"
 	"SomersaultCloud/constant/common"
+	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/internal/requtil"
 	"bytes"
 	"fmt"
 	"github.com/goccy/go-json"
+	"io"
 	"net/http"
 )
 
@@ -85,12 +88,66 @@ func (o OpenaiChatLanguageChatModelExecutor) ConfigureProxy(tc *taskchain.TaskCo
 	return requtil.SetProxy()
 }
 
-func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextData) domain.LanguageModelResponse {
-	//TODO implement me
-	panic("implement me")
+// TODO 接入rabbitMQ
+func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextData) {
+	conn := tc.Conn
+	response, err := conn.Client.Do(conn.Request)
+	defer response.Body.Close()
+
+	generationResponse := channel.NewGenerationResponse(response, tc.ChatId, err)
+
+	rpcRes := res.RpcRes
+	if rpcRes == nil {
+		rpcRes = make(chan *channel.GenerationResponse, sys.GenerationResponseChannelBuffer)
+	}
+	rpcRes <- generationResponse
 }
 
+// ParseResp 关于
+// go-channel方案 设计一个异步线程 始终轮询rpcRes channel  并将轮询所得结果存到map当中 此处只需要GET MAP就可以了
 func (o OpenaiChatLanguageChatModelExecutor) ParseResp(tc *taskchain.TaskContextData) domain.ParsedResponse {
-	//TODO implement me
-	panic("implement me")
+	resp := tc.Resp
+	body, err := io.ReadAll(resp.Resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	var data *ChatCompletionResponse
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil
+	}
+	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
+
+	args := data.Choices
+	if args == nil {
+		return nil
+	}
+	textBody := args[0]
+	generateMessage := domain.OpenAIParsedResponse{
+		GenerateText: textBody.Message.Content,
+		FinishReason: textBody.FinishReason,
+	}
+	return &generateMessage
+}
+
+type ChatCompletionResponse struct {
+	Id         string `json:"id"`
+	Object     string `json:"object"`
+	CreateTime int64  `json:"created"`
+	Model      string `json:"model"`
+	Usage      struct {
+		PromptTokens     int64 `json:"prompt_tokens"`
+		CompletionTokens int64 `json:"completion_tokens"`
+		TotalTokens      int64 `json:"total_tokens"`
+	} `json:"usage"`
+
+	Choices []struct {
+		Index   int `json:"index"`
+		Message struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
 }

@@ -15,4 +15,9 @@ const (
 	HistoryRetrievalFailed   = "历史记录调取失败"
 	BotRetrievalFailed       = "机器人相关信息调取失败"
 	ReqDataMarshalFailed     = "请求序列化失败"
+	ReqUploadError           = "请求上传失败"
+	ReqParsedError           = "请求转码失败"
+	ReqCatchError            = "请求获取失败"
+	ChatGenerationDelError   = "删除生成缓存失败"
+	RespParedError           = "生成内容转码失败"
 )

@@ -5,15 +5,19 @@ import (
 	"SomersaultCloud/api/middleware/taskchain"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
+	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
+	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/internal/checkutil"
 	"SomersaultCloud/repository"
 	"context"
 	"encoding/json"
 	"github.com/thoas/go-funk"
 	"strconv"
+	"sync"
+	"time"
 )
 
 // 责任链任务实现
@@ -23,7 +27,7 @@ type chatTask struct {
 }
 
 type AskContextData struct {
-	chatId         int
+	ChatId         int
 	userId         int
 	message        string
 	botId          int
@@ -32,7 +36,9 @@ type AskContextData struct {
 	Model          string
 	HistoryMessage *[]domain.Message
 	executor       domain.LanguageModelExecutor
-	conn           domain.ConnectionConfig
+	Conn           domain.ConnectionConfig
+	Resp           channel.GenerationResponse
+	ParsedResponse domain.ParsedResponse
 }
 
 func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
@@ -49,7 +55,7 @@ func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 	}
 
 	tc.TaskContextData.botId = ask.BotId
-	tc.TaskContextData.chatId = ask.ChatId
+	tc.TaskContextData.ChatId = ask.ChatId
 	tc.TaskContextData.userId = askDTO.UserId
 	tc.TaskContextData.message = ask.Message
 }
@@ -58,7 +64,7 @@ func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 	var history *[]*domain.Record
 	// 1. 缓存找
-	history, isCache, err := c.chatRepository.CacheGetHistory(context.Background(), tc.TaskContextData.chatId)
+	history, isCache, err := c.chatRepository.CacheGetHistory(context.Background(), tc.TaskContextData.ChatId)
 	if err != nil {
 		tc.InterruptExecute(task.HistoryRetrievalFailed)
 		return
@@ -67,7 +73,7 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录 实现数据流式更新后可取消
 	if isCache {
-		history, err = c.chatRepository.DbGetHistory(context.Background(), tc.TaskContextData.chatId)
+		history, err = c.chatRepository.DbGetHistory(context.Background(), tc.TaskContextData.ChatId)
 		if err != nil {
 			tc.InterruptExecute(task.HistoryRetrievalFailed)
 			return
@@ -86,7 +92,7 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 		return
 	}
 
-	err = c.chatRepository.CacheLuaLruPutHistory(context.Background(), cache.ChatHistory+common.Infix+strconv.Itoa(tc.TaskContextData.chatId), string(jsonHistory))
+	err = c.chatRepository.CacheLuaLruPutHistory(context.Background(), cache.ChatHistory+common.Infix+strconv.Itoa(tc.TaskContextData.ChatId), string(jsonHistory))
 	if err != nil {
 		//TODO 存缓存失败 记录日志 无需打断链子 (还没接入日志)
 	}
@@ -96,7 +102,7 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 
 func (c *chatTask) GetBotTask(tc taskchain.TaskContext) {
 	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), tc.TaskContextData.botId)
-	if botConfig == nil {
+	if funk.IsEmpty(botConfig) {
 		tc.InterruptExecute(task.BotRetrievalFailed)
 		return
 	}
@@ -119,20 +125,75 @@ func (c *chatTask) AssembleReqTask(tc *taskchain.TaskContext) {
 	//无需判空 因为第一次聊情况下就是没有历史记录的
 
 	request := executor.EncodeReq(tc.TaskContextData)
-	if request == nil {
+	if funk.IsEmpty(request) {
 		tc.InterruptExecute(task.ReqDataMarshalFailed)
+		return
 	}
 	client := executor.ConfigureProxy(tc.TaskContextData)
-	tc.TaskContextData.conn = *domain.NewConnection(client, request)
+	tc.TaskContextData.Conn = *domain.NewConnection(client, request)
 }
 
 func (c *chatTask) CallApiTask(tc *taskchain.TaskContext) {
-	//TODO 线程池 & 消息队列
-	tc.TaskContextData.executor.Execute(tc.TaskContextData)
+	var wg sync.WaitGroup
+	//包装提交的任务
+	t := func(i interface{}) {
+		defer wg.Done()
+		tc.TaskContextData.executor.Execute(tc.TaskContextData)
+	}
+	config := poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
+	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
+
+	err := config.Invoke(t)
+	if err != nil {
+		tc.InterruptExecute(task.ReqUploadError)
+		return
+	}
+
+	//TODO 消息队列
 }
 func (c *chatTask) ParseRespTask(tc *taskchain.TaskContext) {
+	var generation *channel.GenerationResponse
+	//没查到的话有可能是没处理完 等个300ms再查
+	//循环查询最多10次 超过则宣布失败
+	for i := 0; i < sys.GenerateQueryRetryLimit; i++ {
+		if funk.IsEmpty(generation) {
+			//轮询等待
+			g, err := c.chatRepository.CacheGetGeneration(context.Background(), tc.TaskContextData.ChatId)
+			if err != nil {
+				tc.InterruptExecute(task.ReqParsedError)
+				return
+			}
 
+			generation = g
+			time.Sleep(600 * time.Millisecond)
+		}
+	}
+
+	//TODO 这里其实是有个bug的 如果超过10次收不到 大部分情况下是rpc失败的 但是也有小部分情况调用成功
+	//	但是未存储 这种造成了一种情况 因为下方删除是确定缓存存在了才删的 而超时的情况则默认了缓存不存在
+	//	假如缓存在超时之后 来到了    在下一次请求的时候 就会读到同一个chat上次rpc时因为超时 而未渲染出来的generation
+	//	暂时还没想对策
+	if funk.IsEmpty(generation) {
+		tc.InterruptExecute(task.ReqCatchError)
+		return
+	} else {
+		//旁路缓存思想 如果缓存获取成功删掉他 防止短时间内 生成内容未覆盖就读到上次的generation
+		err := c.chatRepository.CacheDelGeneration(context.Background(), tc.TaskContextData.ChatId)
+		if err != nil {
+			tc.InterruptExecute(task.ChatGenerationDelError)
+			return
+		}
+	}
+
+	//直到此处成功获取到resp对象
+	tc.TaskContextData.Resp = *generation
+	resp := tc.TaskContextData.executor.ParseResp(tc.TaskContextData)
+	if funk.IsEmpty(resp) {
+		tc.InterruptExecute(task.RespParedError)
+	}
+	tc.TaskContextData.ParsedResponse = resp
 }
+
 func NewChatTask() domain.ChatTask {
 	return &chatTask{chatRepository: repository.NewChatRepository(), botRepository: repository.NewBotRepository()}
 }
