@@ -14,12 +14,20 @@ type LanguageModelExecutor interface {
 	EncodeReq(tc *taskchain.TaskContextData) *http.Request
 	// ConfigureProxy 非必实现 根据api是否被墙
 	ConfigureProxy(tc *taskchain.TaskContextData) *http.Client
-	Execute(tc *taskchain.TaskContextData) LanguageModelResponse
+	Execute(tc *taskchain.TaskContextData)
 	// ParseResp TODO
 	ParseResp(tc *taskchain.TaskContextData) ParsedResponse
 }
 
-type ParsedResponse struct {
+type ParsedResponse interface {
+	parse()
+}
+type OpenAIParsedResponse struct {
+	GenerateText string
+	FinishReason string
+}
+
+func (o *OpenAIParsedResponse) parse() {
 }
 
 type LanguageModelResponse interface {
@@ -37,15 +45,15 @@ type Message struct {
 }
 
 type ConnectionConfig struct {
-	time    time.Time
-	client  *http.Client
-	request *http.Request
+	Time    time.Time
+	Client  *http.Client
+	Request *http.Request
 }
 
 func NewConnection(client *http.Client, r *http.Request) *ConnectionConfig {
 	return &ConnectionConfig{
-		time:    time.Time{},
-		client:  client,
-		request: r,
+		Time:    time.Time{},
+		Client:  client,
+		Request: r,
 	}
 }

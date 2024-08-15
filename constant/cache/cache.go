@@ -19,4 +19,8 @@ const (
 	ContextLruMaxCapacity = 5
 	// LruPrefix LRU前缀缓存
 	LruPrefix = "lru"
+	// ChatGeneration chat的生成缓存
+	ChatGeneration = "chatGeneration"
+	// ChatGenerationDDL 生成缓存时间
+	ChatGenerationDDL = 5
 )

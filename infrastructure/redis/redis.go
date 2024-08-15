@@ -26,6 +26,8 @@ type Client interface {
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
 
+	Del(ctx context.Context, k string) error
+
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
 	ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error
 
@@ -109,6 +111,10 @@ func (r *redisClient) ZScore(ctx context.Context, k string, member string) (isEx
 
 func (r *redisClient) LRem(ctx context.Context, k string, count int, v any) (int64, error) {
 	return r.rcl.LRem(ctx, k, int64(count), v).Result()
+}
+
+func (r *redisClient) Del(ctx context.Context, k string) error {
+	return r.rcl.Del(ctx, k).Err()
 }
 
 // ExecuteLuaScript 执行lua脚本 保证操作原子性
