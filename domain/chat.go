@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"SomersaultCloud/api/middleware/taskchain"
+	"SomersaultCloud/api/dto"
 	"SomersaultCloud/infrastructure/channel"
 	"context"
 )
@@ -64,22 +64,5 @@ type ChatRepository interface {
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
-}
-
-// TODO 此处不仅是chat实体的行为 迁移
-type ChatTask interface {
-	// PreCheckDataTask 数据的前置检查 & 组装TaskContextData对象
-	PreCheckDataTask(tc *taskchain.TaskContext)
-	// GetHistoryTask 从DB or Cache获取历史记录
-	GetHistoryTask(tc taskchain.TaskContext)
-	// GetBotTask 获取prompt & model
-	GetBotTask(tc taskchain.TaskContext)
-	// TODO 微调 TBD
-	AdjustmentTask(tc taskchain.TaskContext)
-	// AssembleReqTask 组装rpc请求体
-	AssembleReqTask(tc *taskchain.TaskContext)
-	// CallApiTask 调用api
-	CallApiTask(tc *taskchain.TaskContext)
-	// ParseRespTask 转换rpc后响应数据
-	ParseRespTask(tc *taskchain.TaskContext)
+	ContextChat(ctx context.Context, token string, ask *dto.AskDTO) (isSuccess bool, message ParsedResponse, code int)
 }
