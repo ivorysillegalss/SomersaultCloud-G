@@ -11,7 +11,6 @@ import (
 	"SomersaultCloud/handler"
 	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/internal/checkutil"
-	"SomersaultCloud/repository"
 	"context"
 	"encoding/json"
 	"github.com/thoas/go-funk"
@@ -20,8 +19,8 @@ import (
 	"time"
 )
 
-// 责任链任务实现
-type chatTask struct {
+// ChatAskTask rpc调用责任链任务实现
+type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
 }
@@ -41,7 +40,15 @@ type AskContextData struct {
 	ParsedResponse domain.ParsedResponse
 }
 
-func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
+func (c *ChatAskTask) InitContextData() *taskchain.TaskContext {
+	return &taskchain.TaskContext{
+		BusinessType:    task.ExecuteChatAskType,
+		BusinessCode:    task.ExecuteChatAskCode,
+		TaskContextData: &taskchain.TaskContextData{AskContextData: &AskContextData{}},
+	}
+}
+
+func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 	askDTO := tc.TData.(dto.AskDTO)
 	ask := askDTO.Ask
 	//TODO 运行前redis加缓存
@@ -61,7 +68,7 @@ func (c *chatTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 }
 
 // GetHistoryTask 2情况 判断是否存在缓存 hit拿缓存 miss则db
-func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
+func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 	var history *[]*domain.Record
 	// 1. 缓存找
 	history, isCache, err := c.chatRepository.CacheGetHistory(context.Background(), tc.TaskContextData.ChatId)
@@ -100,7 +107,7 @@ func (c *chatTask) GetHistoryTask(tc taskchain.TaskContext) {
 	tc.TaskContextData.History = history
 }
 
-func (c *chatTask) GetBotTask(tc taskchain.TaskContext) {
+func (c *ChatAskTask) GetBotTask(tc *taskchain.TaskContext) {
 	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), tc.TaskContextData.botId)
 	if funk.IsEmpty(botConfig) {
 		tc.InterruptExecute(task.BotRetrievalFailed)
@@ -111,12 +118,12 @@ func (c *chatTask) GetBotTask(tc taskchain.TaskContext) {
 	tc.TaskContextData.Model = botConfig.Model
 }
 
-func (c *chatTask) AdjustmentTask(tc taskchain.TaskContext) {
+func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *chatTask) AssembleReqTask(tc *taskchain.TaskContext) {
+func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
 	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
 	executor := handler.NewLanguageModelExecutor(0)
 
@@ -133,7 +140,7 @@ func (c *chatTask) AssembleReqTask(tc *taskchain.TaskContext) {
 	tc.TaskContextData.Conn = *domain.NewConnection(client, request)
 }
 
-func (c *chatTask) CallApiTask(tc *taskchain.TaskContext) {
+func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 	var wg sync.WaitGroup
 	//包装提交的任务
 	t := func(i interface{}) {
@@ -151,7 +158,8 @@ func (c *chatTask) CallApiTask(tc *taskchain.TaskContext) {
 
 	//TODO 消息队列
 }
-func (c *chatTask) ParseRespTask(tc *taskchain.TaskContext) {
+
+func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	var generation *channel.GenerationResponse
 	//没查到的话有可能是没处理完 等个300ms再查
 	//循环查询最多10次 超过则宣布失败
@@ -194,6 +202,6 @@ func (c *chatTask) ParseRespTask(tc *taskchain.TaskContext) {
 	tc.TaskContextData.ParsedResponse = resp
 }
 
-func NewChatTask() domain.ChatTask {
-	return &chatTask{chatRepository: repository.NewChatRepository(), botRepository: repository.NewBotRepository()}
+func NewAskChatTask(botRepository domain.BotRepository, chatRepository domain.ChatRepository) AskTask {
+	return &ChatAskTask{chatRepository: chatRepository, botRepository: botRepository}
 }

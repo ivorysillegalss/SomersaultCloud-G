@@ -2,7 +2,8 @@ package taskchain
 
 import (
 	task2 "SomersaultCloud/constant/task"
-	"SomersaultCloud/usecase/task"
+	"SomersaultCloud/task"
+	"github.com/thoas/go-funk"
 )
 
 type TaskContext struct {
@@ -41,8 +42,11 @@ func (t *TaskContext) InterruptExecute(message string) {
 }
 
 // ExecuteChain 执行责任链
-func (t *TaskContextFactory) ExecuteChain(handlers ...func(tc *TaskContext)) {
-	for _, handler := range handlers {
+func (t *TaskContextFactory) ExecuteChain() {
+	if funk.IsZero(len(t.Nodes)) {
+		t.TaskContext.InterruptExecute(task2.NoneNode)
+	}
+	for _, handler := range t.Nodes {
 		//具体的错误处理包装在TaskResponse中 由各节点自行处理
 		if t.TaskContext.Exception {
 			// 具体的错误原因类型在 实现类中包装
@@ -54,15 +58,18 @@ func (t *TaskContextFactory) ExecuteChain(handlers ...func(tc *TaskContext)) {
 
 // Puts 加入节点
 func (t *TaskContextFactory) Puts(handlers ...func(tc *TaskContext)) {
-	nodes := &t.Nodes
 	//可变参数 + 解包 加入节点
-	*nodes = append(*nodes, handlers...)
+	t.Nodes = append(t.Nodes, handlers...)
 }
 
 // List 列举节点
 func (t *TaskContextFactory) List() []func(tc *TaskContext) {
 	return t.Nodes
 }
+
+//func (t *TaskContextFactory) InputContext(ctx *TaskContext) {
+//	t.TaskContext = ctx
+//}
 
 // TODO 目前是即用即装配链子 初步封装template
 // 			kv形式存储		 k for 业务类型 & v for 链子配置 形成工厂类策略化等等乱七八糟的

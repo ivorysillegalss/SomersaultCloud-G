@@ -8,8 +8,8 @@ import (
 	"SomersaultCloud/infrastructure/pool"
 	"SomersaultCloud/infrastructure/redis"
 	"SomersaultCloud/internal/tokenutil"
+	"SomersaultCloud/task"
 	"SomersaultCloud/usecase"
-	"SomersaultCloud/usecase/task"
 )
 
 type Application struct {
