@@ -18,6 +18,7 @@ var (
 	ZeroSlice []int          = nil // 切片的零值
 	ZeroMap   map[string]int = nil // 映射的零值
 	ZeroPtr   *int           = nil // 指针的零值
+	ZeroByte  []byte         = nil
 )
 
 const (
