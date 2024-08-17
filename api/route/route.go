@@ -1,14 +1,12 @@
 package route
 
 import (
-	"time"
-
 	"SomersaultCloud/api/middleware"
 	"SomersaultCloud/bootstrap"
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(env *bootstrap.Env, timeout time.Duration, db bootstrap.Databases, gin *gin.Engine) {
+func Setup(env *bootstrap.Env, gin *gin.Engine) {
 	publicRouter := gin.Group("")
 	// All Public APIs
 	NewChatRouter(publicRouter)

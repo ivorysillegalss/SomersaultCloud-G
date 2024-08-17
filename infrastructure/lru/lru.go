@@ -105,7 +105,6 @@ func (r *redisLuaLruList) List(ctx context.Context, k string) ([]string, error) 
 
 func (r *redisLuaLruList) Add(ctx context.Context, key, value string) error {
 	luaScript, err := ioutil.LoadLuaScript("lua/listlru.lua")
-	//	TODO
 	err = r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
 	return err
 }

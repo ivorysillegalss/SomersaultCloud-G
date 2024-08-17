@@ -1,8 +1,9 @@
 package bootstrap
 
 import (
+	"SomersaultCloud/cron"
+	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
-	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/infrastructure/mongo"
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/pool"
@@ -31,8 +32,8 @@ type PoolsFactory struct {
 }
 
 type Channels struct {
-	RpcRes      chan *channel.GenerationResponse
-	asyncPoller chan *channel.GenerationResponse
+	RpcRes chan *domain.GenerationResponse
+	Stop   chan bool
 }
 
 // 依赖注入大本营！TODO 使用wire进行改造
@@ -45,14 +46,13 @@ func App() Application {
 	app.Databases.Redis = NewRedisDatabase(app.Env)
 	app.Databases.Mysql = NewMysqlDatabase(app.Env)
 	app.PoolsFactory.Pools = NewPoolFactory()
-	//TODO 可修改为定时任务模块
-	//	这里耦合channel中的异步任务需使用到redis 耦合了
-	app.Channels = NewChannel(app.Databases.Redis)
+	app.Channels = NewChannel()
 
 	tokenutil.NewInternalApplicationConfig(app.Env)
 	usecase.NewUseCaseApplicationConfig(app.Env)
 	task.NewUseCaseApplicationConfig(app.Env, app.PoolsFactory)
 	handler.NewUseCaseApplicationConfig(app.Env, app.Channels)
+	cron.NewCronApplicationConfig(app.Channels)
 
 	return *app
 }

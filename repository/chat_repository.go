@@ -5,7 +5,6 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/db"
 	"SomersaultCloud/domain"
-	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/infrastructure/lru"
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/redis"
@@ -58,16 +57,34 @@ func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (histo
 	return &h, false, nil
 }
 
-func (c *chatRepository) CacheGetGeneration(ctx context.Context, chatId int) (*channel.GenerationResponse, error) {
-	var a channel.GenerationResponse
-	err := c.redis.GetStruct(ctx, cache.ChatGeneration+common.Infix+strconv.Itoa(chatId), &a)
+func (c *chatRepository) CacheGetGeneration(ctx context.Context, chatId int) (*domain.GenerationResponse, error) {
+	hGet, err := c.redis.HGet(ctx, cache.ChatGenerationExpired, strconv.Itoa(chatId))
 	if c.redis.IsEmpty(err) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &a, nil
+
+	s := hGet.(string)
+	keyExpiredTTL, _ := strconv.Atoi(s)
+	currentTime := int(time.Now().Unix())
+
+	var resAny any
+	if currentTime > keyExpiredTTL {
+		return nil, nil
+	} else {
+		resAny, _ = c.redis.HGet(ctx, cache.ChatGeneration, strconv.Itoa(chatId))
+	}
+
+	resStr := resAny.(string)
+	var res domain.GenerationResponse
+	err = json.Unmarshal([]byte(resStr), &res)
+
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
 func (c *chatRepository) CacheDelGeneration(ctx context.Context, chatId int) error {

@@ -1,10 +1,9 @@
 package main
 
 import (
-	"time"
-
 	route "SomersaultCloud/api/route"
 	"SomersaultCloud/bootstrap"
+	"SomersaultCloud/cron"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,14 +13,15 @@ func main() {
 
 	env := app.Env
 
-	db := app.Databases
+	//db := app.Databases
 	defer app.CloseDBConnection()
 
-	timeout := time.Duration(env.ContextTimeout) * time.Second
+	//timeout := time.Duration(env.ContextTimeout) * time.Second
 
 	gin := gin.Default()
 
-	route.Setup(env, timeout, db, gin)
+	route.Setup(env, gin)
+	cron.Setup()
 
 	gin.Run(env.ServerAddress)
 }

@@ -26,6 +26,9 @@ type Client interface {
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
 
+	HSet(ctx context.Context, k string, v ...any) error
+	HGet(ctx context.Context, k string, field string) (any, error)
+
 	Del(ctx context.Context, k string) error
 
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
@@ -111,6 +114,15 @@ func (r *redisClient) ZScore(ctx context.Context, k string, member string) (isEx
 
 func (r *redisClient) LRem(ctx context.Context, k string, count int, v any) (int64, error) {
 	return r.rcl.LRem(ctx, k, int64(count), v).Result()
+}
+
+// HSet 支持批量添加 但是kv必须成对出现
+func (r *redisClient) HSet(ctx context.Context, k string, v ...any) error {
+	return r.rcl.HSet(ctx, k, v).Err()
+}
+
+func (r *redisClient) HGet(ctx context.Context, k string, field string) (any, error) {
+	return r.rcl.HGet(ctx, k, field).Result()
 }
 
 func (r *redisClient) Del(ctx context.Context, k string) error {

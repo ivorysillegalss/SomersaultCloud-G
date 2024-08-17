@@ -21,6 +21,8 @@ const (
 	LruPrefix = "lru"
 	// ChatGeneration chat的生成缓存
 	ChatGeneration = "chatGeneration"
-	// ChatGenerationDDL 生成缓存时间
-	ChatGenerationDDL = 5
+	// ChatGenerationExpired chat生成缓存时间 配合lua脚本设定HSet单键DDL
+	ChatGenerationExpired = "chatGenerationExpired"
+	// ChatGenerationTTL 生成缓存时间
+	ChatGenerationTTL = 5
 )
