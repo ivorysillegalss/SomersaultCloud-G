@@ -5,7 +5,6 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
-	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/internal/requtil"
 	"bytes"
 	"fmt"
@@ -94,11 +93,11 @@ func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextDa
 	response, err := conn.Client.Do(conn.Request)
 	defer response.Body.Close()
 
-	generationResponse := channel.NewGenerationResponse(response, tc.ChatId, err)
+	generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
 
 	rpcRes := res.RpcRes
 	if rpcRes == nil {
-		rpcRes = make(chan *channel.GenerationResponse, sys.GenerationResponseChannelBuffer)
+		rpcRes = make(chan *domain.GenerationResponse, sys.GenerationResponseChannelBuffer)
 	}
 	rpcRes <- generationResponse
 }

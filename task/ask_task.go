@@ -9,7 +9,6 @@ import (
 	"SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
-	"SomersaultCloud/infrastructure/channel"
 	"SomersaultCloud/internal/checkutil"
 	"context"
 	"encoding/json"
@@ -36,7 +35,7 @@ type AskContextData struct {
 	HistoryMessage *[]domain.Message
 	executor       domain.LanguageModelExecutor
 	Conn           domain.ConnectionConfig
-	Resp           channel.GenerationResponse
+	Resp           domain.GenerationResponse
 	ParsedResponse domain.ParsedResponse
 }
 
@@ -78,7 +77,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 	}
 
 	// 2. 缓存miss db找
-	//TODO 目前查DB后需要截取历史记录 实现数据流式更新后可取消
+	//TODO 目前查DB后需要截取历史记录，实现数据流式更新后可取消
 	if isCache {
 		history, err = c.chatRepository.DbGetHistory(context.Background(), tc.TaskContextData.ChatId)
 		if err != nil {
@@ -160,7 +159,7 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 }
 
 func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
-	var generation *channel.GenerationResponse
+	var generation *domain.GenerationResponse
 	//没查到的话有可能是没处理完 等个300ms再查
 	//循环查询最多10次 超过则宣布失败
 	for i := 0; i < sys.GenerateQueryRetryLimit; i++ {

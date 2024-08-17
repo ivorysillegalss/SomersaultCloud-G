@@ -1,9 +1,11 @@
-package channel
+package domain
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
-// GenerationResponse
-// TODO 分割domain和基础 GenerationResponse迁移domain Response作为基础开一个
+// GenerationResponse 程序响应结构体
 type GenerationResponse struct {
 	Resp   *http.Response
 	ChatId int
@@ -16,4 +18,8 @@ func NewGenerationResponse(response *http.Response, chatId int, err error) *Gene
 		ChatId: chatId,
 		Err:    err,
 	}
+}
+
+type GenerationRepository interface {
+	CacheLuaPollHistory(ctx context.Context, generationResp GenerationResponse)
 }

@@ -54,6 +54,12 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 func (c *chatUseCase) ContextChat(ctx context.Context, token string, ask *dto.AskDTO) (isSuccess bool, message domain.ParsedResponse, code int) {
 	chatTask := c.chatTask
 
+	userId, err := tokenutil.DecodeToId(token)
+	if err != nil {
+		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
+	}
+	ask.UserId = userId
+
 	//我他妈太优雅了
 	taskContext := chatTask.InitContextData()
 	factory := taskchain.NewTaskContextFactory()
