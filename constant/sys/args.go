@@ -9,4 +9,7 @@ const (
 	GenerationResponseChannelBuffer = 100
 	// GenerateQueryRetryLimit 查询rpc返回值最大次数
 	GenerateQueryRetryLimit = 10
+
+	// GzipCompress 压缩方式为Gzip
+	GzipCompress = 1
 )

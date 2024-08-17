@@ -70,6 +70,8 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, ask *dto.As
 
 	//TODO 异步数据缓存
 
+	// TODO 接入消息队列
+
 	//按理来说 上面的taskContext == factory.TaskContext 但是下面再赋值一下比较稳妥一点
 	taskContext = factory.TaskContext
 	if taskContext.Exception {

@@ -16,7 +16,8 @@ type Chat struct {
 }
 
 type Record struct {
-	RecordId        int             `json:"record_id"`
+	//ChatId int `json:"chat_id"`
+	//RecordId        int             `json:"record_id"`
 	ChatAsks        *ChatAsk        `json:"chat_asks"`
 	ChatGenerations *ChatGeneration `json:"chat_generations"`
 	//Weights         float64
@@ -24,19 +25,17 @@ type Record struct {
 
 // ChatAsk 一次问题
 type ChatAsk struct {
-	RecordId int    `json:"record_id"`
-	ChatId   int    `json:"chat_id"`
-	Message  string `json:"message"`
-	BotId    int    `json:"bot_id" gorm:"-"`
-	Time     int64  `json:"time"`
+	//RecordId int    `json:"record_id"`
+	ChatId  int    `json:"chat_id,omitempty" gorm:"-"`
+	Message string `json:"message"`
+	BotId   int    `json:"bot_id,omitempty" gorm:"-"`
+	Time    int64  `json:"time"`
 }
 
 // ChatGeneration 一次生成
 type ChatGeneration struct {
-	RecordId int    `json:"record_id"`
-	ChatId   int    `json:"chat_id"`
-	Message  string `json:"message"`
-	Time     int64  `json:"time"`
+	Message string `json:"message"`
+	Time    int64  `json:"time"`
 }
 
 type ChatRepository interface {
@@ -54,6 +53,9 @@ type ChatRepository interface {
 	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
 	// DbGetHistory miss缓存 从DB中获取历史记录
 	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
+
+	// AsyncSaveHistory 异步保存历史记录
+	AsyncSaveHistory(ctx context.Context, chatId int, records *[]*Record) error
 
 	CacheGetGeneration(ctx context.Context, chatId int) (*GenerationResponse, error)
 	CacheDelGeneration(ctx context.Context, chatId int) error
