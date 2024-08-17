@@ -2,7 +2,6 @@ package domain
 
 import (
 	"SomersaultCloud/api/dto"
-	"SomersaultCloud/infrastructure/channel"
 	"context"
 )
 
@@ -56,7 +55,7 @@ type ChatRepository interface {
 	// DbGetHistory miss缓存 从DB中获取历史记录
 	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
 
-	CacheGetGeneration(ctx context.Context, chatId int) (*channel.GenerationResponse, error)
+	CacheGetGeneration(ctx context.Context, chatId int) (*GenerationResponse, error)
 	CacheDelGeneration(ctx context.Context, chatId int) error
 
 	CacheLuaLruPutHistory(ctx context.Context, k string, v string) error
