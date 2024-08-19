@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"SomersaultCloud/api/dto"
 	"context"
 )
 
@@ -65,5 +64,5 @@ type ChatRepository interface {
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
-	ContextChat(ctx context.Context, token string, ask *dto.AskDTO) (isSuccess bool, message ParsedResponse, code int)
+	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message ParsedResponse, code int)
 }
