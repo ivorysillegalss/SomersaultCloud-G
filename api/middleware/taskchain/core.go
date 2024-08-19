@@ -2,22 +2,21 @@ package taskchain
 
 import (
 	task2 "SomersaultCloud/constant/task"
-	"SomersaultCloud/task"
 	"github.com/thoas/go-funk"
 )
 
 type TaskContext struct {
-	BusinessType        string
-	BusinessCode        int
-	TaskContextData     *TaskContextData
+	BusinessType string
+	BusinessCode int
+	//TaskContextData     *TaskContextData
+	TaskContextData     TaskContextData
 	TData               any // 特定类型的数据
 	Exception           bool
 	TaskContextResponse *TaskContextResponse
 }
 
-// TaskContextData 此处定义责任链节点所使用的共同数据
-type TaskContextData struct {
-	*task.AskContextData
+type TaskContextData interface {
+	Data()
 }
 
 type TaskContextResponse struct {
