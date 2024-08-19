@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/db"
@@ -156,6 +157,6 @@ func (c *chatRepository) DbInsertNewChatId(ctx context.Context, userId int, botI
 	return
 }
 
-func NewChatRepository() domain.ChatRepository {
+func NewChatRepository(dbs *bootstrap.Databases) domain.ChatRepository {
 	return &chatRepository{redis: dbs.Redis, mysql: dbs.Mysql}
 }

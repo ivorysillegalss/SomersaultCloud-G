@@ -5,7 +5,6 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/request"
 	"SomersaultCloud/domain"
-	"SomersaultCloud/usecase"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -14,8 +13,8 @@ type ChatController struct {
 	chatUseCase domain.ChatUseCase
 }
 
-func NewChatController() *ChatController {
-	return &ChatController{chatUseCase: usecase.NewChatUseCase()}
+func NewChatController(useCase domain.ChatUseCase) *ChatController {
+	return &ChatController{chatUseCase: useCase}
 }
 
 func (cc *ChatController) InitNewChat(c *gin.Context) {

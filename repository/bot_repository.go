@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/domain"
@@ -43,6 +44,6 @@ func (b *botRepository) CacheGetMaxBotId(ctx context.Context) int {
 	return m
 }
 
-func NewBotRepository() domain.BotRepository {
+func NewBotRepository(dbs *bootstrap.Databases) domain.BotRepository {
 	return &botRepository{redis: dbs.Redis, mysql: dbs.Mysql}
 }
