@@ -3,32 +3,33 @@ package usecase
 import (
 	"SomersaultCloud/api/dto"
 	"SomersaultCloud/api/middleware/taskchain"
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	task2 "SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/internal/ioutil"
 	"SomersaultCloud/internal/tokenutil"
-	"SomersaultCloud/repository"
 	"SomersaultCloud/task"
 	"context"
 	"time"
 )
 
 type chatUseCase struct {
+	env            *bootstrap.Env
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
 	chatTask       task.AskTask
+	tokenUtil      *tokenutil.TokenUtil
 }
 
-func NewChatUseCase() domain.ChatUseCase {
-	chat := &chatUseCase{chatRepository: repository.NewChatRepository(), botRepository: repository.NewBotRepository()}
-	chat.chatTask = task.NewAskChatTask(chat.botRepository, chat.chatRepository)
+func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask) domain.ChatUseCase {
+	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct}
 	return chat
 }
 
 func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(env.ContextTimeout))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(c.env.ContextTimeout))
 	defer cancel()
 
 	script, err := ioutil.LoadLuaScript("lua/increment.lua")
@@ -41,7 +42,7 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 		return common.FalseInt
 	}
 
-	id, err := tokenutil.DecodeToId(token)
+	id, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
 		return common.FalseInt
 	}
@@ -54,7 +55,7 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 func (c *chatUseCase) ContextChat(ctx context.Context, token string, ask *dto.AskDTO) (isSuccess bool, message domain.ParsedResponse, code int) {
 	chatTask := c.chatTask
 
-	userId, err := tokenutil.DecodeToId(token)
+	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
 		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
 	}

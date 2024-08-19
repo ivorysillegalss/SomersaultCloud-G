@@ -2,7 +2,7 @@ package redis
 
 import (
 	"SomersaultCloud/constant/common"
-	"SomersaultCloud/infrastructure/lru"
+	//"SomersaultCloud/infrastructure/lru"
 	"context"
 	"encoding/json"
 	"errors"
@@ -37,7 +37,7 @@ type Client interface {
 	IsEmpty(err error) bool
 
 	// Lru 此调用方式不太合理 哪有从redis里面调用lru的 有也是从lru里面调用redis实现
-	Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru
+	//Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru
 }
 
 type redisClient struct {
@@ -159,6 +159,6 @@ func NewRedisApplication(addr string, password string) *InitRedisApplication {
 	}
 }
 
-func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru {
-	return lru.NewLru(maxCapacity, dataType, r)
-}
+//func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru {
+//	return lru.NewLru(maxCapacity, dataType, r)
+//}

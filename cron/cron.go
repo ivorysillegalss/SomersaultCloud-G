@@ -1,8 +1,8 @@
 package cron
 
 import (
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/domain"
-	"SomersaultCloud/repository"
 	"context"
 	"fmt"
 	"time"
@@ -12,13 +12,14 @@ import (
 
 // AsyncPoller 异步轮询chat的generation的函数 仅负责映射到map中 程序启动则执行
 // TODO 线程池优化，进一步抽象至仓库中
-func (a *asyncService) AsyncPoller(resps <-chan *domain.GenerationResponse, stop <-chan bool) {
+func (a *asyncService) AsyncPoller() {
 	for {
 		select {
-		case task := <-resps:
+		case task := <-a.channels.RpcRes:
 			a.generationRepository.CacheLuaPollHistory(context.Background(), *task)
-		case <-stop:
+		case <-a.channels.Stop:
 			fmt.Println("Stopping async poller")
+			//TODO 打日志
 			return
 		default:
 			time.Sleep(500 * time.Millisecond) // 控制轮询频率
@@ -28,18 +29,14 @@ func (a *asyncService) AsyncPoller(resps <-chan *domain.GenerationResponse, stop
 
 type AsyncService interface {
 	// AsyncPoller 只读channel
-	AsyncPoller(resps <-chan *domain.GenerationResponse, stop <-chan bool)
+	AsyncPoller()
 }
 
 type asyncService struct {
 	generationRepository domain.GenerationRepository
+	channels             *bootstrap.Channels
 }
 
-func newAsyncService() AsyncService {
-	return &asyncService{generationRepository: repository.NewGenerationRepository()}
-}
-
-func Setup() {
-	service := newAsyncService()
-	go service.AsyncPoller(c.RpcRes, c.Stop) //只读
+func NewAsyncService(generationRepository domain.GenerationRepository, channels *bootstrap.Channels) AsyncService {
+	return &asyncService{generationRepository: generationRepository, channels: channels}
 }

@@ -3,6 +3,7 @@ package task
 import (
 	"SomersaultCloud/api/dto"
 	"SomersaultCloud/api/middleware/taskchain"
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
@@ -22,6 +23,13 @@ import (
 type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
+	env            *bootstrap.Env
+	channels       *bootstrap.Channels
+	poolFactory    *bootstrap.PoolsFactory
+}
+
+func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels) AskTask {
+	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch}
 }
 
 type AskContextData struct {
@@ -124,7 +132,7 @@ func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
 
 func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
 	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
-	executor := handler.NewLanguageModelExecutor(0)
+	executor := handler.NewLanguageModelExecutor(c.env, c.channels, 0)
 
 	tc.TaskContextData.executor = executor
 	tc.TaskContextData.HistoryMessage = executor.AssemblePrompt(tc.TaskContextData)
@@ -146,7 +154,7 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 		defer wg.Done()
 		tc.TaskContextData.executor.Execute(tc.TaskContextData)
 	}
-	config := poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
+	config := c.poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
 	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
 
 	err := config.Invoke(t)
@@ -199,8 +207,4 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 		tc.InterruptExecute(task.RespParedError)
 	}
 	tc.TaskContextData.ParsedResponse = resp
-}
-
-func NewAskChatTask(botRepository domain.BotRepository, chatRepository domain.ChatRepository) AskTask {
-	return &ChatAskTask{chatRepository: chatRepository, botRepository: botRepository}
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"SomersaultCloud/api/middleware/taskchain"
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
@@ -13,16 +14,16 @@ import (
 	"net/http"
 )
 
-func NewLanguageModelExecutor(id int) domain.LanguageModelExecutor {
-	return &OpenaiChatLanguageChatModelExecutor{}
+func NewLanguageModelExecutor(env *bootstrap.Env, channels *bootstrap.Channels, id int) domain.LanguageModelExecutor {
+	return &OpenaiChatLanguageChatModelExecutor{env: env, res: channels}
 }
 
-func newOpenaiChatLanguageChatModelRequest(message *[]domain.Message, model string) *openaiChatLanguageChatModelRequest {
-	return &openaiChatLanguageChatModelRequest{
-		Message: *message,
-		Model:   model,
-	}
+type OpenaiChatLanguageChatModelExecutor struct {
+	env *bootstrap.Env
+	res *bootstrap.Channels
 }
+
+func (o *openaiChatLanguageChatModelRequest) Req() {}
 
 type openaiChatLanguageChatModelRequest struct {
 	Message []domain.Message `json:"messages"`
@@ -30,9 +31,11 @@ type openaiChatLanguageChatModelRequest struct {
 	//TODO 此处可丰富详细参数 见openai api doc
 }
 
-func (o *openaiChatLanguageChatModelRequest) Req() {}
-
-type OpenaiChatLanguageChatModelExecutor struct {
+func newOpenaiChatLanguageChatModelRequest(message *[]domain.Message, model string) *openaiChatLanguageChatModelRequest {
+	return &openaiChatLanguageChatModelRequest{
+		Message: *message,
+		Model:   model,
+	}
 }
 
 // AssemblePrompt 组装prompt
@@ -77,7 +80,7 @@ func (o OpenaiChatLanguageChatModelExecutor) EncodeReq(tc *taskchain.TaskContext
 		return nil
 	}
 
-	key := fmt.Sprintf("Bearer %s", env.ApiOpenaiSecretKey)
+	key := fmt.Sprintf("Bearer %s", o.env.ApiOpenaiSecretKey)
 	request.Header.Set("Authorization", key) // 请确保使用你自己的API密钥
 	request.Header.Set("Content-Type", "application/json")
 	return request
@@ -95,7 +98,7 @@ func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextDa
 
 	generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
 
-	rpcRes := res.RpcRes
+	rpcRes := o.res.RpcRes
 	if rpcRes == nil {
 		rpcRes = make(chan *domain.GenerationResponse, sys.GenerationResponseChannelBuffer)
 	}

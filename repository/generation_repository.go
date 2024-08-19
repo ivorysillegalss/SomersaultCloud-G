@@ -28,6 +28,6 @@ func (g generationRepository) CacheLuaPollHistory(ctx context.Context, generatio
 	}
 }
 
-func NewGenerationRepository() domain.GenerationRepository {
-	return &generationRepository{rcl: dbs.Redis}
+func NewGenerationRepository(client redis.Client) domain.GenerationRepository {
+	return &generationRepository{rcl: client}
 }
