@@ -32,35 +32,21 @@ func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstra
 	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch}
 }
 
-func (a *AskContextData) Data() {
-}
-
-type AskContextData struct {
-	ChatId         int
-	userId         int
-	message        string
-	botId          int
-	History        *[]*domain.Record
-	Prompt         string
-	Model          string
-	HistoryMessage *[]domain.Message
-	executor       domain.LanguageModelExecutor
-	Conn           domain.ConnectionConfig
-	Resp           domain.GenerationResponse
-	ParsedResponse domain.ParsedResponse
-}
-
-func (c *ChatAskTask) InitContextData() *taskchain.TaskContext {
+func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
+	userId := args[0].(int)
+	botId := args[1].(int)
+	chatId := args[2].(int)
+	message := args[3].(string)
 	return &taskchain.TaskContext{
 		BusinessType:    task.ExecuteChatAskType,
 		BusinessCode:    task.ExecuteChatAskCode,
-		TaskContextData: &AskContextData{},
+		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message},
 	}
 }
 
 func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 
-	data := tc.TaskContextData.(*AskContextData)
+	data := tc.TaskContextData.(*domain.AskContextData)
 
 	askDTO := tc.TData.(dto.AskDTO)
 	ask := askDTO.Ask
@@ -74,16 +60,16 @@ func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 		return
 	}
 
-	data.botId = ask.BotId
+	data.BotId = ask.BotId
 	data.ChatId = ask.ChatId
-	data.userId = askDTO.UserId
-	data.message = ask.Message
+	data.UserId = askDTO.UserId
+	data.Message = ask.Message
 }
 
 // GetHistoryTask 2情况 判断是否存在缓存 hit拿缓存 miss则db
 func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
-	data := tc.TaskContextData.(*AskContextData)
+	data := tc.TaskContextData.(*domain.AskContextData)
 
 	var history *[]*domain.Record
 	// 1. 缓存找
@@ -125,9 +111,9 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 func (c *ChatAskTask) GetBotTask(tc *taskchain.TaskContext) {
 
-	data := tc.TaskContextData.(*AskContextData)
+	data := tc.TaskContextData.(*domain.AskContextData)
 
-	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), data.botId)
+	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), data.BotId)
 	if funk.IsEmpty(botConfig) {
 		tc.InterruptExecute(task.BotRetrievalFailed)
 		return
@@ -144,12 +130,12 @@ func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
 
 func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
 
-	data := tc.TaskContextData.(*AskContextData)
+	data := tc.TaskContextData.(*domain.AskContextData)
 
 	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
 	executor := handler.NewLanguageModelExecutor(c.env, c.channels, 0)
 
-	data.executor = executor
+	data.Executor = executor
 	data.HistoryMessage = executor.AssemblePrompt(data)
 	//无需判空 因为第一次聊情况下就是没有历史记录的
 
@@ -164,13 +150,13 @@ func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
 
 func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 
-	data := tc.TaskContextData.(*AskContextData)
+	data := tc.TaskContextData.(*domain.AskContextData)
 
 	var wg sync.WaitGroup
 	//包装提交的任务
 	t := func(i interface{}) {
 		defer wg.Done()
-		data.executor.Execute(data)
+		data.Executor.Execute(data)
 	}
 	config := c.poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
 	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
@@ -186,7 +172,7 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 
 func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
-	data := tc.TaskContextData.(*AskContextData)
+	data := tc.TaskContextData.(*domain.AskContextData)
 
 	var generation *domain.GenerationResponse
 	//没查到的话有可能是没处理完 等个300ms再查
@@ -223,7 +209,7 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	//直到此处成功获取到resp对象
 	data.Resp = *generation
-	resp := data.executor.ParseResp(data)
+	resp := data.Executor.ParseResp(data)
 	if funk.IsEmpty(resp) {
 		tc.InterruptExecute(task.RespParedError)
 	}

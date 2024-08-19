@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"SomersaultCloud/api/dto"
 	"SomersaultCloud/api/middleware/taskchain"
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
@@ -52,20 +51,18 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	return chatId
 }
 
-func (c *chatUseCase) ContextChat(ctx context.Context, token string, ask *dto.AskDTO) (isSuccess bool, message domain.ParsedResponse, code int) {
+func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message domain.ParsedResponse, code int) {
 	chatTask := c.chatTask
 
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
 		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
 	}
-	ask.UserId = userId
 
 	//我他妈太优雅了
-	taskContext := chatTask.InitContextData()
+	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage)
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext
-	taskContext.TData = ask
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
 		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask)
 
@@ -78,7 +75,9 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, ask *dto.As
 	if taskContext.Exception {
 		return false, &domain.OpenAIParsedResponse{GenerateText: taskContext.TaskContextResponse.Message}, taskContext.TaskContextResponse.Code
 	}
-	parsedResponse := taskContext.TaskContextData.ParsedResponse
+	data := taskContext.TaskContextData.(*domain.AskContextData)
+	parsedResponse := data.ParsedResponse
+
 	response := parsedResponse.(*domain.OpenAIParsedResponse)
 	return true, response, task2.SuccessCode
 }

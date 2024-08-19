@@ -3,7 +3,7 @@ package task
 import "SomersaultCloud/api/middleware/taskchain"
 
 type AskTask interface {
-	InitContextData() *taskchain.TaskContext
+	InitContextData(args ...any) *taskchain.TaskContext
 	// PreCheckDataTask 数据的前置检查 & 组装TaskContextData对象
 	PreCheckDataTask(tc *taskchain.TaskContext)
 	// GetHistoryTask 从DB or Cache获取历史记录
