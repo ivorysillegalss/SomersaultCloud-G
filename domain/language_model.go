@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"SomersaultCloud/api/middleware/taskchain"
+	"SomersaultCloud/task"
 	"net/http"
 	"time"
 )
@@ -9,12 +9,12 @@ import (
 // 目前思路：所有模型的所有任一请求方式 都需要实现下方languagemodel
 // 但是同一个厂商的不同请求方式 eg 文生文 or 文生图 可以将他的请求参数综合
 type LanguageModelExecutor interface {
-	AssemblePrompt(tc *taskchain.TaskContextData) *[]Message
-	EncodeReq(tc *taskchain.TaskContextData) *http.Request
+	AssemblePrompt(tc *task.AskContextData) *[]Message
+	EncodeReq(tc *task.AskContextData) *http.Request
 	// ConfigureProxy 非必实现 根据api是否被墙
-	ConfigureProxy(tc *taskchain.TaskContextData) *http.Client
-	Execute(tc *taskchain.TaskContextData)
-	ParseResp(tc *taskchain.TaskContextData) ParsedResponse
+	ConfigureProxy(tc *task.AskContextData) *http.Client
+	Execute(tc *task.AskContextData)
+	ParseResp(tc *task.AskContextData) ParsedResponse
 }
 
 type ParsedResponse interface {

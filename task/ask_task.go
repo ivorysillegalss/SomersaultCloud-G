@@ -32,6 +32,9 @@ func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstra
 	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch}
 }
 
+func (a *AskContextData) Data() {
+}
+
 type AskContextData struct {
 	ChatId         int
 	userId         int
@@ -51,11 +54,14 @@ func (c *ChatAskTask) InitContextData() *taskchain.TaskContext {
 	return &taskchain.TaskContext{
 		BusinessType:    task.ExecuteChatAskType,
 		BusinessCode:    task.ExecuteChatAskCode,
-		TaskContextData: &taskchain.TaskContextData{AskContextData: &AskContextData{}},
+		TaskContextData: &AskContextData{},
 	}
 }
 
 func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
+
+	data := tc.TaskContextData.(*AskContextData)
+
 	askDTO := tc.TData.(dto.AskDTO)
 	ask := askDTO.Ask
 	//TODO 运行前redis加缓存
@@ -68,17 +74,20 @@ func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 		return
 	}
 
-	tc.TaskContextData.botId = ask.BotId
-	tc.TaskContextData.ChatId = ask.ChatId
-	tc.TaskContextData.userId = askDTO.UserId
-	tc.TaskContextData.message = ask.Message
+	data.botId = ask.BotId
+	data.ChatId = ask.ChatId
+	data.userId = askDTO.UserId
+	data.message = ask.Message
 }
 
 // GetHistoryTask 2情况 判断是否存在缓存 hit拿缓存 miss则db
 func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
+
+	data := tc.TaskContextData.(*AskContextData)
+
 	var history *[]*domain.Record
 	// 1. 缓存找
-	history, isCache, err := c.chatRepository.CacheGetHistory(context.Background(), tc.TaskContextData.ChatId)
+	history, isCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId)
 	if err != nil {
 		tc.InterruptExecute(task.HistoryRetrievalFailed)
 		return
@@ -87,7 +96,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录，实现数据流式更新后可取消
 	if isCache {
-		history, err = c.chatRepository.DbGetHistory(context.Background(), tc.TaskContextData.ChatId)
+		history, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId)
 		if err != nil {
 			tc.InterruptExecute(task.HistoryRetrievalFailed)
 			return
@@ -106,23 +115,26 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 		return
 	}
 
-	err = c.chatRepository.CacheLuaLruPutHistory(context.Background(), cache.ChatHistory+common.Infix+strconv.Itoa(tc.TaskContextData.ChatId), string(jsonHistory))
+	err = c.chatRepository.CacheLuaLruPutHistory(context.Background(), cache.ChatHistory+common.Infix+strconv.Itoa(data.ChatId), string(jsonHistory))
 	if err != nil {
 		//TODO 存缓存失败 记录日志 无需打断链子 (还没接入日志)
 	}
 
-	tc.TaskContextData.History = history
+	data.History = history
 }
 
 func (c *ChatAskTask) GetBotTask(tc *taskchain.TaskContext) {
-	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), tc.TaskContextData.botId)
+
+	data := tc.TaskContextData.(*AskContextData)
+
+	botConfig := c.botRepository.CacheGetBotConfig(context.Background(), data.botId)
 	if funk.IsEmpty(botConfig) {
 		tc.InterruptExecute(task.BotRetrievalFailed)
 		return
 	}
 
-	tc.TaskContextData.Prompt = botConfig.InitPrompt
-	tc.TaskContextData.Model = botConfig.Model
+	data.Prompt = botConfig.InitPrompt
+	data.Model = botConfig.Model
 }
 
 func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
@@ -131,28 +143,34 @@ func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
 }
 
 func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
+
+	data := tc.TaskContextData.(*AskContextData)
+
 	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
 	executor := handler.NewLanguageModelExecutor(c.env, c.channels, 0)
 
-	tc.TaskContextData.executor = executor
-	tc.TaskContextData.HistoryMessage = executor.AssemblePrompt(tc.TaskContextData)
+	data.executor = executor
+	data.HistoryMessage = executor.AssemblePrompt(data)
 	//无需判空 因为第一次聊情况下就是没有历史记录的
 
-	request := executor.EncodeReq(tc.TaskContextData)
+	request := executor.EncodeReq(data)
 	if funk.IsEmpty(request) {
 		tc.InterruptExecute(task.ReqDataMarshalFailed)
 		return
 	}
-	client := executor.ConfigureProxy(tc.TaskContextData)
-	tc.TaskContextData.Conn = *domain.NewConnection(client, request)
+	client := executor.ConfigureProxy(data)
+	data.Conn = *domain.NewConnection(client, request)
 }
 
 func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
+
+	data := tc.TaskContextData.(*AskContextData)
+
 	var wg sync.WaitGroup
 	//包装提交的任务
 	t := func(i interface{}) {
 		defer wg.Done()
-		tc.TaskContextData.executor.Execute(tc.TaskContextData)
+		data.executor.Execute(data)
 	}
 	config := c.poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
 	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
@@ -167,13 +185,16 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 }
 
 func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
+
+	data := tc.TaskContextData.(*AskContextData)
+
 	var generation *domain.GenerationResponse
 	//没查到的话有可能是没处理完 等个300ms再查
 	//循环查询最多10次 超过则宣布失败
 	for i := 0; i < sys.GenerateQueryRetryLimit; i++ {
 		if funk.IsEmpty(generation) {
 			//轮询等待
-			g, err := c.chatRepository.CacheGetGeneration(context.Background(), tc.TaskContextData.ChatId)
+			g, err := c.chatRepository.CacheGetGeneration(context.Background(), data.ChatId)
 			if err != nil {
 				tc.InterruptExecute(task.ReqParsedError)
 				return
@@ -193,7 +214,7 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 		return
 	} else {
 		//旁路缓存思想 如果缓存获取成功删掉他 防止短时间内 生成内容未覆盖就读到上次的generation
-		err := c.chatRepository.CacheDelGeneration(context.Background(), tc.TaskContextData.ChatId)
+		err := c.chatRepository.CacheDelGeneration(context.Background(), data.ChatId)
 		if err != nil {
 			tc.InterruptExecute(task.ChatGenerationDelError)
 			return
@@ -201,10 +222,10 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	}
 
 	//直到此处成功获取到resp对象
-	tc.TaskContextData.Resp = *generation
-	resp := tc.TaskContextData.executor.ParseResp(tc.TaskContextData)
+	data.Resp = *generation
+	resp := data.executor.ParseResp(data)
 	if funk.IsEmpty(resp) {
 		tc.InterruptExecute(task.RespParedError)
 	}
-	tc.TaskContextData.ParsedResponse = resp
+	data.ParsedResponse = resp
 }

@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"SomersaultCloud/api/middleware/taskchain"
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/internal/requtil"
+	"SomersaultCloud/task"
 	"bytes"
 	"fmt"
 	"github.com/goccy/go-json"
@@ -42,7 +42,7 @@ func newOpenaiChatLanguageChatModelRequest(message *[]domain.Message, model stri
 // TODO 这个架构上或许可以改进 现在每调用一次都需要 转5次消息格式
 //
 //	一思路是将他转成哈希
-func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *taskchain.TaskContextData) *[]domain.Message {
+func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *task.AskContextData) *[]domain.Message {
 	var msgs []domain.Message
 	historyChat := *tc.History
 	var i float64
@@ -68,7 +68,7 @@ func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *taskchain.TaskCo
 	return &msgs
 }
 
-func (o OpenaiChatLanguageChatModelExecutor) EncodeReq(tc *taskchain.TaskContextData) *http.Request {
+func (o OpenaiChatLanguageChatModelExecutor) EncodeReq(tc *task.AskContextData) *http.Request {
 
 	jsonData, err := json.Marshal(newOpenaiChatLanguageChatModelRequest(tc.HistoryMessage, tc.Model))
 	if err != nil {
@@ -86,12 +86,12 @@ func (o OpenaiChatLanguageChatModelExecutor) EncodeReq(tc *taskchain.TaskContext
 	return request
 }
 
-func (o OpenaiChatLanguageChatModelExecutor) ConfigureProxy(tc *taskchain.TaskContextData) *http.Client {
+func (o OpenaiChatLanguageChatModelExecutor) ConfigureProxy(tc *task.AskContextData) *http.Client {
 	return requtil.SetProxy()
 }
 
 // TODO 接入rabbitMQ
-func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextData) {
+func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *task.AskContextData) {
 	conn := tc.Conn
 	response, err := conn.Client.Do(conn.Request)
 	defer response.Body.Close()
@@ -107,7 +107,7 @@ func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *taskchain.TaskContextDa
 
 // ParseResp 关于
 // go-channel方案 设计一个异步线程 始终轮询rpcRes channel  并将轮询所得结果存到map当中 此处只需要GET MAP就可以了
-func (o OpenaiChatLanguageChatModelExecutor) ParseResp(tc *taskchain.TaskContextData) domain.ParsedResponse {
+func (o OpenaiChatLanguageChatModelExecutor) ParseResp(tc *task.AskContextData) domain.ParsedResponse {
 	resp := tc.Resp
 	body, err := io.ReadAll(resp.Resp.Body)
 	if err != nil {
