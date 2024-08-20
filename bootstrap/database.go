@@ -95,3 +95,9 @@ func CloseMongoDBConnection(client mongo.Client) {
 
 	log.Println("Connection to MongoDB closed.")
 }
+
+func NewDatabases(env *Env) *Databases {
+	return &Databases{
+		Redis: NewRedisDatabase(env),
+	}
+}

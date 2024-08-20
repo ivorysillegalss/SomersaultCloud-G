@@ -1,24 +1,18 @@
 package route
 
 import (
-	"time"
-
-	"SomersaultCloud/api/middleware"
 	"SomersaultCloud/bootstrap"
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(env *bootstrap.Env, timeout time.Duration, db bootstrap.Databases, gin *gin.Engine) {
-	publicRouter := gin.Group("")
+func Setup(c *bootstrap.Controllers, e bootstrap.Executor) *gin.Engine {
+	r := gin.Default()
+
+	publicRouter := r.Group("")
 	// All Public APIs
-	NewChatRouter(publicRouter)
+	RegisterChatRouter(publicRouter, c.ChatController)
 
-	protectedRouter := gin.Group("")
-
-	// Middleware to verify AccessToken
-	protectedRouter.Use(middleware.JwtAuthMiddleware(env.AccessTokenSecret))
-
-	// All Private APIs
-	//NewProfileRouter(env, timeout, db, protectedRouter)
-	//NewTaskRouter(env, timeout, db, protectedRouter)
+	//Cron start
+	e.SetupCron()
+	return r
 }

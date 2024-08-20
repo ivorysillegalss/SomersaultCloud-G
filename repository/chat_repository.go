@@ -1,13 +1,16 @@
 package repository
 
 import (
+	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/db"
+	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/lru"
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/redis"
+	"SomersaultCloud/internal/compressutil"
 	"context"
 	"encoding/json"
 	"strconv"
@@ -57,6 +60,62 @@ func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (histo
 	return &h, false, nil
 }
 
+func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, records *[]*domain.Record) error {
+	history, err := c.DbGetHistory(ctx, chatId)
+	if err != nil {
+		return err
+	}
+
+	*history = append(*history, *records...)
+
+	marshal, err := compressutil.NewCompress(sys.GzipCompress).CompressData(*history)
+	if err != nil {
+		return err
+	}
+	//TODO 使用序列化压缩
+
+	if err != nil {
+		return err
+	}
+
+	err = c.mysql.Gorm().Table("chat_re").Where("chat_id = ?", chatId).Update("data", marshal).Error
+	return err
+}
+
+func (c *chatRepository) CacheGetGeneration(ctx context.Context, chatId int) (*domain.GenerationResponse, error) {
+	hGet, err := c.redis.HGet(ctx, cache.ChatGenerationExpired, strconv.Itoa(chatId))
+	if c.redis.IsEmpty(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	s := hGet.(string)
+	keyExpiredTTL, _ := strconv.Atoi(s)
+	currentTime := int(time.Now().Unix())
+
+	var resAny any
+	if currentTime > keyExpiredTTL {
+		return nil, nil
+	} else {
+		resAny, _ = c.redis.HGet(ctx, cache.ChatGeneration, strconv.Itoa(chatId))
+	}
+
+	resStr := resAny.(string)
+	var res domain.GenerationResponse
+	err = json.Unmarshal([]byte(resStr), &res)
+
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *chatRepository) CacheDelGeneration(ctx context.Context, chatId int) error {
+	return c.redis.Del(ctx, cache.ChatGeneration+common.Infix+strconv.Itoa(chatId))
+}
+
 func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, k string, v string) error {
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
 	err := newLru.Add(ctx, k, v)
@@ -76,7 +135,7 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 		return nil, err
 	}
 
-	err := json.Unmarshal([]byte(data), &h)
+	err := compressutil.NewCompress(sys.GzipCompress).DecompressData([]byte(data), &h)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +157,6 @@ func (c *chatRepository) DbInsertNewChatId(ctx context.Context, userId int, botI
 	return
 }
 
-func NewChatRepository() domain.ChatRepository {
+func NewChatRepository(dbs *bootstrap.Databases) domain.ChatRepository {
 	return &chatRepository{redis: dbs.Redis, mysql: dbs.Mysql}
 }

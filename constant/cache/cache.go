@@ -19,4 +19,10 @@ const (
 	ContextLruMaxCapacity = 5
 	// LruPrefix LRU前缀缓存
 	LruPrefix = "lru"
+	// ChatGeneration chat的生成缓存
+	ChatGeneration = "chatGeneration"
+	// ChatGenerationExpired chat生成缓存时间 配合lua脚本设定HSet单键DDL
+	ChatGenerationExpired = "chatGenerationExpired"
+	// ChatGenerationTTL 生成缓存时间
+	ChatGenerationTTL = 5
 )

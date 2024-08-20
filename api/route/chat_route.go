@@ -5,8 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewChatRouter(group *gin.RouterGroup) {
-	chatController := controller.NewChatController()
+func RegisterChatRouter(group *gin.RouterGroup, cc *controller.ChatController) {
 	chatGroup := group.Group("/chat")
-	chatGroup.POST("/init", chatController.InitNewChat)
+	chatGroup.POST("/init", cc.InitNewChat)
 }

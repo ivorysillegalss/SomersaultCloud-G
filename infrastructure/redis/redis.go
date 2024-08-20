@@ -2,7 +2,7 @@ package redis
 
 import (
 	"SomersaultCloud/constant/common"
-	"SomersaultCloud/infrastructure/lru"
+	//"SomersaultCloud/infrastructure/lru"
 	"context"
 	"encoding/json"
 	"errors"
@@ -26,13 +26,18 @@ type Client interface {
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
 	GetStruct(ctx context.Context, k string, targetStruct any) error
 
+	HSet(ctx context.Context, k string, v ...any) error
+	HGet(ctx context.Context, k string, field string) (any, error)
+
+	Del(ctx context.Context, k string) error
+
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
 	ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error
 
 	IsEmpty(err error) bool
 
 	// Lru 此调用方式不太合理 哪有从redis里面调用lru的 有也是从lru里面调用redis实现
-	Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru
+	//Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru
 }
 
 type redisClient struct {
@@ -111,6 +116,19 @@ func (r *redisClient) LRem(ctx context.Context, k string, count int, v any) (int
 	return r.rcl.LRem(ctx, k, int64(count), v).Result()
 }
 
+// HSet 支持批量添加 但是kv必须成对出现
+func (r *redisClient) HSet(ctx context.Context, k string, v ...any) error {
+	return r.rcl.HSet(ctx, k, v).Err()
+}
+
+func (r *redisClient) HGet(ctx context.Context, k string, field string) (any, error) {
+	return r.rcl.HGet(ctx, k, field).Result()
+}
+
+func (r *redisClient) Del(ctx context.Context, k string) error {
+	return r.rcl.Del(ctx, k).Err()
+}
+
 // ExecuteLuaScript 执行lua脚本 保证操作原子性
 func (r *redisClient) ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error) {
 	result, err := r.rcl.Eval(ctx, luaScript, []string{k}).Result()
@@ -141,6 +159,6 @@ func NewRedisApplication(addr string, password string) *InitRedisApplication {
 	}
 }
 
-func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru {
-	return lru.NewLru(maxCapacity, dataType, r)
-}
+//func (r *redisClient) Lru(ctx context.Context, maxCapacity int, dataType int) lru.Lru {
+//	return lru.NewLru(maxCapacity, dataType, r)
+//}

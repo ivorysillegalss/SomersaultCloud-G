@@ -2,6 +2,8 @@ package dto
 
 import "SomersaultCloud/domain"
 
+//import "SomersaultCloud/domain"
+
 // InitDTO 初始化映射
 type InitDTO struct {
 	UserId int `json:"user_id"`
@@ -18,6 +20,8 @@ type ExecuteBotDTO struct {
 
 // AskDTO 这个映射类是问题的映射类
 type AskDTO struct {
+	ChatId     int             `json:"chat_id"`
+	BotId      int             `json:"bot_id"`
 	Ask        *domain.ChatAsk `json:"ask"`
 	UserId     int             `json:"user_id"`
 	Adjustment bool            `json:"adjustment"`

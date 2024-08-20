@@ -10,9 +10,19 @@ const (
 	ExecutingCode    = 1
 	ExecutingMessage = "责任链执行中"
 
+	NoneNode = "没节点怎么执行老铁"
+
 	InvalidDataFormatMessage = "消息格式错误"
 	InvalidDataMarshal       = "数据转码错误"
 	HistoryRetrievalFailed   = "历史记录调取失败"
 	BotRetrievalFailed       = "机器人相关信息调取失败"
 	ReqDataMarshalFailed     = "请求序列化失败"
+	ReqUploadError           = "请求上传失败"
+	ReqParsedError           = "请求转码失败"
+	ReqCatchError            = "请求获取失败"
+	ChatGenerationDelError   = "删除生成缓存失败"
+	RespParedError           = "生成内容转码失败"
+
+	ExecuteChatAskType = "ExecuteChatAsk"
+	ExecuteChatAskCode = 10
 )
