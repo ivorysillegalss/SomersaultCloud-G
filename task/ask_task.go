@@ -83,8 +83,8 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 		} else {
 			// 截取数据
-			if len(*history) >= common.HistoryDefaultWeight {
-				*history = (*history)[:common.HistoryDefaultWeight]
+			if len(*history) >= cache.HistoryDefaultWeight {
+				*history = (*history)[:cache.HistoryDefaultWeight]
 			}
 
 			// 2.1 回写缓存 (把从DB拿到的回写缓存 维护热点数据)

@@ -19,6 +19,8 @@ const (
 
 	// ContextLruMaxCapacity 历史记录LRU窗口默认大小
 	ContextLruMaxCapacity = 5
+	// HistoryDefaultWeight 单chat历史记录默认存储记录大小
+	HistoryDefaultWeight = 5
 	// LruPrefix LRU前缀缓存
 	LruPrefix = "lru"
 	// ChatGeneration chat的生成缓存

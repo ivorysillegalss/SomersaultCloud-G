@@ -22,8 +22,7 @@ var (
 )
 
 const (
-	RecordNotFoundError  = "record not found"
-	HistoryDefaultWeight = 5
+	RecordNotFoundError = "record not found"
 	// SystemRole 系统角色
 	SystemRole = "system"
 	// UserRole 用户角色
