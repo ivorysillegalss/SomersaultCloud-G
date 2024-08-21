@@ -19,7 +19,7 @@ type botRepository struct {
 
 func (b *botRepository) CacheGetBotHistory(ctx context.Context, chatId int) *[]*domain.Record {
 	var a []*domain.Record
-	err := b.redis.GetStruct(ctx, cache.ChatHistory+strconv.Itoa(chatId), a)
+	err := b.redis.GetStruct(ctx, cache.ChatHistoryScore+strconv.Itoa(chatId), a)
 	if err != nil {
 		return nil
 	}

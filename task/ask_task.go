@@ -90,8 +90,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 			// 2.1 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
 			//TODO 目前架构下，chat一次请求回写两次缓存，可优化，取消此次回写
 			go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
-				cache.ChatHistory+common.Infix+strconv.Itoa(data.ChatId), data.History)
-
+				cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId), data.History, data.ChatId)
 		}
 	}
 
@@ -201,16 +200,17 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	}
 
 	//回写缓存
-	c.chatRepository.CacheLuaLruPutHistory(
+	go c.chatRepository.CacheLuaLruPutHistory(
 		context.Background(),
-		cache.ChatHistory+common.Infix+strconv.Itoa(data.ChatId),
+		cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
 		data.History,
 		data.Message,
 		generationText,
+		data.ChatId,
 	)
 
 	//回写db
-	c.chatRepository.AsyncSaveHistory(
+	go c.chatRepository.AsyncSaveHistory(
 		context.Background(),
 		data.ChatId,
 		data.Message,

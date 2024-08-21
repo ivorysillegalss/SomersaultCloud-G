@@ -28,7 +28,7 @@ func NewLru(maxCapacity int, dataType int, middleware any) Lru {
 // Lru 接口定义
 type Lru interface {
 	List(ctx context.Context, k string) ([]string, error)
-	Add(ctx context.Context, k, value string) error
+	Add(ctx context.Context, k, value string) (error, int)
 	Remove(ctx context.Context, k string, v string) error
 	isExist(ctx context.Context, k string, member string) bool
 	//Get(ctx context.Context, field string) (string, error)
@@ -54,10 +54,14 @@ func (r *redisLuaLruZSet) List(ctx context.Context, k string) ([]string, error) 
 	return r.rcl.LRange(ctx, k, 0, -1)
 }
 
-func (r *redisLuaLruZSet) Add(ctx context.Context, key, value string) error {
-	luaScript, err := ioutil.LoadLuaScript("infrastructure/lru/lua/zsetlru.lua")
-	err = r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
-	return err
+func (r *redisLuaLruZSet) Add(ctx context.Context, key, value string) (error, int) {
+	luaScript, _ := ioutil.LoadLuaScript("infrastructure/lru/lua/zsetlru.lua")
+	err, retValue := r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
+	if err != nil {
+		return err, common.FalseInt
+	}
+
+	return nil, retValue[0].(int)
 }
 
 // redisLuaLruList List实现类型
@@ -103,8 +107,11 @@ func (r *redisLuaLruList) List(ctx context.Context, k string) ([]string, error) 
 	return r.rcl.LRange(ctx, k, 0, -1)
 }
 
-func (r *redisLuaLruList) Add(ctx context.Context, key, value string) error {
-	luaScript, err := ioutil.LoadLuaScript("lua/listlru.lua")
-	err = r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
-	return err
+func (r *redisLuaLruList) Add(ctx context.Context, key, value string) (error, int) {
+	luaScript, _ := ioutil.LoadLuaScript("infrastructure/lru/lua/listlru.lua")
+	err, retValue := r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
+	if err != nil {
+		return err, common.FalseInt
+	}
+	return nil, retValue[0].(int)
 }

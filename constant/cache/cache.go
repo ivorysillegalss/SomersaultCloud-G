@@ -5,7 +5,9 @@ const (
 	NewestChatIdKey = "newestChatId"
 	// BotConfig 模型相关配置
 	BotConfig = "botConfig"
-	// ChatHistory 历史记录
+	// ChatHistoryScore 历史记录LRU权重
+	ChatHistoryScore = "chatHistoryLruScore"
+	// ChatHistory 历史记录缓存前缀
 	ChatHistory = "chatHistory"
 	// MaxBotId 最大的BotId 用于判断数据是否合法
 	MaxBotId = "maxBotId"

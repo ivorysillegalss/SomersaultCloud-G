@@ -34,7 +34,7 @@ type Client interface {
 	Del(ctx context.Context, k string) error
 
 	ExecuteLuaScript(ctx context.Context, luaScript string, k string) (any, error)
-	ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error
+	ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) (err error, retValue []any)
 
 	IsEmpty(err error) bool
 
@@ -140,9 +140,19 @@ func (r *redisClient) ExecuteLuaScript(ctx context.Context, luaScript string, k 
 	return result, err
 }
 
-func (r *redisClient) ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) error {
-	_, err := r.rcl.Eval(ctx, luaScript, keys, args).Result()
-	return err
+func (r *redisClient) ExecuteArgsLuaScript(ctx context.Context, luaScript string, keys []string, args ...interface{}) (err error, retValue []any) {
+	res, err := r.rcl.Eval(ctx, luaScript, keys, args).Result()
+	if err != nil {
+		return err, nil
+	}
+
+	// 如果 result 是一个切片，直接返回
+	if res, ok := res.([]interface{}); ok {
+		return err, res
+	}
+
+	// 否则，将 result 包装为切片并返回
+	return err, []interface{}{res}
 }
 
 func (r *redisClient) IsEmpty(err error) bool {
