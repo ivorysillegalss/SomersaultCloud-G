@@ -52,9 +52,8 @@ func (c *chatRepository) CacheLuaInsertNewChatId(ctx context.Context, luaScript 
 
 func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (history *[]*domain.Record, isCache bool, isErr error) {
 	var h []*domain.Record
-	//TODO
 	v, err := c.redis.Get(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId))
-	_ = jsoniter.Unmarshal([]byte(v), h)
+	_ = jsoniter.Unmarshal([]byte(v), &h)
 	if c.redis.IsEmpty(err) {
 		return nil, true, nil
 	}
@@ -71,7 +70,7 @@ func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askTe
 		ChatGenerations: &domain.ChatGeneration{Message: generationText},
 	}
 	var records []*domain.Record
-	records = make([]*domain.Record, 1)
+	records = make([]*domain.Record, 0)
 	records = append(records, r)
 
 	history, err := c.DbGetHistory(ctx, chatId)
@@ -80,7 +79,11 @@ func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askTe
 		panic(err)
 	}
 
-	*history = append(*history, records...)
+	if funk.NotEmpty(history) {
+		*history = append(*history, records...)
+	} else {
+		history = &records
+	}
 
 	marshal, err := compressutil.NewCompress(sys.GzipCompress).CompressData(*history)
 	if err != nil {
@@ -138,8 +141,19 @@ func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey s
 	if err2 != nil {
 		//TODO 打日志
 	}
+
+	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
+	if err2 != nil {
+		//TODO 打日志
+	}
+
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
-	err := newLru.Add(ctx, cacheKey, marshalToString)
+	//返回最老的一个元素
+	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
+	if funk.NotEqual(oldest, common.FalseInt) || funk.NotEqual(oldest, common.ZeroInt) {
+		//证明有元素被移除了
+		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+	}
 	return err
 }
 
@@ -158,8 +172,19 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 	if err2 != nil {
 		//TODO 打日志
 	}
+
+	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
+	if err2 != nil {
+		//TODO 打日志
+	}
+
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
-	err := newLru.Add(ctx, cacheKey, marshalToString)
+	//返回最老的一个元素
+	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
+	if !(funk.Equal(oldest, common.FalseInt) || funk.Equal(oldest, common.ZeroInt)) {
+		//证明有元素被移除了
+		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+	}
 	return err
 }
 
@@ -177,18 +202,11 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 		return nil, err
 	}
 
-	//TODO 这个该类型可优化
-	var res string
-	err := jsoniter.Unmarshal(data[0], &res)
-	if err != nil {
-		return nil, err
-	}
-
-	if funk.Equal(res, db.DefaultData) {
+	if funk.IsEmpty(data[0]) {
 		return nil, nil
 	}
 
-	err = compressutil.NewCompress(sys.GzipCompress).DecompressData(data[0], &h)
+	err := compressutil.NewCompress(sys.GzipCompress).DecompressData(data[0], &h)
 	if err != nil {
 		return nil, err
 	}

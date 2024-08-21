@@ -30,7 +30,7 @@ func (g generationRepository) CacheLuaPollHistory(ctx context.Context, generatio
 	//TODO json包有问题？为什么明明不是空的序列化出来是空的。
 	//http.response不可以序列化
 
-	err = g.rcl.ExecuteArgsLuaScript(context.Background(), script, []string{cache.ChatGeneration, cache.ChatGenerationExpired}, strconv.Itoa(generationResp.ChatId), marshal, cache.ChatGenerationTTL)
+	err, _ = g.rcl.ExecuteArgsLuaScript(context.Background(), script, []string{cache.ChatGeneration, cache.ChatGenerationExpired}, strconv.Itoa(generationResp.ChatId), marshal, cache.ChatGenerationTTL)
 	if err != nil {
 		//同上 TODO 打日志
 	}

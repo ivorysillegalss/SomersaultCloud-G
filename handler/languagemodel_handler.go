@@ -48,7 +48,7 @@ func newOpenaiChatLanguageChatModelRequest(message *[]domain.Message, model stri
 func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *domain.AskContextData) *[]domain.Message {
 	var msgs []domain.Message
 	historyChat := *tc.History
-	var i float64
+	var i int
 	i = 0
 	first := &domain.Message{
 		Role:    common.SystemRole,
@@ -56,15 +56,15 @@ func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *domain.AskContex
 	}
 	msgs = append(msgs, *first)
 	if funk.NotEmpty(historyChat) {
-		for i < common.HistoryDefaultWeight {
+		for i < funk.MinInt([]int{len(historyChat), common.HistoryDefaultWeight}) {
 			user := &domain.Message{
 				Role:    common.UserRole,
-				Content: historyChat[int(i)].ChatAsks.Message,
+				Content: historyChat[i].ChatAsks.Message,
 			}
 			msgs = append(msgs, *user)
 			asst := &domain.Message{
 				Role:    common.GPTRole,
-				Content: historyChat[int(i)].ChatGenerations.Message,
+				Content: historyChat[i].ChatGenerations.Message,
 			}
 			msgs = append(msgs, *asst)
 			i++

@@ -61,6 +61,7 @@ type ChatRepository interface {
 	// CacheLuaLruPutHistory 这个是在生成完毕后 回写完整
 	CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*Record, askText string, generationText string, chatId int) error
 
+	//由于http.response对象不可序列化 转为inmemory存储
 	MemoryGetGeneration(ctx context.Context, chatId int) *GenerationResponse
 	CacheGetGeneration(ctx context.Context, chatId int) (*GenerationResponse, error)
 	MemoryDelGeneration(ctx context.Context, chatId int)

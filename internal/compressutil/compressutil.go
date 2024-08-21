@@ -28,7 +28,12 @@ func (g GzipCompress) CompressData(data any) ([]byte, error) {
 
 	// gzip 压缩
 	var buf bytes.Buffer
-	gzipWriter := gzip.NewWriter(&buf)
+	gzipWriter, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	defer gzipWriter.Close()
+
+	if err != nil {
+		return common.ZeroByte, err
+	}
 	_, err = gzipWriter.Write(marshal)
 	if err != nil {
 		return common.ZeroByte, err
@@ -54,7 +59,7 @@ func (g GzipCompress) DecompressData(data []byte, v any) error {
 		return err
 	}
 
-	err = jsoniter.Unmarshal(decompressedData, &v)
+	err = jsoniter.Unmarshal(decompressedData, v)
 	return nil
 }
 
