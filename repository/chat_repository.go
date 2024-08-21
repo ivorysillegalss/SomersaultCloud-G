@@ -19,7 +19,6 @@ import (
 	"time"
 )
 
-// 多例是正确的吗？
 type chatRepository struct {
 	redis redis.Client
 	mysql mysql.Client
@@ -163,12 +162,15 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 		ChatAsks:        &domain.ChatAsk{Message: askText},
 		ChatGenerations: &domain.ChatGeneration{Message: generationText},
 	}
-	var records []*domain.Record
-	records = make([]*domain.Record, 0)
-	records = append(records, r)
-	*history = append(*history, records...)
 
-	marshalToString, err2 := jsoniter.MarshalToString(history)
+	a := append(*history, r)
+
+	//控制单chat内最大缓存数量
+	if len(a) > cache.HistoryDefaultWeight {
+		a = a[len(a)-cache.HistoryDefaultWeight:]
+	}
+
+	marshalToString, err2 := jsoniter.MarshalToString(a)
 	if err2 != nil {
 		//TODO 打日志
 	}

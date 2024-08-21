@@ -2,6 +2,7 @@ package handler
 
 import (
 	"SomersaultCloud/bootstrap"
+	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
@@ -56,7 +57,7 @@ func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *domain.AskContex
 	}
 	msgs = append(msgs, *first)
 	if funk.NotEmpty(historyChat) {
-		for i < funk.MinInt([]int{len(historyChat), common.HistoryDefaultWeight}) {
+		for i < funk.MinInt([]int{len(historyChat), cache.HistoryDefaultWeight}) {
 			user := &domain.Message{
 				Role:    common.UserRole,
 				Content: historyChat[i].ChatAsks.Message,
