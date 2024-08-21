@@ -7,9 +7,9 @@ type DefaultExecutor struct {
 }
 
 func (d *DefaultExecutor) SetupCron() {
-	d.asyncService.AsyncPoller()
+	go d.asyncService.AsyncPoller()
 }
 
-func NewExecutor() bootstrap.Executor {
-	return &DefaultExecutor{}
+func NewExecutor(service AsyncService) bootstrap.Executor {
+	return &DefaultExecutor{asyncService: service}
 }

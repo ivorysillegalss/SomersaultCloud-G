@@ -23,13 +23,8 @@ type Env struct {
 	MysqlUser     string `mapstructure:"MYSQL_DB_USER"`
 	MysqlPassword string `mapstructure:"MYSQL_DB_PASSWORD"`
 	MysqlHost     string `mapstructure:"MYSQL_DB_HOST"`
-	MysqlPort     string `mapstructure:"MYSQL_DB_PORT"`
+	MysqlPort     int    `mapstructure:"MYSQL_DB_PORT"`
 	MysqlDB       string `mapstructure:"MYSQL_DB_DB"`
-
-	AccessTokenExpiryHour  int    `mapstructure:"ACCESS_TOKEN_EXPIRY_HOUR"`
-	RefreshTokenExpiryHour int    `mapstructure:"REFRESH_TOKEN_EXPIRY_HOUR"`
-	AccessTokenSecret      string `mapstructure:"ACCESS_TOKEN_SECRET"`
-	RefreshTokenSecret     string `mapstructure:"REFRESH_TOKEN_SECRET"`
 
 	JwtSecretToken     string `mapstructure:"JWT_SECRET_KEY"`
 	ApiOpenaiSecretKey string `mapstructure:"API_OPENAI_SECRET_KEY"`

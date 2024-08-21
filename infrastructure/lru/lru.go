@@ -9,16 +9,16 @@ import (
 )
 
 func NewLru(maxCapacity int, dataType int, middleware any) Lru {
-	var redisClient *redis.Client
-	if client, ok := middleware.(*redis.Client); ok {
+	var redisClient redis.Client
+	if client, ok := middleware.(redis.Client); ok {
 		redisClient = client
 	}
 
 	if dataType == cache.RedisListType {
-		return &redisLuaLruList{maxCapacity: maxCapacity, rcl: *redisClient}
+		return &redisLuaLruList{maxCapacity: maxCapacity, rcl: redisClient}
 	}
 	if dataType == cache.RedisZSetType {
-		return &redisLuaLruZSet{maxCapacity: maxCapacity, rcl: *redisClient}
+		return &redisLuaLruZSet{maxCapacity: maxCapacity, rcl: redisClient}
 	}
 
 	//TODO 丰富实现的数据类型 eg InMemoryLru
@@ -55,7 +55,7 @@ func (r *redisLuaLruZSet) List(ctx context.Context, k string) ([]string, error) 
 }
 
 func (r *redisLuaLruZSet) Add(ctx context.Context, key, value string) error {
-	luaScript, err := ioutil.LoadLuaScript("lua/zsetlru.lua")
+	luaScript, err := ioutil.LoadLuaScript("infrastructure/lru/lua/zsetlru.lua")
 	err = r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
 	return err
 }

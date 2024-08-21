@@ -26,7 +26,7 @@ type Databases struct {
 
 // PoolsFactory k为pool业务号 v为poll详细配置信息
 type PoolsFactory struct {
-	Pools map[int]pool.Pool
+	Pools map[int]*pool.Pool
 }
 
 type Channels struct {

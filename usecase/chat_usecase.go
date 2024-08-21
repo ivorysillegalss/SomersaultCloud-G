@@ -11,7 +11,6 @@ import (
 	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/task"
 	"context"
-	"time"
 )
 
 type chatUseCase struct {
@@ -22,16 +21,16 @@ type chatUseCase struct {
 	tokenUtil      *tokenutil.TokenUtil
 }
 
-func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask) domain.ChatUseCase {
-	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct}
+func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil) domain.ChatUseCase {
+	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util}
 	return chat
 }
 
 func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(c.env.ContextTimeout))
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(ctx, time.Duration(c.env.ContextTimeout))
+	//defer cancel()
 
-	script, err := ioutil.LoadLuaScript("lua/increment.lua")
+	script, err := ioutil.LoadLuaScript("usecase/lua/increment.lua")
 	if err != nil {
 		return common.FalseInt
 	}
@@ -65,7 +64,7 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 	factory.TaskContext = taskContext
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
 		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask)
-
+	factory.ExecuteChain()
 	//TODO 异步数据缓存
 
 	// TODO 接入消息队列

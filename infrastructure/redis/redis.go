@@ -24,6 +24,8 @@ type Client interface {
 
 	SetStruct(ctx context.Context, k string, vStruct any) error
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
+
+	//TODO 这个方法有问题！！！！
 	GetStruct(ctx context.Context, k string, targetStruct any) error
 
 	HSet(ctx context.Context, k string, v ...any) error

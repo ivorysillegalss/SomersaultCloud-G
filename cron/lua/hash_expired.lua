@@ -4,6 +4,9 @@ local field = ARGV[1]
 local value = ARGV[2]
 local ttl = tonumber(ARGV[3])
 
+-- 切换到单命令复制模式 保证一致性
+redis.replicate_commands()
+
 -- 存储字段和值
 redis.call("HSET", hash_key, field, value)
 

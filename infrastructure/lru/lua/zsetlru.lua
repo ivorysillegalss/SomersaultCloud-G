@@ -1,3 +1,5 @@
+redis.replicate_commands()
+
 local zset_key = KEYS[1]
 local member = ARGV[1]
 local max_items = tonumber(ARGV[2])

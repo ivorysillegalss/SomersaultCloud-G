@@ -12,6 +12,7 @@ type Chat struct {
 	LastUpdateTime int64      `json:"last_update_time"`
 	IsDelete       bool       `json:"is_delete"`
 	Records        *[]*Record `json:"records" gorm:"-"`
+	Data           []byte     `json:"data"`
 }
 
 type Record struct {
@@ -54,12 +55,16 @@ type ChatRepository interface {
 	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
 
 	// AsyncSaveHistory 异步保存历史记录
-	AsyncSaveHistory(ctx context.Context, chatId int, records *[]*Record) error
+	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string)
+	// CacheLuaLruResetHistory 这个是在生成前 把从DB拿到的数据回写缓存 维护热点数据
+	CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*Record, chatId int) error
+	// CacheLuaLruPutHistory 这个是在生成完毕后 回写完整
+	CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*Record, askText string, generationText string, chatId int) error
 
+	MemoryGetGeneration(ctx context.Context, chatId int) *GenerationResponse
 	CacheGetGeneration(ctx context.Context, chatId int) (*GenerationResponse, error)
+	MemoryDelGeneration(ctx context.Context, chatId int)
 	CacheDelGeneration(ctx context.Context, chatId int) error
-
-	CacheLuaLruPutHistory(ctx context.Context, k string, v string) error
 }
 
 type ChatUseCase interface {
