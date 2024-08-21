@@ -14,7 +14,7 @@ type LanguageModelExecutor interface {
 	// ConfigureProxy 非必实现 根据api是否被墙
 	ConfigureProxy(tc *AskContextData) *http.Client
 	Execute(tc *AskContextData)
-	ParseResp(tc *AskContextData) ParsedResponse
+	ParseResp(tc *AskContextData) (ParsedResponse, string)
 }
 
 type ParsedResponse interface {

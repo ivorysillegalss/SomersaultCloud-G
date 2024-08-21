@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/goccy/go-json"
+	"github.com/thoas/go-funk"
 	"io"
 	"net/http"
 )
@@ -25,15 +26,18 @@ type OpenaiChatLanguageChatModelExecutor struct {
 func (o *openaiChatLanguageChatModelRequest) Req() {}
 
 type openaiChatLanguageChatModelRequest struct {
-	Message []domain.Message `json:"messages"`
-	Model   string           `json:"model"`
+	MaxToken int              `json:"max_tokens"`
+	Message  []domain.Message `json:"messages"`
+	Model    string           `json:"model"`
 	//TODO 此处可丰富详细参数 见openai api doc
 }
 
 func newOpenaiChatLanguageChatModelRequest(message *[]domain.Message, model string) *openaiChatLanguageChatModelRequest {
 	return &openaiChatLanguageChatModelRequest{
+		MaxToken: 1000,
+		Model:    model,
+		//Model:   "gpt-3.5-turbo-0125",
 		Message: *message,
-		Model:   model,
 	}
 }
 
@@ -46,22 +50,29 @@ func (o OpenaiChatLanguageChatModelExecutor) AssemblePrompt(tc *domain.AskContex
 	historyChat := *tc.History
 	var i float64
 	i = 0
-	for i < common.HistoryDefaultWeight {
-		user := &domain.Message{
-			Role:    common.UserRole,
-			Content: historyChat[int(i)].ChatAsks.Message,
+	first := &domain.Message{
+		Role:    common.SystemRole,
+		Content: tc.Prompt,
+	}
+	msgs = append(msgs, *first)
+	if funk.NotEmpty(historyChat) {
+		for i < common.HistoryDefaultWeight {
+			user := &domain.Message{
+				Role:    common.UserRole,
+				Content: historyChat[int(i)].ChatAsks.Message,
+			}
+			msgs = append(msgs, *user)
+			asst := &domain.Message{
+				Role:    common.GPTRole,
+				Content: historyChat[int(i)].ChatGenerations.Message,
+			}
+			msgs = append(msgs, *asst)
+			i++
 		}
-		msgs = append(msgs, *user)
-		asst := &domain.Message{
-			Role:    common.GPTRole,
-			Content: historyChat[int(i)].ChatGenerations.Message,
-		}
-		msgs = append(msgs, *asst)
-		i++
 	}
 	last := &domain.Message{
 		Role:    common.UserRole,
-		Content: tc.Prompt,
+		Content: tc.Message,
 	}
 	msgs = append(msgs, *last)
 	return &msgs
@@ -92,8 +103,9 @@ func (o OpenaiChatLanguageChatModelExecutor) ConfigureProxy(tc *domain.AskContex
 // TODO 接入rabbitMQ
 func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *domain.AskContextData) {
 	conn := tc.Conn
+	//TODO generationResponse，格式可改此处关流
 	response, err := conn.Client.Do(conn.Request)
-	defer response.Body.Close()
+	//defer response.Body.Close()
 
 	generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
 
@@ -106,30 +118,30 @@ func (o OpenaiChatLanguageChatModelExecutor) Execute(tc *domain.AskContextData) 
 
 // ParseResp 关于
 // go-channel方案 设计一个异步线程 始终轮询rpcRes channel  并将轮询所得结果存到map当中 此处只需要GET MAP就可以了
-func (o OpenaiChatLanguageChatModelExecutor) ParseResp(tc *domain.AskContextData) domain.ParsedResponse {
+func (o OpenaiChatLanguageChatModelExecutor) ParseResp(tc *domain.AskContextData) (domain.ParsedResponse, string) {
 	resp := tc.Resp
 	body, err := io.ReadAll(resp.Resp.Body)
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 
 	var data *ChatCompletionResponse
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 	//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 
 	args := data.Choices
 	if args == nil {
-		return nil
+		return nil, ""
 	}
 	textBody := args[0]
 	generateMessage := domain.OpenAIParsedResponse{
 		GenerateText: textBody.Message.Content,
 		FinishReason: textBody.FinishReason,
 	}
-	return &generateMessage
+	return &generateMessage, textBody.Message.Content
 }
 
 type ChatCompletionResponse struct {

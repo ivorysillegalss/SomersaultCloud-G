@@ -24,5 +24,5 @@ const (
 	// ChatGenerationExpired chat生成缓存时间 配合lua脚本设定HSet单键DDL
 	ChatGenerationExpired = "chatGenerationExpired"
 	// ChatGenerationTTL 生成缓存时间
-	ChatGenerationTTL = 5
+	ChatGenerationTTL = 500
 )

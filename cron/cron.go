@@ -14,9 +14,12 @@ import (
 // TODO 线程池优化，进一步抽象至仓库中
 func (a *asyncService) AsyncPoller() {
 	for {
+		fmt.Println("-----------------------------------------")
 		select {
 		case task := <-a.channels.RpcRes:
-			a.generationRepository.CacheLuaPollHistory(context.Background(), *task)
+			fmt.Println("get -----------------------------------")
+			//a.generationRepository.CacheLuaPollHistory(context.Background(), *task)
+			a.generationRepository.InMemoryPollHistory(context.Background(), task)
 		case <-a.channels.Stop:
 			fmt.Println("Stopping async poller")
 			//TODO 打日志

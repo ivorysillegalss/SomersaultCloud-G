@@ -17,6 +17,7 @@ import (
 
 var appSet = wire.NewSet(
 	bootstrap.NewEnv,
+	tokenutil.NewTokenUtil,
 	bootstrap.NewDatabases,
 	bootstrap.NewRedisDatabase,
 	bootstrap.NewMysqlDatabase,
@@ -29,16 +30,14 @@ var appSet = wire.NewSet(
 	repository.NewChatRepository,
 	repository.NewBotRepository,
 
-	cron.NewExecutor,
 	cron.NewAsyncService,
+	cron.NewExecutor,
 
 	usecase.NewChatUseCase,
 
 	task.NewAskChatTask,
 
 	controller.NewChatController,
-
-	tokenutil.NewTokenUtil,
 
 	wire.Struct(new(bootstrap.Application), "*"),
 )

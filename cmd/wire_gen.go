@@ -25,13 +25,16 @@ func InitializeApp() (*bootstrap.Application, error) {
 	databases := bootstrap.NewDatabases(env)
 	poolsFactory := bootstrap.NewPoolFactory()
 	channels := bootstrap.NewChannel()
+	generationRepository := repository.NewGenerationRepository(databases)
 	chatRepository := repository.NewChatRepository(databases)
 	botRepository := repository.NewBotRepository(databases)
-	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels)
-	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask)
+	util := tokenutil.NewTokenUtil(env)
+	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels, poolsFactory)
+	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, util)
 	chatController := controller.NewChatController(chatUseCase)
 	controllers := bootstrap.NewControllers(chatController)
-	executor := cron.NewExecutor()
+	service := cron.NewAsyncService(generationRepository, channels)
+	executor := cron.NewExecutor(service)
 	application := &bootstrap.Application{
 		Env:          env,
 		Databases:    databases,
@@ -45,4 +48,4 @@ func InitializeApp() (*bootstrap.Application, error) {
 
 // wire.go:
 
-var appSet = wire.NewSet(bootstrap.NewEnv, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewControllers, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, cron.NewExecutor, cron.NewAsyncService, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, tokenutil.NewTokenUtil, wire.Struct(new(bootstrap.Application), "*"))
+var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewControllers, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, cron.NewAsyncService, cron.NewExecutor, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, wire.Struct(new(bootstrap.Application), "*"))

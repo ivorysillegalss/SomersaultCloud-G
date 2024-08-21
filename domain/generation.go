@@ -21,5 +21,8 @@ func NewGenerationResponse(response *http.Response, chatId int, err error) *Gene
 }
 
 type GenerationRepository interface {
+	// CacheLuaPollHistory 由于htttp.response等字段不可序列化 暂且将消费缓存的缓冲map in memory
 	CacheLuaPollHistory(ctx context.Context, generationResp GenerationResponse)
+	// InMemoryPollHistory 内存存储
+	InMemoryPollHistory(ctx context.Context, response *GenerationResponse)
 }

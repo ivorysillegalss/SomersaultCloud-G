@@ -1,5 +1,8 @@
 FROM golang:1.19-alpine
 
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/STZ /etc/localtime &echo $TZ /etc/timezone
+
 RUN mkdir /app
 
 ADD . /app
