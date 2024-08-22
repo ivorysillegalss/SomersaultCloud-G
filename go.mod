@@ -10,8 +10,10 @@ require (
 	github.com/jinzhu/gorm v1.9.16
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.15.13
+	github.com/mattn/go-colorable v0.1.12
 	github.com/panjf2000/ants/v2 v2.10.0
 	github.com/redis/go-redis/v9 v9.6.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.14.0
 	github.com/thoas/go-funk v0.9.3
 	go.mongodb.org/mongo-driver v1.11.1
