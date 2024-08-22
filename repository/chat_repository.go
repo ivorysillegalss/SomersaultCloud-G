@@ -7,6 +7,7 @@ import (
 	"SomersaultCloud/constant/db"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/lru"
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/redis"
@@ -74,7 +75,7 @@ func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askTe
 
 	history, err := c.DbGetHistory(ctx, chatId)
 	if err != nil {
-		//TODO 打日志
+		log.GetJsonLogger().WithFields("async history", err.Error()).Warn("async history error")
 		panic(err)
 	}
 
@@ -138,12 +139,12 @@ func (c *chatRepository) MemoryDelGeneration(ctx context.Context, chatId int) {
 func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int) error {
 	marshalToString, err2 := jsoniter.MarshalToString(*history)
 	if err2 != nil {
-		//TODO 打日志
+		log.GetJsonLogger().WithFields("marshal", err2.Error()).Warn("reset history failed")
 	}
 
 	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
 	if err2 != nil {
-		//TODO 打日志
+		log.GetJsonLogger().WithFields("redis_set", err2.Error()).Warn("reset history failed")
 	}
 
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
@@ -172,13 +173,10 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 
 	marshalToString, err2 := jsoniter.MarshalToString(a)
 	if err2 != nil {
-		//TODO 打日志
+		log.GetJsonLogger().WithFields("marshal_res", err2.Error()).Warn("lru put history failed")
 	}
 
-	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
-	if err2 != nil {
-		//TODO 打日志
-	}
+	_ = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
 
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
 	//返回最老的一个元素
