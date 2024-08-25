@@ -102,3 +102,8 @@ func (l *Logger) Warn(msg string) {
 func (l *Logger) Error(msg string) {
 	l.logger.Error(msg)
 }
+
+// Fatal 级别的日志记录方法
+func (l *Logger) Fatal(msg string) {
+	l.logger.Fatal(msg)
+}

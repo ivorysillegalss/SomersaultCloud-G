@@ -19,10 +19,11 @@ type chatUseCase struct {
 	botRepository  domain.BotRepository
 	chatTask       task.AskTask
 	tokenUtil      *tokenutil.TokenUtil
+	chatEvent      domain.ChatEvent
 }
 
-func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil) domain.ChatUseCase {
-	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util}
+func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.ChatEvent) domain.ChatUseCase {
+	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce}
 	return chat
 }
 
@@ -44,8 +45,10 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	if err != nil {
 		return common.FalseInt
 	}
-	go c.chatRepository.DbInsertNewChatId(ctx, id, botId)
-	// TODO mq异步写入MYSQL
+
+	// 同样提供依赖mq or not
+	//go c.chatRepository.DbInsertNewChat(ctx, id, botId)
+	c.chatEvent.PublishDbNewChat(&domain.ChatStorageData{BotId: botId, UserId: id})
 
 	return chatId
 }

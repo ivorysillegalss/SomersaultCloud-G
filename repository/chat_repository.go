@@ -4,7 +4,7 @@ import (
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
-	"SomersaultCloud/constant/db"
+	"SomersaultCloud/constant/dao"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
@@ -214,12 +214,12 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 	return &h, nil
 }
 
-func (c *chatRepository) DbInsertNewChatId(ctx context.Context, userId int, botId int) {
-	marshal, _ := jsoniter.Marshal(db.DefaultData)
+func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
+	marshal, _ := jsoniter.Marshal(dao.DefaultData)
 	chat := &domain.Chat{
 		UserId:         userId,
 		BotId:          botId,
-		Title:          db.DefaultTitle,
+		Title:          dao.DefaultTitle,
 		LastUpdateTime: time.Now().Unix(),
 		IsDelete:       false,
 		Data:           marshal,

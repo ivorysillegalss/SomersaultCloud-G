@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"SomersaultCloud/api/controller"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/executor"
 	"SomersaultCloud/infrastructure/mongo"
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/pool"
@@ -15,7 +16,7 @@ type Application struct {
 	PoolsFactory *PoolsFactory
 	Channels     *Channels
 	Controllers  *Controllers
-	Executor     Executor
+	Executor     *Executor
 }
 
 type Databases struct {
@@ -38,8 +39,9 @@ type Controllers struct {
 	ChatController *controller.ChatController
 }
 
-type Executor interface {
-	SetupCron()
+type Executor struct {
+	CronExecutor    *executor.CronExecutor
+	ConsumeExecutor *executor.ConsumeExecutor
 }
 
 func (app *Application) CloseDBConnection() {
@@ -48,4 +50,11 @@ func (app *Application) CloseDBConnection() {
 
 func NewControllers(chatController *controller.ChatController) *Controllers {
 	return &Controllers{ChatController: chatController}
+}
+
+func NewExecutors(ce *executor.CronExecutor, cse *executor.ConsumeExecutor) *Executor {
+	return &Executor{
+		CronExecutor:    ce,
+		ConsumeExecutor: cse,
+	}
 }
