@@ -1,4 +1,4 @@
-package db
+package dao
 
 const (
 	// DefaultTitle 默认标题

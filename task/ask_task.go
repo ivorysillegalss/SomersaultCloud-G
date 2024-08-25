@@ -21,13 +21,14 @@ import (
 type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
+	chatEvent      domain.ChatEvent
 	env            *bootstrap.Env
 	channels       *bootstrap.Channels
 	poolFactory    *bootstrap.PoolsFactory
 }
 
-func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory) AskTask {
-	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch, poolFactory: p}
+func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory, ce domain.ChatEvent) AskTask {
+	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch, poolFactory: p, chatEvent: ce}
 }
 
 func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
@@ -194,28 +195,34 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	data.Resp = *generation
 	defer generation.Resp.Body.Close()
 
-	resp, generationText := data.Executor.ParseResp(data)
+	//直接go模式下未优化需generationText rabbit不用
+	//resp, generationText := data.Executor.ParseResp(data)
+
+	resp, _ := data.Executor.ParseResp(data)
+
 	if funk.IsEmpty(resp) {
 		tc.InterruptExecute(task.RespParedError)
 	}
 
-	//回写缓存
-	go c.chatRepository.CacheLuaLruPutHistory(
-		context.Background(),
-		cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
-		data.History,
-		data.Message,
-		generationText,
-		data.ChatId,
-	)
-
-	//回写db
-	go c.chatRepository.AsyncSaveHistory(
-		context.Background(),
-		data.ChatId,
-		data.Message,
-		generationText,
-	)
-
 	data.ParsedResponse = resp
+
+	//回写缓存  (可直接调用or交给rabbit------chatEvent板块)
+	c.chatEvent.PublishSaveCacheHistory(data)
+	//go c.chatRepository.CacheLuaLruPutHistory(
+	//	context.Background(),
+	//	cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
+	//	data.History,
+	//	data.Message,
+	//	generationText,
+	//	data.ChatId,
+	//)
+
+	//回写db  (可直接调用or交给rabbit------chatEvent板块)
+	c.chatEvent.PublishSaveDbHistory(data)
+	//go c.chatRepository.AsyncSaveHistory(
+	//	context.Background(),
+	//	data.ChatId,
+	//	data.Message,
+	//	generationText,
+	//)
 }

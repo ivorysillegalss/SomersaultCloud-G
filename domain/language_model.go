@@ -18,7 +18,7 @@ type LanguageModelExecutor interface {
 }
 
 type ParsedResponse interface {
-	parse()
+	GetGenerateText() string
 }
 
 type OpenAIParsedResponse struct {
@@ -26,7 +26,8 @@ type OpenAIParsedResponse struct {
 	FinishReason string
 }
 
-func (o *OpenAIParsedResponse) parse() {
+func (o *OpenAIParsedResponse) GetGenerateText() string {
+	return o.GenerateText
 }
 
 type LanguageModelRequest interface {

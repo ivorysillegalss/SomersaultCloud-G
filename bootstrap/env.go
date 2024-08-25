@@ -26,6 +26,11 @@ type Env struct {
 	MysqlPort     int    `mapstructure:"MYSQL_DB_PORT"`
 	MysqlDB       string `mapstructure:"MYSQL_DB_DB"`
 
+	RabbitmqUser     string `mapstructure:"RABBITMQ_USER"`
+	RabbitmqPassword string `mapstructure:"RABBITMQ_PASSWORD"`
+	RabbitmqAddr     string `mapstructure:"RABBITMQ_ADDR"`
+	RabbitmqPort     string `mapstructure:"RABBITMQ_PORT"`
+
 	JwtSecretToken     string `mapstructure:"JWT_SECRET_KEY"`
 	ApiOpenaiSecretKey string `mapstructure:"API_OPENAI_SECRET_KEY"`
 }

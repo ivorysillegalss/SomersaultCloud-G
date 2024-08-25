@@ -46,8 +46,8 @@ type ChatRepository interface {
 
 	// CacheLuaInsertNewChatId lua脚本保证高并发时获取chatId的一致性
 	CacheLuaInsertNewChatId(ctx context.Context, luaScript string, k string) (int, error)
-	// DbInsertNewChatId 异步使用 存入SQL持久化方法
-	DbInsertNewChatId(ctx context.Context, token int, id int)
+	// DbInsertNewChat 异步使用 存入SQL持久化方法
+	DbInsertNewChat(ctx context.Context, userId int, botId int)
 
 	// CacheGetHistory 从缓存中取出历史记录 存的时候确保最大条数 取时无需注意
 	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
@@ -71,4 +71,25 @@ type ChatRepository interface {
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
 	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message ParsedResponse, code int)
+}
+
+type ChatEvent interface {
+	//对repository中方法进行二次封装
+	DbPutHistory(b []byte) error
+	CachePutHistory(b []byte) error
+	DbNewChat(b []byte) error
+
+	PublishSaveDbHistory(data *AskContextData)
+	PublishSaveCacheHistory(data *AskContextData)
+	PublishDbNewChat(data *ChatStorageData)
+
+	AsyncConsumeDbHistory()
+	AsyncConsumeCacheHistory()
+	AsyncConsumeDbNewChat()
+}
+
+type ChatStorageData struct {
+	UserId int
+	ChatId int
+	BotId  int
 }

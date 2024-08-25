@@ -7,7 +7,9 @@ package main
 import (
 	"SomersaultCloud/api/controller"
 	"SomersaultCloud/bootstrap"
+	"SomersaultCloud/consume"
 	"SomersaultCloud/cron"
+	"SomersaultCloud/executor"
 	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/repository"
 	"SomersaultCloud/task"
@@ -24,14 +26,21 @@ var appSet = wire.NewSet(
 	bootstrap.NewMongoDatabase,
 	bootstrap.NewPoolFactory,
 	bootstrap.NewChannel,
+	bootstrap.NewRabbitConnection,
 	bootstrap.NewControllers,
+	bootstrap.NewExecutors,
 
 	repository.NewGenerationRepository,
 	repository.NewChatRepository,
 	repository.NewBotRepository,
 
-	cron.NewAsyncService,
-	cron.NewExecutor,
+	consume.NewChatEvent,
+	consume.NewMessageHandler,
+
+	cron.NewGenerationCron,
+
+	executor.NewCronExecutor,
+	executor.NewConsumeExecutor,
 
 	usecase.NewChatUseCase,
 
