@@ -10,9 +10,48 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "$PORT:$PORT"
+      - "3000:3000"
     depends_on:
-      - mongodb
+      - redis
+      - mysql
+      - rabbitmq
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: mini_gpt
+      MYSQL_USER:
+      MYSQL_PASSWORD:
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/mnesia
+      - rabbitmq_log:/var/log/rabbitmq
+
+volumes:
+  mysql_data:
+  rabbitmq_data:
+  rabbitmq_log:
 
 #  mongodb:
 #    image: mongo:6.0
