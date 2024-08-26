@@ -1,3 +1,5 @@
+redis.replicate_commands()
+
 local zset_key = KEYS[1]
 local member = ARGV[1]
 local max_items = tonumber(ARGV[2])
@@ -7,11 +9,17 @@ local timestamp = redis.call("TIME")
 local score = timestamp[1] + timestamp[2] / 1000000
 redis.call("ZADD", zset_key, score, member)
 
+local removed_member = nil
+
 -- 检查 ZSet 大小并移除最旧的元素
 local zset_size = redis.call("ZCARD", zset_key)
 if zset_size > max_items then
-    local oldest = redis.call("ZRANGE", zset_key, 0, 0)[1]
-    redis.call("ZREM", zset_key, oldest)
+    removed_member  = redis.call("ZRANGE", zset_key, 0, 0)[1]
+    redis.call("ZREM", zset_key, removed_member)
 end
 
-return "OK"
+if removed_member then
+    return removed_member
+else
+    return nil
+end

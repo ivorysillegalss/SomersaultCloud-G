@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(c *bootstrap.Controllers, e bootstrap.Executor) *gin.Engine {
+func Setup(c *bootstrap.Controllers, e *bootstrap.Executor) *gin.Engine {
 	r := gin.Default()
 
 	publicRouter := r.Group("")
@@ -13,6 +13,9 @@ func Setup(c *bootstrap.Controllers, e bootstrap.Executor) *gin.Engine {
 	RegisterChatRouter(publicRouter, c.ChatController)
 
 	//Cron start
-	e.SetupCron()
+	e.CronExecutor.SetupCron()
+	//Consume Start
+	e.ConsumeExecutor.SetupConsume()
+
 	return r
 }

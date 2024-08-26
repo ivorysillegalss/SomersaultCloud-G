@@ -99,5 +99,6 @@ func CloseMongoDBConnection(client mongo.Client) {
 func NewDatabases(env *Env) *Databases {
 	return &Databases{
 		Redis: NewRedisDatabase(env),
+		Mysql: NewMysqlDatabase(env),
 	}
 }

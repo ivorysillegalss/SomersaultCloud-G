@@ -4,20 +4,22 @@ import (
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
-	"SomersaultCloud/constant/db"
+	"SomersaultCloud/constant/dao"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/lru"
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/redis"
 	"SomersaultCloud/internal/compressutil"
 	"context"
 	"encoding/json"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/thoas/go-funk"
 	"strconv"
 	"time"
 )
 
-// 多例是正确的吗？
 type chatRepository struct {
 	redis redis.Client
 	mysql mysql.Client
@@ -45,41 +47,51 @@ func (c *chatRepository) CacheLuaInsertNewChatId(ctx context.Context, luaScript 
 	if err != nil {
 		return common.FalseInt, err
 	}
-	return res.(int), nil
+	return int(res.(int64)), nil
 }
 
 func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (history *[]*domain.Record, isCache bool, isErr error) {
 	var h []*domain.Record
-	err := c.redis.GetStruct(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), h)
+	v, err := c.redis.Get(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId))
+	_ = jsoniter.Unmarshal([]byte(v), &h)
 	if c.redis.IsEmpty(err) {
 		return nil, true, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, true, err
 	}
 	return &h, false, nil
 }
 
-func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, records *[]*domain.Record) error {
+func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string) {
+
+	r := &domain.Record{
+		ChatAsks:        &domain.ChatAsk{Message: askText},
+		ChatGenerations: &domain.ChatGeneration{Message: generationText},
+	}
+	var records []*domain.Record
+	records = make([]*domain.Record, 0)
+	records = append(records, r)
+
 	history, err := c.DbGetHistory(ctx, chatId)
 	if err != nil {
-		return err
+		log.GetJsonLogger().WithFields("async history", err.Error()).Warn("async history error")
+		panic(err)
 	}
 
-	*history = append(*history, *records...)
+	if funk.NotEmpty(history) {
+		*history = append(*history, records...)
+	} else {
+		history = &records
+	}
 
 	marshal, err := compressutil.NewCompress(sys.GzipCompress).CompressData(*history)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	//TODO 使用序列化压缩
-
-	if err != nil {
-		return err
+	if err = c.mysql.Gorm().Table("chat_re").Where("chat_id = ?", chatId).Update("data", marshal).Error; err != nil {
+		panic(err)
 	}
-
-	err = c.mysql.Gorm().Table("chat_re").Where("chat_id = ?", chatId).Update("data", marshal).Error
-	return err
 }
 
 func (c *chatRepository) CacheGetGeneration(ctx context.Context, chatId int) (*domain.GenerationResponse, error) {
@@ -112,13 +124,67 @@ func (c *chatRepository) CacheGetGeneration(ctx context.Context, chatId int) (*d
 	return &res, nil
 }
 
+func (c *chatRepository) MemoryGetGeneration(ctx context.Context, chatId int) *domain.GenerationResponse {
+	return chatGenerationMap[chatId]
+}
+
 func (c *chatRepository) CacheDelGeneration(ctx context.Context, chatId int) error {
 	return c.redis.Del(ctx, cache.ChatGeneration+common.Infix+strconv.Itoa(chatId))
 }
 
-func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, k string, v string) error {
+func (c *chatRepository) MemoryDelGeneration(ctx context.Context, chatId int) {
+	delete(chatGenerationMap, chatId)
+}
+
+func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int) error {
+	marshalToString, err2 := jsoniter.MarshalToString(*history)
+	if err2 != nil {
+		log.GetJsonLogger().WithFields("marshal", err2.Error()).Warn("reset history failed")
+	}
+
+	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
+	if err2 != nil {
+		log.GetJsonLogger().WithFields("redis_set", err2.Error()).Warn("reset history failed")
+	}
+
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
-	err := newLru.Add(ctx, k, v)
+	//返回最老的一个元素
+	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
+	if funk.NotEqual(oldest, common.FalseInt) || funk.NotEqual(oldest, common.ZeroInt) {
+		//证明有元素被移除了
+		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+	}
+	return err
+}
+
+func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, askText string, generationText string, chatId int) error {
+
+	r := &domain.Record{
+		ChatAsks:        &domain.ChatAsk{Message: askText},
+		ChatGenerations: &domain.ChatGeneration{Message: generationText},
+	}
+
+	a := append(*history, r)
+
+	//控制单chat内最大缓存数量
+	if len(a) > cache.HistoryDefaultWeight {
+		a = a[len(a)-cache.HistoryDefaultWeight:]
+	}
+
+	marshalToString, err2 := jsoniter.MarshalToString(a)
+	if err2 != nil {
+		log.GetJsonLogger().WithFields("marshal_res", err2.Error()).Warn("lru put history failed")
+	}
+
+	_ = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
+
+	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
+	//返回最老的一个元素
+	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
+	if !(funk.Equal(oldest, common.FalseInt) || funk.Equal(oldest, common.ZeroInt)) {
+		//证明有元素被移除了
+		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+	}
 	return err
 }
 
@@ -128,14 +194,19 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, k string, v 
 //	保证不出现大Key等 主要是为了提高查询效率
 func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*domain.Record, error) {
 	var h []*domain.Record
-	var data string
+	var data [][]byte
 
 	//pluck方法在不构建结构体的前提下 获取单个字段的值
-	if err := c.mysql.Gorm().Table("chat_re").Where("chat_id = ?", chatId).Pluck("data", data).Error; err != nil {
+	if err := c.mysql.Gorm().Table("chat_re").
+		Where("chat_id = ?", chatId).Pluck("data", &data).Error; err != nil {
 		return nil, err
 	}
 
-	err := compressutil.NewCompress(sys.GzipCompress).DecompressData([]byte(data), &h)
+	if funk.IsEmpty(data[0]) {
+		return nil, nil
+	}
+
+	err := compressutil.NewCompress(sys.GzipCompress).DecompressData(data[0], &h)
 	if err != nil {
 		return nil, err
 	}
@@ -143,13 +214,15 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 	return &h, nil
 }
 
-func (c *chatRepository) DbInsertNewChatId(ctx context.Context, userId int, botId int) {
+func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
+	marshal, _ := jsoniter.Marshal(dao.DefaultData)
 	chat := &domain.Chat{
 		UserId:         userId,
 		BotId:          botId,
-		Title:          db.DefaultTitle,
+		Title:          dao.DefaultTitle,
 		LastUpdateTime: time.Now().Unix(),
 		IsDelete:       false,
+		Data:           marshal,
 	}
 	if err := c.mysql.Gorm().Table("chat_re").Create(chat).Error; err != nil {
 		//TODO 异步 写入日志

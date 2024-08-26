@@ -5,7 +5,9 @@ const (
 	NewestChatIdKey = "newestChatId"
 	// BotConfig 模型相关配置
 	BotConfig = "botConfig"
-	// ChatHistory 历史记录
+	// ChatHistoryScore 历史记录LRU权重
+	ChatHistoryScore = "chatHistoryLruScore"
+	// ChatHistory 历史记录缓存前缀
 	ChatHistory = "chatHistory"
 	// MaxBotId 最大的BotId 用于判断数据是否合法
 	MaxBotId = "maxBotId"
@@ -17,6 +19,8 @@ const (
 
 	// ContextLruMaxCapacity 历史记录LRU窗口默认大小
 	ContextLruMaxCapacity = 5
+	// HistoryDefaultWeight 单chat历史记录默认存储记录大小
+	HistoryDefaultWeight = 5
 	// LruPrefix LRU前缀缓存
 	LruPrefix = "lru"
 	// ChatGeneration chat的生成缓存
@@ -24,5 +28,5 @@ const (
 	// ChatGenerationExpired chat生成缓存时间 配合lua脚本设定HSet单键DDL
 	ChatGenerationExpired = "chatGenerationExpired"
 	// ChatGenerationTTL 生成缓存时间
-	ChatGenerationTTL = 5
+	ChatGenerationTTL = 500
 )

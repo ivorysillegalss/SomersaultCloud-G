@@ -12,5 +12,6 @@ func main() {
 	defer app.CloseDBConnection()
 
 	setup := route.Setup(app.Controllers, app.Executor)
+	//gin.SetMode(gin.DebugMode)
 	setup.Run(app.Env.ServerAddress)
 }

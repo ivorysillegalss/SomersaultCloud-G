@@ -1,7 +1,6 @@
 package task
 
 import (
-	"SomersaultCloud/api/dto"
 	"SomersaultCloud/api/middleware/taskchain"
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
@@ -12,7 +11,6 @@ import (
 	"SomersaultCloud/handler"
 	"SomersaultCloud/internal/checkutil"
 	"context"
-	"encoding/json"
 	"github.com/thoas/go-funk"
 	"strconv"
 	"sync"
@@ -23,13 +21,14 @@ import (
 type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
+	chatEvent      domain.ChatEvent
 	env            *bootstrap.Env
 	channels       *bootstrap.Channels
 	poolFactory    *bootstrap.PoolsFactory
 }
 
-func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels) AskTask {
-	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch}
+func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory, ce domain.ChatEvent) AskTask {
+	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch, poolFactory: p, chatEvent: ce}
 }
 
 func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
@@ -47,23 +46,15 @@ func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
 func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 
 	data := tc.TaskContextData.(*domain.AskContextData)
-
-	askDTO := tc.TData.(dto.AskDTO)
-	ask := askDTO.Ask
 	//TODO 运行前redis加缓存
-	chatIdCheck := checkutil.IsLegalID(ask.ChatId, common.FalseInt, c.chatRepository.CacheGetNewestChatId(context.Background()))
-	botIdCheck := checkutil.IsLegalID(ask.BotId, common.FalseInt, c.botRepository.CacheGetMaxBotId(context.Background()))
-	message := ask.Message
+	chatIdCheck := checkutil.IsLegalID(data.ChatId, common.FalseInt, c.chatRepository.CacheGetNewestChatId(context.Background()))
+	botIdCheck := checkutil.IsLegalID(data.BotId, common.FalseInt, c.botRepository.CacheGetMaxBotId(context.Background()))
+	message := data.Message
 	msgCheck := funk.NotEmpty(message)
 	if !(msgCheck && chatIdCheck && botIdCheck) {
 		tc.InterruptExecute(task.InvalidDataFormatMessage)
 		return
 	}
-
-	data.BotId = ask.BotId
-	data.ChatId = ask.ChatId
-	data.UserId = askDTO.UserId
-	data.Message = ask.Message
 }
 
 // GetHistoryTask 2情况 判断是否存在缓存 hit拿缓存 miss则db
@@ -73,7 +64,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 	var history *[]*domain.Record
 	// 1. 缓存找
-	history, isCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId)
+	history, NotHaveCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId)
 	if err != nil {
 		tc.InterruptExecute(task.HistoryRetrievalFailed)
 		return
@@ -81,29 +72,27 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录，实现数据流式更新后可取消
-	if isCache {
+	if NotHaveCache {
 		history, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId)
 		if err != nil {
 			tc.InterruptExecute(task.HistoryRetrievalFailed)
 			return
 		}
 
-		// 截取数据
-		if len(*history) >= common.HistoryDefaultWeight {
-			*history = (*history)[:common.HistoryDefaultWeight]
+		if funk.IsEmpty(history) {
+			history = new([]*domain.Record)
+
+		} else {
+			// 截取数据
+			if len(*history) >= cache.HistoryDefaultWeight {
+				*history = (*history)[:cache.HistoryDefaultWeight]
+			}
+
+			// 2.1 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
+			//TODO 目前架构下，chat一次请求回写两次缓存，可优化，取消此次回写
+			go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
+				cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId), data.History, data.ChatId)
 		}
-	}
-
-	// 2.1 回写缓存
-	jsonHistory, err := json.Marshal(*history)
-	if err != nil {
-		tc.InterruptExecute(task.InvalidDataMarshal)
-		return
-	}
-
-	err = c.chatRepository.CacheLuaLruPutHistory(context.Background(), cache.ChatHistory+common.Infix+strconv.Itoa(data.ChatId), string(jsonHistory))
-	if err != nil {
-		//TODO 存缓存失败 记录日志 无需打断链子 (还没接入日志)
 	}
 
 	data.History = history
@@ -154,14 +143,16 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 
 	var wg sync.WaitGroup
 	//包装提交的任务
-	t := func(i interface{}) {
+	t := func() {
 		defer wg.Done()
 		data.Executor.Execute(data)
 	}
 	config := c.poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
 	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
+	wg.Add(1)
+	err := config.Submit(t)
 
-	err := config.Invoke(t)
+	//err := config.Invoke(t)
 	if err != nil {
 		tc.InterruptExecute(task.ReqUploadError)
 		return
@@ -180,14 +171,11 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	for i := 0; i < sys.GenerateQueryRetryLimit; i++ {
 		if funk.IsEmpty(generation) {
 			//轮询等待
-			g, err := c.chatRepository.CacheGetGeneration(context.Background(), data.ChatId)
-			if err != nil {
-				tc.InterruptExecute(task.ReqParsedError)
-				return
-			}
-
+			g := c.chatRepository.MemoryGetGeneration(context.Background(), data.ChatId)
 			generation = g
 			time.Sleep(600 * time.Millisecond)
+		} else {
+			break
 		}
 	}
 
@@ -200,18 +188,41 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 		return
 	} else {
 		//旁路缓存思想 如果缓存获取成功删掉他 防止短时间内 生成内容未覆盖就读到上次的generation
-		err := c.chatRepository.CacheDelGeneration(context.Background(), data.ChatId)
-		if err != nil {
-			tc.InterruptExecute(task.ChatGenerationDelError)
-			return
-		}
+		c.chatRepository.MemoryDelGeneration(context.Background(), data.ChatId)
 	}
 
-	//直到此处成功获取到resp对象
+	//直到此处成功获取到resp对象 此处关流
 	data.Resp = *generation
-	resp := data.Executor.ParseResp(data)
+	defer generation.Resp.Body.Close()
+
+	//直接go模式下未优化需generationText rabbit不用
+	//resp, generationText := data.Executor.ParseResp(data)
+
+	resp, _ := data.Executor.ParseResp(data)
+
 	if funk.IsEmpty(resp) {
 		tc.InterruptExecute(task.RespParedError)
 	}
+
 	data.ParsedResponse = resp
+
+	//回写缓存  (可直接调用or交给rabbit------chatEvent板块)
+	c.chatEvent.PublishSaveCacheHistory(data)
+	//go c.chatRepository.CacheLuaLruPutHistory(
+	//	context.Background(),
+	//	cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
+	//	data.History,
+	//	data.Message,
+	//	generationText,
+	//	data.ChatId,
+	//)
+
+	//回写db  (可直接调用or交给rabbit------chatEvent板块)
+	c.chatEvent.PublishSaveDbHistory(data)
+	//go c.chatRepository.AsyncSaveHistory(
+	//	context.Background(),
+	//	data.ChatId,
+	//	data.Message,
+	//	generationText,
+	//)
 }

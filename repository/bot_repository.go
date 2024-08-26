@@ -8,6 +8,7 @@ import (
 	"SomersaultCloud/infrastructure/mysql"
 	"SomersaultCloud/infrastructure/redis"
 	"context"
+	jsoniter "github.com/json-iterator/go"
 	"strconv"
 )
 
@@ -18,7 +19,7 @@ type botRepository struct {
 
 func (b *botRepository) CacheGetBotHistory(ctx context.Context, chatId int) *[]*domain.Record {
 	var a []*domain.Record
-	err := b.redis.GetStruct(ctx, cache.ChatHistory+strconv.Itoa(chatId), a)
+	err := b.redis.GetStruct(ctx, cache.ChatHistoryScore+strconv.Itoa(chatId), a)
 	if err != nil {
 		return nil
 	}
@@ -27,7 +28,12 @@ func (b *botRepository) CacheGetBotHistory(ctx context.Context, chatId int) *[]*
 
 func (b *botRepository) CacheGetBotConfig(ctx context.Context, botId int) *domain.BotConfig {
 	var a domain.BotConfig
-	err := b.redis.GetStruct(ctx, cache.BotConfig+strconv.Itoa(botId), a)
+	//err := b.redis.GetStruct(ctx, cache.BotConfig+strconv.Itoa(botId), a)
+	get, err := b.redis.Get(ctx, cache.BotConfig+strconv.Itoa(botId))
+	if err != nil {
+		return nil
+	}
+	err = jsoniter.Unmarshal([]byte(get), &a)
 	if err != nil {
 		return nil
 	}

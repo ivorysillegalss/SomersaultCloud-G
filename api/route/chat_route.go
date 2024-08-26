@@ -6,6 +6,7 @@ import (
 )
 
 func RegisterChatRouter(group *gin.RouterGroup, cc *controller.ChatController) {
-	chatGroup := group.Group("/chat")
+	chatGroup := group.Group("/context")
 	chatGroup.POST("/init", cc.InitNewChat)
+	chatGroup.POST("/call", cc.ContextChat)
 }

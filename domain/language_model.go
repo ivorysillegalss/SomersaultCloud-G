@@ -14,11 +14,11 @@ type LanguageModelExecutor interface {
 	// ConfigureProxy 非必实现 根据api是否被墙
 	ConfigureProxy(tc *AskContextData) *http.Client
 	Execute(tc *AskContextData)
-	ParseResp(tc *AskContextData) ParsedResponse
+	ParseResp(tc *AskContextData) (ParsedResponse, string)
 }
 
 type ParsedResponse interface {
-	parse()
+	GetGenerateText() string
 }
 
 type OpenAIParsedResponse struct {
@@ -26,7 +26,8 @@ type OpenAIParsedResponse struct {
 	FinishReason string
 }
 
-func (o *OpenAIParsedResponse) parse() {
+func (o *OpenAIParsedResponse) GetGenerateText() string {
+	return o.GenerateText
 }
 
 type LanguageModelRequest interface {

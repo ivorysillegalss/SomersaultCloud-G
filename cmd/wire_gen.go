@@ -9,7 +9,9 @@ package main
 import (
 	"SomersaultCloud/api/controller"
 	"SomersaultCloud/bootstrap"
+	"SomersaultCloud/consume"
 	"SomersaultCloud/cron"
+	"SomersaultCloud/executor"
 	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/repository"
 	"SomersaultCloud/task"
@@ -27,22 +29,30 @@ func InitializeApp() (*bootstrap.Application, error) {
 	channels := bootstrap.NewChannel()
 	chatRepository := repository.NewChatRepository(databases)
 	botRepository := repository.NewBotRepository(databases)
-	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels)
-	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask)
+	connection := bootstrap.NewRabbitConnection(env)
+	messageHandler := consume.NewMessageHandler(connection)
+	chatEvent := consume.NewChatEvent(chatRepository, messageHandler)
+	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels, poolsFactory, chatEvent)
+	tokenUtil := tokenutil.NewTokenUtil(env)
+	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, tokenUtil, chatEvent)
 	chatController := controller.NewChatController(chatUseCase)
 	controllers := bootstrap.NewControllers(chatController)
-	executor := cron.NewExecutor()
+	generationRepository := repository.NewGenerationRepository(databases)
+	generationCron := cron.NewGenerationCron(generationRepository, channels)
+	cronExecutor := executor.NewCronExecutor(generationCron)
+	consumeExecutor := executor.NewConsumeExecutor(chatEvent)
+	bootstrapExecutor := bootstrap.NewExecutors(cronExecutor, consumeExecutor)
 	application := &bootstrap.Application{
 		Env:          env,
 		Databases:    databases,
 		PoolsFactory: poolsFactory,
 		Channels:     channels,
 		Controllers:  controllers,
-		Executor:     executor,
+		Executor:     bootstrapExecutor,
 	}
 	return application, nil
 }
 
 // wire.go:
 
-var appSet = wire.NewSet(bootstrap.NewEnv, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewControllers, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, cron.NewExecutor, cron.NewAsyncService, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, tokenutil.NewTokenUtil, wire.Struct(new(bootstrap.Application), "*"))
+var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewChatEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, wire.Struct(new(bootstrap.Application), "*"))
