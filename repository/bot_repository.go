@@ -17,15 +17,6 @@ type botRepository struct {
 	mysql mysql.Client
 }
 
-func (b *botRepository) CacheGetBotHistory(ctx context.Context, chatId int) *[]*domain.Record {
-	var a []*domain.Record
-	err := b.redis.GetStruct(ctx, cache.ChatHistoryScore+strconv.Itoa(chatId), a)
-	if err != nil {
-		return nil
-	}
-	return &a
-}
-
 func (b *botRepository) CacheGetBotConfig(ctx context.Context, botId int) *domain.BotConfig {
 	var a domain.BotConfig
 	//err := b.redis.GetStruct(ctx, cache.BotConfig+strconv.Itoa(botId), a)

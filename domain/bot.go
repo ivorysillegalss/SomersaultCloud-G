@@ -28,7 +28,6 @@ type BotConfig struct {
 
 type BotRepository interface {
 	CacheGetBotConfig(ctx context.Context, botId int) *BotConfig
-	CacheGetBotHistory(ctx context.Context, chatId int) *[]*Record
 	CacheGetMaxBotId(ctx context.Context) int
 }
 

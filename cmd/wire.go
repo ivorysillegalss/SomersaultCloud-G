@@ -47,6 +47,7 @@ var appSet = wire.NewSet(
 	task.NewAskChatTask,
 
 	controller.NewChatController,
+	controller.NewHistoryMessageController,
 
 	wire.Struct(new(bootstrap.Application), "*"),
 )

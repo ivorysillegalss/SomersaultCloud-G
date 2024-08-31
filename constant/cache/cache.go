@@ -29,4 +29,6 @@ const (
 	ChatGenerationExpired = "chatGenerationExpired"
 	// ChatGenerationTTL 生成缓存时间
 	ChatGenerationTTL = 500
+	// ChatHistoryTitle 历史记标题前缀
+	ChatHistoryTitle = "chatHistoryTitle"
 )
