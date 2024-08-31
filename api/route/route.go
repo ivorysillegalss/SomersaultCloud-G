@@ -10,7 +10,7 @@ func Setup(c *bootstrap.Controllers, e *bootstrap.Executor) *gin.Engine {
 
 	publicRouter := r.Group("")
 	// All Public APIs
-	RegisterChatRouter(publicRouter, c.ChatController)
+	RegisterChatRouter(publicRouter, c)
 
 	//Cron start
 	e.CronExecutor.SetupCron()

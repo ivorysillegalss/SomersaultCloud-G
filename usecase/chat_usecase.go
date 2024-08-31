@@ -11,6 +11,8 @@ import (
 	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/task"
 	"context"
+	"github.com/gin-gonic/gin"
+	"github.com/thoas/go-funk"
 )
 
 type chatUseCase struct {
@@ -82,4 +84,29 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 
 	response := parsedResponse.(*domain.OpenAIParsedResponse)
 	return true, response, task2.SuccessCode
+}
+
+// func (c *chatUseCase) InitMainPage(ctx context.Context, token string) (titles []string, err error) {
+// TODO 适应前端接口修改
+func (c *chatUseCase) InitMainPage(ctx context.Context, token string) (titles []*domain.TitleData, err error) {
+	userId, err := c.tokenUtil.DecodeToId(token)
+	if err != nil {
+		return nil, err
+	}
+	titleStr, err := c.chatRepository.CacheGetTitles(ctx, userId)
+	return titleStr, nil
+}
+
+func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int) (*[]*domain.Record, error) {
+	var history *[]*domain.Record
+	history, isCache, err := c.chatRepository.CacheGetHistory(ctx, chatId)
+	if err != nil {
+		return nil, err
+	}
+	if isCache && funk.IsEmpty(history) {
+		history, _, err = c.chatRepository.DbGetHistory(ctx, chatId)
+	} else {
+		return history, nil
+	}
+	return history, err
 }

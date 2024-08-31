@@ -73,7 +73,8 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录，实现数据流式更新后可取消
 	if NotHaveCache {
-		history, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId)
+		var title string
+		history, title, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId)
 		if err != nil {
 			tc.InterruptExecute(task.HistoryRetrievalFailed)
 			return
@@ -91,7 +92,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 			// 2.1 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
 			//TODO 目前架构下，chat一次请求回写两次缓存，可优化，取消此次回写
 			go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
-				cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId), data.History, data.ChatId)
+				cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId), data.History, data.ChatId, title)
 		}
 	}
 

@@ -3,6 +3,7 @@ package consume
 import (
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
+	"SomersaultCloud/constant/dao"
 	"SomersaultCloud/constant/mq"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
@@ -62,7 +63,8 @@ func (c chatEvent) CachePutHistory(b []byte) error {
 		data.Records,
 		data.UserContent,
 		data.GenerationContent,
-		data.ChatId)
+		data.ChatId,
+		dao.DefaultTitle)
 	if err != nil {
 		log.GetTextLogger().Error("mq cache put history error:" + err.Error())
 	}

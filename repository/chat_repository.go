@@ -73,7 +73,7 @@ func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askTe
 	records = make([]*domain.Record, 0)
 	records = append(records, r)
 
-	history, err := c.DbGetHistory(ctx, chatId)
+	history, _, err := c.DbGetHistory(ctx, chatId)
 	if err != nil {
 		log.GetJsonLogger().WithFields("async history", err.Error()).Warn("async history error")
 		panic(err)
@@ -136,7 +136,7 @@ func (c *chatRepository) MemoryDelGeneration(ctx context.Context, chatId int) {
 	delete(chatGenerationMap, chatId)
 }
 
-func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int) error {
+func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int, title string) error {
 	marshalToString, err2 := jsoniter.MarshalToString(*history)
 	if err2 != nil {
 		log.GetJsonLogger().WithFields("marshal", err2.Error()).Warn("reset history failed")
@@ -147,17 +147,23 @@ func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey s
 		log.GetJsonLogger().WithFields("redis_set", err2.Error()).Warn("reset history failed")
 	}
 
+	err2 = c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId), title)
+	if err2 != nil {
+		log.GetJsonLogger().WithFields("redis_set", err2.Error()).Warn("reset history failed")
+	}
+
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
 	//返回最老的一个元素
 	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
 	if funk.NotEqual(oldest, common.FalseInt) || funk.NotEqual(oldest, common.ZeroInt) {
 		//证明有元素被移除了
 		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId))
 	}
 	return err
 }
 
-func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, askText string, generationText string, chatId int) error {
+func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, askText string, generationText string, chatId int, title string) error {
 
 	r := &domain.Record{
 		ChatAsks:        &domain.ChatAsk{Message: askText},
@@ -179,6 +185,7 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 	}
 
 	_ = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
+	_ = c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId), title)
 
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
 	//返回最老的一个元素
@@ -186,6 +193,7 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 	if !(funk.Equal(oldest, common.FalseInt) || funk.Equal(oldest, common.ZeroInt)) {
 		//证明有元素被移除了
 		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(oldest))
 	}
 	if c.redis.IsEmpty(err) {
 		return nil
@@ -197,26 +205,32 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 //
 //	目前的架构一旦db获取历史记录 就是全部获取 初步思路是定时任务 mq以某个时间段为界限（eg7天） 将数据流式更新
 //	保证不出现大Key等 主要是为了提高查询效率
-func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*domain.Record, error) {
+func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*domain.Record, string, error) {
 	var h []*domain.Record
 	var data [][]byte
 
 	//pluck方法在不构建结构体的前提下 获取单个字段的值
 	if err := c.mysql.Gorm().Table("chat_re").
-		Where("chat_id = ?", chatId).Pluck("data", &data).Error; err != nil {
-		return nil, err
+		Where("chat_id = ?", chatId).Pluck("data,title", &data).Error; err != nil {
+		return nil, "", err
 	}
 
 	if funk.IsEmpty(data[0]) {
-		return nil, nil
+		return nil, "", nil
 	}
 
 	err := compressutil.NewCompress(sys.GzipCompress).DecompressData(data[0], &h)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &h, nil
+	var title string
+	err = jsoniter.Unmarshal(data[1], title)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return &h, title, nil
 }
 
 func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
@@ -233,6 +247,26 @@ func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId 
 		//TODO 异步 写入日志
 	}
 	return
+}
+
+func (c *chatRepository) CacheGetTitles(ctx context.Context, userId int) ([]*domain.TitleData, error) {
+	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
+	list, err := newLru.List(ctx, cache.ChatHistoryScore+common.Infix+strconv.Itoa(userId))
+	if err != nil {
+		return nil, err
+	}
+	//var res []string
+	var res []*domain.TitleData
+	for _, v := range list {
+		t, err := c.redis.Get(ctx, cache.ChatHistoryTitle+common.Infix+v)
+		if err != nil {
+			return nil, err
+		}
+		//res = append(res, t)
+		v1 := &domain.TitleData{Title: t}
+		res = append(res, v1)
+	}
+	return res, nil
 }
 
 func NewChatRepository(dbs *bootstrap.Databases) domain.ChatRepository {

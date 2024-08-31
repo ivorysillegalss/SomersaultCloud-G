@@ -36,7 +36,8 @@ func InitializeApp() (*bootstrap.Application, error) {
 	tokenUtil := tokenutil.NewTokenUtil(env)
 	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, tokenUtil, chatEvent)
 	chatController := controller.NewChatController(chatUseCase)
-	controllers := bootstrap.NewControllers(chatController)
+	historyMessageController := controller.NewHistoryMessageController(chatUseCase)
+	controllers := bootstrap.NewControllers(chatController, historyMessageController)
 	generationRepository := repository.NewGenerationRepository(databases)
 	generationCron := cron.NewGenerationCron(generationRepository, channels)
 	cronExecutor := executor.NewCronExecutor(generationCron)
@@ -55,4 +56,4 @@ func InitializeApp() (*bootstrap.Application, error) {
 
 // wire.go:
 
-var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewChatEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, wire.Struct(new(bootstrap.Application), "*"))
+var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewChatEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, controller.NewHistoryMessageController, wire.Struct(new(bootstrap.Application), "*"))

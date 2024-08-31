@@ -2,7 +2,12 @@ package domain
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 )
+
+type ChatHistoryTitle struct {
+	Title []string `json:"title"`
+}
 
 type Chat struct {
 	ID             int        `json:"chat_id"  gorm:"primaryKey"`
@@ -52,25 +57,32 @@ type ChatRepository interface {
 	// CacheGetHistory 从缓存中取出历史记录 存的时候确保最大条数 取时无需注意
 	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
 	// DbGetHistory miss缓存 从DB中获取历史记录
-	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
+	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, string, error)
 
 	// AsyncSaveHistory 异步保存历史记录
 	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string)
 	// CacheLuaLruResetHistory 这个是在生成前 把从DB拿到的数据回写缓存 维护热点数据
-	CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*Record, chatId int) error
+	CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*Record, chatId int, title string) error
 	// CacheLuaLruPutHistory 这个是在生成完毕后 回写完整
-	CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*Record, askText string, generationText string, chatId int) error
+	CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*Record, askText string, generationText string, chatId int, title string) error
 
 	//由于http.response对象不可序列化 转为inmemory存储
 	MemoryGetGeneration(ctx context.Context, chatId int) *GenerationResponse
 	CacheGetGeneration(ctx context.Context, chatId int) (*GenerationResponse, error)
 	MemoryDelGeneration(ctx context.Context, chatId int)
 	CacheDelGeneration(ctx context.Context, chatId int) error
+
+	CacheGetTitles(ctx context.Context, userId int) ([]*TitleData, error)
 }
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
 	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message ParsedResponse, code int)
+
+	//TODO 同上适应前端接口
+	//InitMainPage(ctx context.Context, token string) (titles []string, err error)
+	InitMainPage(ctx context.Context, token string) (titles []*TitleData, err error)
+	GetChatHistory(c *gin.Context, chatId int) (*[]*Record, error)
 }
 
 type ChatEvent interface {
@@ -92,4 +104,9 @@ type ChatStorageData struct {
 	UserId int
 	ChatId int
 	BotId  int
+}
+
+// TODO 适应前端接口
+type TitleData struct {
+	Title string `json:"title"`
 }
