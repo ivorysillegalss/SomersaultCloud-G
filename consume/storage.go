@@ -12,7 +12,7 @@ import (
 )
 
 type chatEvent struct {
-	baseMessageHandler
+	*baseMessageHandler
 	chatRepository domain.ChatRepository
 }
 
@@ -64,7 +64,7 @@ func (c chatEvent) CachePutHistory(b []byte) error {
 		data.GenerationContent,
 		data.ChatId)
 	if err != nil {
-		log.GetTextLogger().Error("mq cache put history error" + err.Error())
+		log.GetTextLogger().Error("mq cache put history error:" + err.Error())
 	}
 	return err
 }
@@ -88,7 +88,7 @@ func (c chatEvent) DbNewChat(b []byte) error {
 }
 func (c chatEvent) PublishDbNewChat(data *domain.ChatStorageData) {
 	marshal, _ := jsoniter.Marshal(data)
-	c.PublishMessage(mq.InsertNewChatKey, marshal)
+	c.PublishMessage(mq.InsertNewChatQueue, marshal)
 }
 func (c chatEvent) AsyncConsumeDbNewChat() {
 	c.ConsumeMessage(mq.InsertNewChatQueue, c.DbNewChat)
@@ -96,7 +96,7 @@ func (c chatEvent) AsyncConsumeDbNewChat() {
 
 func NewChatEvent(c domain.ChatRepository, h MessageHandler) domain.ChatEvent {
 	//TODO 丑
-	handler := h.(baseMessageHandler)
+	handler := h.(*baseMessageHandler)
 	dbSave := &MessageQueueArgs{
 		ExchangeName: mq.HistoryDbSaveExchange,
 		QueueName:    mq.HistoryDbSaveQueue,

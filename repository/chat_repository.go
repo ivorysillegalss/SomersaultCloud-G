@@ -163,7 +163,9 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 		ChatAsks:        &domain.ChatAsk{Message: askText},
 		ChatGenerations: &domain.ChatGeneration{Message: generationText},
 	}
-
+	if funk.IsEmpty(history) {
+		history = new([]*domain.Record)
+	}
 	a := append(*history, r)
 
 	//控制单chat内最大缓存数量
@@ -184,6 +186,9 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 	if !(funk.Equal(oldest, common.FalseInt) || funk.Equal(oldest, common.ZeroInt)) {
 		//证明有元素被移除了
 		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
+	}
+	if c.redis.IsEmpty(err) {
+		return nil
 	}
 	return err
 }

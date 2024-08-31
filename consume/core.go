@@ -2,6 +2,7 @@ package consume
 
 import (
 	"SomersaultCloud/constant/mq"
+	"github.com/thoas/go-funk"
 	"time"
 
 	"SomersaultCloud/infrastructure/log"
@@ -37,30 +38,39 @@ type MessageQueueArgs struct {
 
 func (b baseMessageHandler) InitMessageQueue(args ...any) {
 	for _, argAny := range args {
-		arg := argAny.(MessageQueueArgs)
+		arg := argAny.(*MessageQueueArgs)
 
 		// 创建生产者 Channel
 		prodCh, err := b.conn.NewChannel()
 		if err != nil {
 			log.GetJsonLogger().WithFields("create producer channel err", err.Error()).Fatal(mq.MqPublishErr)
+		} else {
+			log.GetTextLogger().Info("create publish channel success")
 		}
-
 		// 创建消费者 Channel
 		consCh, err := b.conn.NewChannel()
 		if err != nil {
 			log.GetJsonLogger().WithFields("create consumer channel err", err.Error()).Fatal(mq.MqConsumeErr)
+		} else {
+			log.GetTextLogger().Info("create consumer channel success")
 		}
 
 		if err := prodCh.ExchangeDeclare(arg.ExchangeName, "direct"); err != nil {
 			log.GetJsonLogger().WithFields("create exchange err", err.Error()).Fatal(mq.MqPublishErr)
+		} else {
+			log.GetTextLogger().Info("create exchange success")
 		}
 
 		if err := prodCh.QueueDeclare(arg.QueueName); err != nil {
 			log.GetJsonLogger().WithFields("create queue err:", err.Error()).Fatal(mq.MqPublishErr)
+		} else {
+			log.GetTextLogger().Info("create queue success")
 		}
 
 		if err := prodCh.QueueBind(arg.QueueName, arg.KeyName, arg.ExchangeName); err != nil {
 			log.GetJsonLogger().WithFields("bind queue err:", err.Error()).Fatal(mq.MqPublishErr)
+		} else {
+			log.GetTextLogger().Info("bind queue success")
 		}
 
 		// 保存创建的 Channel
@@ -68,7 +78,10 @@ func (b baseMessageHandler) InitMessageQueue(args ...any) {
 		arg.ConsumerChannel = consCh
 
 		// 将配置保存到全局 map 中
-		messageQueueConfigs[arg.QueueName] = arg
+		if funk.IsEmpty(messageQueueConfigs) {
+			messageQueueConfigs = make(map[string]MessageQueueArgs)
+		}
+		messageQueueConfigs[arg.QueueName] = *arg
 	}
 }
 
