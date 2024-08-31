@@ -2,6 +2,7 @@ package executor
 
 import (
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/log"
 )
 
 type ConsumeExecutor struct {
@@ -10,7 +11,9 @@ type ConsumeExecutor struct {
 
 func (d *ConsumeExecutor) SetupConsume() {
 	d.ChatEvent.AsyncConsumeDbHistory()
+	log.GetTextLogger().Info("AsyncConsumeDbHistory QUEUE start")
 	d.ChatEvent.AsyncConsumeCacheHistory()
+	log.GetTextLogger().Info("AsyncConsumeCacheHistory QUEUE start")
 	//TODO
 	//在这里全部启动消费者逻辑
 }
