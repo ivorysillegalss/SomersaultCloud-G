@@ -6,14 +6,14 @@ type AskContextData struct {
 	Message        string
 	BotId          int
 	History        *[]*Record
-	Prompt         string
+	SysPrompt      string
 	Model          string
-	HistoryMessage *[]Message
+	HistoryMessage *Message
+	ExecutorId     int
 	Executor       LanguageModelExecutor
 	Conn           ConnectionConfig
 	Resp           GenerationResponse
 	ParsedResponse ParsedResponse
 }
 
-func (a *AskContextData) Data() {
-}
+func (a *AskContextData) Data() {}

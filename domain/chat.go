@@ -22,12 +22,14 @@ type Chat struct {
 
 type Record struct {
 	//ChatId int `json:"chat_id"`
-	//RecordId        int             `json:"record_id"`
+	RecordId        int             `json:"record_id"`
 	ChatAsks        *ChatAsk        `json:"chat_asks"`
 	ChatGenerations *ChatGeneration `json:"chat_generations"`
 	//Weights         float64
 }
 
+//	TODO 加一个imageurllist，应付提问中有多张图片
+//
 // ChatAsk 一次问题
 type ChatAsk struct {
 	//RecordId int    `json:"record_id"`
@@ -58,6 +60,7 @@ type ChatRepository interface {
 	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
 	// DbGetHistory miss缓存 从DB中获取历史记录
 	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, string, error)
+	DbGetFuncHistory(ctx context.Context, chatId int) (*[]*Record, error)
 
 	// AsyncSaveHistory 异步保存历史记录
 	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string)
@@ -72,17 +75,27 @@ type ChatRepository interface {
 	MemoryDelGeneration(ctx context.Context, chatId int)
 	CacheDelGeneration(ctx context.Context, chatId int) error
 
+	// CacheGetTitlePrompt 获取根据历史记录获取标题的prompt
+	CacheGetTitlePrompt(ctx context.Context) string
 	CacheGetTitles(ctx context.Context, userId int) ([]*TitleData, error)
+
+	DbUpdateTitle(ctx context.Context, chatId int, newTitle string)
+	CacheUpdateTitle(ctx context.Context, chatId int, newTitle string)
 }
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
 	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message ParsedResponse, code int)
 
+	DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message ParsedResponse, code int)
+
 	//TODO 同上适应前端接口
 	//InitMainPage(ctx context.Context, token string) (titles []string, err error)
 	InitMainPage(ctx context.Context, token string) (titles []*TitleData, err error)
 	GetChatHistory(c *gin.Context, chatId int) (*[]*Record, error)
+
+	GenerateUpdateTitle(ctx context.Context, message *[]TextMessage, token string, chatId int) (string, error)
+	InputUpdateTitle(ctx context.Context, title string, token string, chatId int) bool
 }
 
 type ChatEvent interface {
@@ -98,6 +111,12 @@ type ChatEvent interface {
 	AsyncConsumeDbHistory()
 	AsyncConsumeCacheHistory()
 	AsyncConsumeDbNewChat()
+
+	DbUpdateTitle(b []byte) error
+
+	PublishDbSaveTitle(data *AskContextData)
+
+	AsyncConsumeDbUpdateTitle()
 }
 
 type ChatStorageData struct {

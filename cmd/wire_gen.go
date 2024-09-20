@@ -34,7 +34,8 @@ func InitializeApp() (*bootstrap.Application, error) {
 	chatEvent := consume.NewChatEvent(chatRepository, messageHandler)
 	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels, poolsFactory, chatEvent)
 	tokenUtil := tokenutil.NewTokenUtil(env)
-	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, tokenUtil, chatEvent)
+	titleTask := task.NewChatTitleTask(chatRepository, env, channels)
+	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, tokenUtil, chatEvent, titleTask)
 	chatController := controller.NewChatController(chatUseCase)
 	historyMessageController := controller.NewHistoryMessageController(chatUseCase)
 	controllers := bootstrap.NewControllers(chatController, historyMessageController)
@@ -56,4 +57,4 @@ func InitializeApp() (*bootstrap.Application, error) {
 
 // wire.go:
 
-var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewChatEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, controller.NewChatController, controller.NewHistoryMessageController, wire.Struct(new(bootstrap.Application), "*"))
+var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewChatEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, task.NewChatTitleTask, controller.NewChatController, controller.NewHistoryMessageController, wire.Struct(new(bootstrap.Application), "*"))

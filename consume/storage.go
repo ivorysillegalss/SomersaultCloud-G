@@ -23,6 +23,7 @@ type storageHistory struct {
 	GenerationContent string
 	ChatId            int
 	UserId            int
+	Title             string
 }
 
 func storageDataReady(data *domain.AskContextData) *storageHistory {
@@ -32,6 +33,7 @@ func storageDataReady(data *domain.AskContextData) *storageHistory {
 		GenerationContent: data.ParsedResponse.GetGenerateText(),
 		ChatId:            data.ChatId,
 		UserId:            data.UserId,
+		Title:             data.ParsedResponse.GetGenerateText(),
 	}
 }
 
@@ -45,6 +47,7 @@ func (c chatEvent) DbPutHistory(b []byte) error {
 	)
 	return nil
 }
+
 func (c chatEvent) PublishSaveDbHistory(data *domain.AskContextData) {
 	dataReady := storageDataReady(data)
 	marshal, _ := jsoniter.Marshal(dataReady)
@@ -54,7 +57,6 @@ func (c chatEvent) PublishSaveDbHistory(data *domain.AskContextData) {
 func (c chatEvent) AsyncConsumeDbHistory() {
 	c.ConsumeMessage(mq.HistoryDbSaveQueue, c.DbPutHistory)
 }
-
 func (c chatEvent) CachePutHistory(b []byte) error {
 	var data storageHistory
 	_ = jsoniter.Unmarshal(b, &data)
@@ -70,6 +72,7 @@ func (c chatEvent) CachePutHistory(b []byte) error {
 	}
 	return err
 }
+
 func (c chatEvent) PublishSaveCacheHistory(data *domain.AskContextData) {
 	dataReady := storageDataReady(data)
 	marshal, _ := jsoniter.Marshal(dataReady)
@@ -78,7 +81,6 @@ func (c chatEvent) PublishSaveCacheHistory(data *domain.AskContextData) {
 func (c chatEvent) AsyncConsumeCacheHistory() {
 	c.ConsumeMessage(mq.HistoryCacheSaveQueue, c.CachePutHistory)
 }
-
 func (c chatEvent) DbNewChat(b []byte) error {
 	var data domain.ChatStorageData
 	err := jsoniter.Unmarshal(b, &data)
@@ -88,12 +90,31 @@ func (c chatEvent) DbNewChat(b []byte) error {
 	c.chatRepository.DbInsertNewChat(context.Background(), data.UserId, data.BotId)
 	return nil
 }
+
 func (c chatEvent) PublishDbNewChat(data *domain.ChatStorageData) {
 	marshal, _ := jsoniter.Marshal(data)
+	log.GetJsonLogger().WithFields("user", data.UserId, "activity", "createNewChat")
 	c.PublishMessage(mq.InsertNewChatQueue, marshal)
 }
 func (c chatEvent) AsyncConsumeDbNewChat() {
 	c.ConsumeMessage(mq.InsertNewChatQueue, c.DbNewChat)
+}
+
+func (c chatEvent) PublishDbSaveTitle(data *domain.AskContextData) {
+	dataReady := storageDataReady(data)
+	marshal, _ := jsoniter.Marshal(dataReady)
+	log.GetJsonLogger().WithFields("user", data.UserId, "activity", "update chat title", "chatId", data.ChatId)
+	c.PublishMessage(mq.UpdateChatTitleQueue, marshal)
+}
+func (c chatEvent) DbUpdateTitle(b []byte) error {
+	var data storageHistory
+	_ = jsoniter.Unmarshal(b, &data)
+	c.chatRepository.DbUpdateTitle(context.Background(), data.ChatId, data.Title)
+	return nil
+}
+
+func (c chatEvent) AsyncConsumeDbUpdateTitle() {
+	c.ConsumeMessage(mq.UpdateChatTitleQueue, c.DbUpdateTitle)
 }
 
 func NewChatEvent(c domain.ChatRepository, h MessageHandler) domain.ChatEvent {
@@ -114,7 +135,12 @@ func NewChatEvent(c domain.ChatRepository, h MessageHandler) domain.ChatEvent {
 		QueueName:    mq.InsertNewChatQueue,
 		KeyName:      mq.InsertNewChatKey,
 	}
-	handler.InitMessageQueue(dbSave, cacheSave, dbNewChat)
+	dbNewTitle := &MessageQueueArgs{
+		ExchangeName: mq.UpdateChatTitleExchange,
+		QueueName:    mq.UpdateChatTitleQueue,
+		KeyName:      mq.UpdateChatTitleKey,
+	}
+	handler.InitMessageQueue(dbSave, cacheSave, dbNewChat, dbNewTitle)
 	return &chatEvent{
 		baseMessageHandler: handler,
 		chatRepository:     c,

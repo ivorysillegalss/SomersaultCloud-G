@@ -20,7 +20,7 @@ type botRepository struct {
 func (b *botRepository) CacheGetBotConfig(ctx context.Context, botId int) *domain.BotConfig {
 	var a domain.BotConfig
 	//err := b.redis.GetStruct(ctx, cache.BotConfig+strconv.Itoa(botId), a)
-	get, err := b.redis.Get(ctx, cache.BotConfig+strconv.Itoa(botId))
+	get, err := b.redis.Get(ctx, cache.BotConfig+common.Infix+strconv.Itoa(botId))
 	if err != nil {
 		return nil
 	}
