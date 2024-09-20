@@ -25,4 +25,13 @@ const (
 
 	ExecuteChatAskType = "ExecuteChatAsk"
 	ExecuteChatAskCode = 10
+	ChatAskExecutorId  = 1
+
+	ExecuteChatVisionAskType = "ExecuteChatVisionAsk"
+	ExecuteChatVisionAskCode = 20
+	ChatVisionAskExecutorId  = 2
+
+	ExecuteTitleAskType    = "ExecuteTitleAsk"
+	ExecuteTitleAskCode    = 30
+	ChatTitleAskExecutorId = 3
 )

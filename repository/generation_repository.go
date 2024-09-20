@@ -6,8 +6,8 @@ import (
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/redis"
-	"SomersaultCloud/internal/ioutil"
 	"context"
+	_ "embed"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/thoas/go-funk"
 	"strconv"
@@ -15,12 +15,16 @@ import (
 
 var chatGenerationMap map[int]*domain.GenerationResponse
 
+//go:embed lua/hash_expired.lua
+var hashExpiredLuaScript string
+
 type generationRepository struct {
 	rcl redis.Client
 }
 
 func (g generationRepository) CacheLuaPollHistory(ctx context.Context, generationResp domain.GenerationResponse) {
-	script, _ := ioutil.LoadLuaScript("cron/lua/hash_expired.lua")
+	//script, _ := ioutil.LoadLuaScript("repository/lua/hash_expired.lua")
+	script := hashExpiredLuaScript
 
 	//JSON序列化存储 也许可以改进
 	marshal, _ := jsoniter.Marshal(generationResp)

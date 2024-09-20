@@ -31,4 +31,6 @@ const (
 	ChatGenerationTTL = 500
 	// ChatHistoryTitle 历史记标题前缀
 	ChatHistoryTitle = "chatHistoryTitle"
+	// HistoryTitlePrompt 获取标题的prompt
+	HistoryTitlePrompt = "historyTitlePrompt"
 )

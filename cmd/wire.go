@@ -45,6 +45,7 @@ var appSet = wire.NewSet(
 	usecase.NewChatUseCase,
 
 	task.NewAskChatTask,
+	task.NewChatTitleTask,
 
 	controller.NewChatController,
 	controller.NewHistoryMessageController,

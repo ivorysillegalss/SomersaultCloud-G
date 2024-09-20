@@ -37,9 +37,9 @@ func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
 	chatId := args[2].(int)
 	message := args[3].(string)
 	return &taskchain.TaskContext{
-		BusinessType:    task.ExecuteChatAskType,
-		BusinessCode:    task.ExecuteChatAskCode,
-		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message},
+		BusinessType:    args[4].(string),
+		BusinessCode:    args[5].(int),
+		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message, ExecutorId: args[6].(int)},
 	}
 }
 
@@ -109,7 +109,7 @@ func (c *ChatAskTask) GetBotTask(tc *taskchain.TaskContext) {
 		return
 	}
 
-	data.Prompt = botConfig.InitPrompt
+	data.SysPrompt = botConfig.InitPrompt
 	data.Model = botConfig.Model
 }
 
@@ -123,7 +123,7 @@ func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
 	data := tc.TaskContextData.(*domain.AskContextData)
 
 	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
-	executor := handler.NewLanguageModelExecutor(c.env, c.channels, 0)
+	executor := handler.NewLanguageModelExecutor(c.env, c.channels, data.ExecutorId)
 
 	data.Executor = executor
 	data.HistoryMessage = executor.AssemblePrompt(data)
@@ -196,9 +196,6 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	data.Resp = *generation
 	defer generation.Resp.Body.Close()
 
-	//直接go模式下未优化需generationText rabbit不用
-	//resp, generationText := data.Executor.ParseResp(data)
-
 	resp, _ := data.Executor.ParseResp(data)
 
 	if funk.IsEmpty(resp) {
@@ -207,23 +204,13 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	data.ParsedResponse = resp
 
-	//回写缓存  (可直接调用or交给rabbit------chatEvent板块)
-	c.chatEvent.PublishSaveCacheHistory(data)
-	//go c.chatRepository.CacheLuaLruPutHistory(
-	//	context.Background(),
-	//	cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
-	//	data.History,
-	//	data.Message,
-	//	generationText,
-	//	data.ChatId,
-	//)
-
-	//回写db  (可直接调用or交给rabbit------chatEvent板块)
-	c.chatEvent.PublishSaveDbHistory(data)
-	//go c.chatRepository.AsyncSaveHistory(
-	//	context.Background(),
-	//	data.ChatId,
-	//	data.Message,
-	//	generationText,
-	//)
+	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) {
+		//回写缓存&DB
+		c.chatEvent.PublishSaveCacheHistory(data)
+		c.chatEvent.PublishSaveDbHistory(data)
+	} else if funk.Equal(tc.BusinessCode, task.ExecuteTitleAskCode) {
+		c.chatEvent.PublishDbSaveTitle(data)
+		//感觉没必要都上mq 写缓存就直接go好了
+		go c.chatRepository.CacheUpdateTitle(context.Background(), data.ChatId, data.ParsedResponse.GetGenerateText())
+	}
 }

@@ -7,13 +7,18 @@ import (
 	"SomersaultCloud/constant/common"
 	task2 "SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
-	"SomersaultCloud/internal/ioutil"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/tokenutil"
 	"SomersaultCloud/task"
 	"context"
+	_ "embed"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/thoas/go-funk"
 )
+
+//go:embed lua/increment.lua
+var incrementLuaScript string
 
 type chatUseCase struct {
 	env            *bootstrap.Env
@@ -22,10 +27,11 @@ type chatUseCase struct {
 	chatTask       task.AskTask
 	tokenUtil      *tokenutil.TokenUtil
 	chatEvent      domain.ChatEvent
+	titleTask      task.TitleTask
 }
 
-func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.ChatEvent) domain.ChatUseCase {
-	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce}
+func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.ChatEvent, tt task.TitleTask) domain.ChatUseCase {
+	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce, titleTask: tt}
 	return chat
 }
 
@@ -33,18 +39,18 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	//ctx, cancel := context.WithTimeout(ctx, time.Duration(c.env.ContextTimeout))
 	//defer cancel()
 
-	script, err := ioutil.LoadLuaScript("usecase/lua/increment.lua")
-	if err != nil {
-		return common.FalseInt
-	}
+	script := incrementLuaScript
+	log.GetJsonLogger().Info("load new chat lua script")
 
 	chatId, err := c.chatRepository.CacheLuaInsertNewChatId(ctx, script, cache.NewestChatIdKey)
 	if err != nil {
+		log.GetTextLogger().Error(err.Error())
 		return common.FalseInt
 	}
 
 	id, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
+		log.GetTextLogger().Error(err.Error())
 		return common.FalseInt
 	}
 
@@ -64,20 +70,45 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 	}
 
 	//我他妈太优雅了
-	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage)
+	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId)
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
 		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask)
 	factory.ExecuteChain()
-	//TODO 异步数据缓存
-
-	// TODO 接入消息队列
 
 	//按理来说 上面的taskContext == factory.TaskContext 但是下面再赋值一下比较稳妥一点
 	taskContext = factory.TaskContext
 	if taskContext.Exception {
 		return false, &domain.OpenAIParsedResponse{GenerateText: taskContext.TaskContextResponse.Message}, taskContext.TaskContextResponse.Code
+	}
+	data := taskContext.TaskContextData.(*domain.AskContextData)
+	parsedResponse := data.ParsedResponse
+
+	response := parsedResponse.(*domain.OpenAIParsedResponse)
+	return true, response, task2.SuccessCode
+}
+
+func (c *chatUseCase) DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message domain.ParsedResponse, code int) {
+	chatTask := c.chatTask
+
+	userId, err := c.tokenUtil.DecodeToId(token)
+	//TODO
+	if err != nil {
+		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
+	}
+
+	//我他妈太优雅了
+	taskContext := chatTask.InitContextData(userId, botId, chatId, picUrl, task2.ExecuteChatVisionAskType, task2.ExecuteChatVisionAskCode, task2.ChatVisionAskExecutorId)
+	factory := taskchain.NewTaskContextFactory()
+	factory.TaskContext = taskContext
+	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetBotTask,
+		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask)
+	factory.ExecuteChain()
+
+	taskContext = factory.TaskContext
+	if taskContext.Exception {
+		//return false, &domain.OpenAIParsedResponse{GenerateText: taskContext.TaskContextResponse.TextMessage}, taskContext.TaskContextResponse.Code
 	}
 	data := taskContext.TaskContextData.(*domain.AskContextData)
 	parsedResponse := data.ParsedResponse
@@ -109,4 +140,46 @@ func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int) (*[]*domain.R
 		return history, nil
 	}
 	return history, err
+}
+
+func (c *chatUseCase) GenerateUpdateTitle(ctx context.Context, message *[]domain.TextMessage, token string, chatId int) (string, error) {
+	userId, err := c.tokenUtil.DecodeToId(token)
+	if err != nil {
+		log.GetTextLogger().Error(err.Error())
+		return common.ZeroString, nil
+	}
+
+	taskContext := c.titleTask.InitContextData(userId, common.ZeroInt, chatId, message, task2.ExecuteTitleAskType, task2.ExecuteTitleAskCode, task2.ChatTitleAskExecutorId)
+	factory := taskchain.NewTaskContextFactory()
+
+	factory.TaskContext = taskContext
+	titleTask := c.titleTask
+	chatTask := c.chatTask
+	factory.Puts(titleTask.PreTitleTask, titleTask.AssembleTitleReqTask,
+		chatTask.CallApiTask, chatTask.ParseRespTask)
+	factory.ExecuteChain()
+
+	//TODO 包装链子上出现的任务,继续提取其中共同点
+	taskContext = factory.TaskContext
+	if taskContext.Exception {
+		e := errors.New(taskContext.TaskContextResponse.Message)
+		return common.ZeroString, e
+	}
+	data := taskContext.TaskContextData.(*domain.AskContextData)
+	parsedResponse := data.ParsedResponse
+
+	response := parsedResponse.(*domain.OpenAIParsedResponse)
+	return response.GenerateText, nil
+}
+
+func (c *chatUseCase) InputUpdateTitle(ctx context.Context, title string, token string, chatId int) bool {
+	userId, err := c.tokenUtil.DecodeToId(token)
+	if err != nil {
+		log.GetTextLogger().Error("user signed error:")
+		return false
+	}
+	data := &domain.AskContextData{ChatId: chatId, ParsedResponse: &domain.OpenAIParsedResponse{GenerateText: title}, UserId: userId}
+	c.chatEvent.PublishDbSaveTitle(data)
+	go c.chatRepository.CacheUpdateTitle(context.Background(), chatId, title)
+	return true
 }

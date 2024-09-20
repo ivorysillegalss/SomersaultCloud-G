@@ -209,13 +209,16 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 	var h []*domain.Record
 	var data [][]byte
 
-	//pluck方法在不构建结构体的前提下 获取单个字段的值
 	if err := c.mysql.Gorm().Table("chat_re").
-		Where("chat_id = ?", chatId).Pluck("data,title", &data).Error; err != nil {
+		Where("chat_id = ?", chatId).
+		Select("data,title").
+		Scan(&data).
+		Error; err != nil {
+
 		return nil, "", err
 	}
 
-	if funk.IsEmpty(data[0]) {
+	if funk.IsEmpty(data) || funk.IsEmpty(data[0]) {
 		return nil, "", nil
 	}
 
@@ -231,6 +234,41 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*doma
 	}
 
 	return &h, title, nil
+}
+
+func (c *chatRepository) DbGetFuncHistory(ctx context.Context, chatId int) (*[]*domain.Record, error) {
+	var records []*domain.Record
+	err := c.mysql.Gorm().Table("record_info").Where("chat_id = ?", chatId).Find(&records).Error
+	if err != nil {
+		return nil, err
+	}
+	for index, record := range records {
+
+		//如果获取了足够的历史记录 直接跳出 不再获取
+		if funk.Equal(index, cache.HistoryDefaultWeight) {
+			break
+		}
+
+		// 确保 ChatAsks 和 ChatGenerations 是指向结构体的指针
+		if records[index].ChatAsks == nil {
+			records[index].ChatAsks = &domain.ChatAsk{}
+		}
+		if records[index].ChatGenerations == nil {
+			records[index].ChatGenerations = &domain.ChatGeneration{}
+		}
+
+		err := c.mysql.Gorm().Table("chat_ask").Where("record_id = ?", record.RecordId).First(records[index].ChatAsks).Error
+		//如果同一段chat在数据库中没找到记录 有可能是这个机器人这一次不需要问题
+		if err != nil && err.Error() != dao.RecordNotFoundError {
+			return nil, nil
+		}
+		err = c.mysql.Gorm().Table("chat_generation").Where("record_id = ?", record.RecordId).First(records[index].ChatGenerations).Error
+		if err != nil && err.Error() != dao.RecordNotFoundError {
+			return nil, nil
+		}
+	}
+
+	return &records, nil
 }
 
 func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
@@ -267,6 +305,25 @@ func (c *chatRepository) CacheGetTitles(ctx context.Context, userId int) ([]*dom
 		res = append(res, v1)
 	}
 	return res, nil
+}
+
+func (c *chatRepository) CacheGetTitlePrompt(ctx context.Context) string {
+	v, _ := c.redis.Get(ctx, cache.HistoryTitlePrompt)
+	return v
+}
+
+func (c *chatRepository) DbUpdateTitle(ctx context.Context, chatId int, newTitle string) {
+	if err := c.mysql.Gorm().Table("chat_re").Where("chat_id = ?", chatId).Update("title", newTitle).Error; err != nil {
+		log.GetJsonLogger().WithFields("chat_id", chatId).Error("update title error")
+	}
+}
+
+// CacheUpdateTitle 默认是有这个缓存的 因为这个方法的执行时机在第一次聊天后 并且已经获得了聊天记录。所以一般情况下必定有此次聊天记录的LRU缓存
+func (c *chatRepository) CacheUpdateTitle(ctx context.Context, chatId int, newTitle string) {
+	err := c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId), newTitle)
+	if err != nil {
+		log.GetTextLogger().Error("update title failed")
+	}
 }
 
 func NewChatRepository(dbs *bootstrap.Databases) domain.ChatRepository {
