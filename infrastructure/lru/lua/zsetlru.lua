@@ -14,8 +14,11 @@ local removed_member = nil
 -- 检查 ZSet 大小并移除最旧的元素
 local zset_size = redis.call("ZCARD", zset_key)
 if zset_size > max_items then
-    removed_member  = redis.call("ZRANGE", zset_key, 0, 0)[1]
-    redis.call("ZREM", zset_key, removed_member)
+    local range_result = redis.call("ZRANGE", zset_key, 0, 0)
+    if range_result and #range_result > 0 then
+        removed_member = range_result[1]
+        redis.call("ZREM", zset_key, removed_member)
+    end
 end
 
 if removed_member then

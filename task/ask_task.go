@@ -9,6 +9,7 @@ import (
 	"SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/checkutil"
 	"context"
 	"github.com/thoas/go-funk"
@@ -196,15 +197,20 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	data.Resp = *generation
 	defer generation.Resp.Body.Close()
 
+	log.GetTextLogger().Info("start parsing data")
 	resp, _ := data.Executor.ParseResp(data)
 
 	if funk.IsEmpty(resp) {
+		log.GetTextLogger().Error("can't get data")
 		tc.InterruptExecute(task.RespParedError)
+	} else {
+		log.GetTextLogger().Info("successfully get data")
 	}
 
 	data.ParsedResponse = resp
 
 	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) {
+		log.GetTextLogger().Info("saving history")
 		//回写缓存&DB
 		c.chatEvent.PublishSaveCacheHistory(data)
 		c.chatEvent.PublishSaveDbHistory(data)

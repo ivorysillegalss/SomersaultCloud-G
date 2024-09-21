@@ -8,7 +8,7 @@ const (
 	// DefaultData 默认数据
 	DefaultData = "initData"
 	// AsyncPollingFrequency 轮询打日志频率
-	AsyncPollingFrequency = 5
+	AsyncPollingFrequency = 100
 
 	// RecordNotFoundError *old存法没找到历史记录
 	RecordNotFoundError = "record not found"

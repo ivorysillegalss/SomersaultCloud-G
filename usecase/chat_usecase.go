@@ -55,8 +55,8 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	}
 
 	// 同样提供依赖mq or not
-	//go c.chatRepository.DbInsertNewChat(ctx, id, botId)
-	c.chatEvent.PublishDbNewChat(&domain.ChatStorageData{BotId: botId, UserId: id})
+	go c.chatRepository.DbInsertNewChat(ctx, id, botId)
+	//c.chatEvent.PublishDbNewChat(&domain.ChatStorageData{BotId: botId, UserId: id})
 
 	return chatId
 }

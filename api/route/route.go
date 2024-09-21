@@ -31,7 +31,7 @@ func defaultCorsConfig(r *gin.Engine) {
 		// 设置允许的头部，注意添加你的自定义头部 "token"
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, token")
 		// 设置浏览器是否应该包含凭证
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		//c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		// 如果是OPTIONS请求，直接返回200
 		if c.Request.Method == "OPTIONS" {
