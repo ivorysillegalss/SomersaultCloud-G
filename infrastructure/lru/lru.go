@@ -3,9 +3,11 @@ package lru
 import (
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/redis"
 	"context"
 	_ "embed"
+	"strconv"
 )
 
 //go:embed lua/zsetlru.lua
@@ -67,8 +69,9 @@ func (r *redisLuaLruZSet) Add(ctx context.Context, key, value string) (error, in
 	if err != nil {
 		return err, common.FalseInt
 	}
-
-	return nil, retValue[0].(int)
+	log.GetTextLogger().Warn("lru lua add")
+	atoi, _ := strconv.Atoi(retValue[0].(string))
+	return nil, atoi
 }
 
 // redisLuaLruList List实现类型

@@ -81,6 +81,7 @@ func (c chatEvent) PublishSaveCacheHistory(data *domain.AskContextData) {
 func (c chatEvent) AsyncConsumeCacheHistory() {
 	c.ConsumeMessage(mq.HistoryCacheSaveQueue, c.CachePutHistory)
 }
+
 func (c chatEvent) DbNewChat(b []byte) error {
 	var data domain.ChatStorageData
 	err := jsoniter.Unmarshal(b, &data)
@@ -90,10 +91,9 @@ func (c chatEvent) DbNewChat(b []byte) error {
 	c.chatRepository.DbInsertNewChat(context.Background(), data.UserId, data.BotId)
 	return nil
 }
-
 func (c chatEvent) PublishDbNewChat(data *domain.ChatStorageData) {
 	marshal, _ := jsoniter.Marshal(data)
-	log.GetJsonLogger().WithFields("user", data.UserId, "activity", "createNewChat")
+	log.GetJsonLogger().WithFields("user", data.UserId, "activity", "createNewChat").Info("create new chat")
 	c.PublishMessage(mq.InsertNewChatQueue, marshal)
 }
 func (c chatEvent) AsyncConsumeDbNewChat() {
