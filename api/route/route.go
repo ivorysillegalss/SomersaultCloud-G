@@ -9,7 +9,7 @@ func Setup(c *bootstrap.Controllers, e *bootstrap.Executor) *gin.Engine {
 	r := gin.Default()
 	defaultCorsConfig(r)
 
-	publicRouter := r.Group("")
+	publicRouter := r.Group("/api")
 	// All Public APIs
 	RegisterChatRouter(publicRouter, c)
 
