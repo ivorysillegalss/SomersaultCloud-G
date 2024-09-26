@@ -34,9 +34,10 @@ func getInfixType(botId int) (originInfix string) {
 	originInfix = common.ZeroString
 	switch botId2TableMap[botId] {
 	case dao.RefactorTable:
-		originInfix = cache.OriginTable + common.Infix
-	case dao.OriginTable:
 		originInfix = common.ZeroString
+	case dao.OriginTable:
+		originInfix = cache.OriginTable + common.Infix
+
 	default:
 		log.GetTextLogger().Error("get wrong botId mapping table type")
 	}
@@ -160,9 +161,6 @@ func (c *chatRepository) MemoryDelGeneration(ctx context.Context, chatId int) {
 
 func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int, title string, botId int) error {
 	originInfix := getInfixType(botId)
-	if funk.IsEmpty(originInfix) {
-		log.GetTextLogger().Error("get wrong type botId mapping history")
-	}
 
 	marshalToString, err2 := jsoniter.MarshalToString(*history)
 	if err2 != nil {
@@ -185,7 +183,7 @@ func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey s
 	if funk.NotEqual(oldest, common.FalseInt) || funk.NotEqual(oldest, common.ZeroInt) {
 		//证明有元素被移除了
 		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+originInfix+strconv.Itoa(oldest))
-		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+originInfix+strconv.Itoa(chatId))
+		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+originInfix+strconv.Itoa(oldest))
 	}
 	return err
 }
@@ -248,37 +246,34 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int, botId int
 
 }
 
+// TODO 映射数据库历史纪录结构体，修改
+type historyData struct {
+	Data  []byte `gorm:"column:data"`
+	Title string `gorm:"column:title"`
+}
+
 // refactorTableGetHistory  重构后的新表获取记录的方法
-// TODO 这里获取标题可能有bug
 func refactorTableGetHistory(db *gorm.DB, chatId int) (*[]*domain.Record, string, error) {
-	var h []*domain.Record
-	var data [][]byte
+	var h []*historyData
 
-	if err := db.Table("chat_re").
-		Where("chat_id = ?", chatId).
+	if err := db.Table("chat_re").Where("chat_id = ?", chatId).
 		Select("data,title").
-		Scan(&data).
+		Scan(&h).
 		Error; err != nil {
-
 		return nil, common.ZeroString, err
 	}
 
-	if funk.IsEmpty(data) || funk.IsEmpty(data[0]) {
+	if funk.IsEmpty(h) {
 		return nil, common.ZeroString, nil
 	}
 
-	err := compressutil.NewCompress(sys.GzipCompress).DecompressData(data[0], &h)
+	var history []*domain.Record
+	err := compressutil.NewCompress(sys.GzipCompress).DecompressData(h[0].Data, &history)
 	if err != nil {
 		return nil, common.ZeroString, err
 	}
 
-	var title string
-	err = jsoniter.Unmarshal(data[1], title)
-	if err != nil {
-		return nil, common.ZeroString, err
-	}
-
-	return &h, title, nil
+	return &history, h[0].Title, nil
 }
 
 // TODO 重写
@@ -345,13 +340,13 @@ func (c *chatRepository) CacheGetTitles(ctx context.Context, userId int, botId i
 		return nil, err
 	}
 	var res []*domain.TitleData
-	for _, v := range list {
-		t, err := c.redis.Get(ctx, cache.ChatHistoryTitle+common.Infix+getInfixType(botId)+v)
+	for _, chatId := range list {
+		t, err := c.redis.Get(ctx, cache.ChatHistoryTitle+common.Infix+getInfixType(botId)+chatId)
 		if err != nil {
 			return nil, err
 		}
-		//res = append(res, t)
-		v1 := &domain.TitleData{Title: t}
+		chatId, _ := strconv.Atoi(chatId)
+		v1 := &domain.TitleData{Title: t, ChatId: chatId}
 		res = append(res, v1)
 	}
 	return res, nil
