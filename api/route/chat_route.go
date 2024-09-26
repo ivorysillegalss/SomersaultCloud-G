@@ -24,7 +24,7 @@ func RegisterChatRouter(group *gin.RouterGroup, controllers *bootstrap.Controlle
 	mainPageGroup := group.Group("/init")
 	{
 		//主页面查询的chat历史记录
-		mainPageGroup.GET("/", mc.HistoryTitle)
+		mainPageGroup.GET("/title/:botId", mc.HistoryTitle)
 		//查询特定chat的历史记录
 		mainPageGroup.GET("/:chatId/:botId", mc.GetChatHistory)
 	}

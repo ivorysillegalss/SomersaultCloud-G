@@ -141,16 +141,17 @@ func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int, botId int, to
 		log.GetTextLogger().Error(err.Error())
 		return nil, err
 	}
+	var title string
 	if isCache && funk.IsEmpty(history) {
-		history, title, err := c.chatRepository.DbGetHistory(ctx, chatId, botId)
+		history, title, err = c.chatRepository.DbGetHistory(ctx, chatId, botId)
 		if err != nil {
 			log.GetTextLogger().Error(err.Error())
 			return nil, err
 		}
 
 		// 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
-		go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
-			cache.ChatHistoryScore+common.Infix+cache.OriginTable+strconv.Itoa(userId)+common.Infix+strconv.Itoa(botId), history, chatId, title, botId)
+		c.chatRepository.CacheLuaLruResetHistory(context.Background(),
+			cache.ChatHistoryScore+common.Infix+strconv.Itoa(userId)+common.Infix+strconv.Itoa(botId), history, chatId, title, botId)
 
 	} else {
 		return history, nil
