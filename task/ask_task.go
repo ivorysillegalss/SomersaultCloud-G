@@ -13,7 +13,6 @@ import (
 	"SomersaultCloud/internal/checkutil"
 	"context"
 	"github.com/thoas/go-funk"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -65,7 +64,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 	var history *[]*domain.Record
 	// 1. 缓存找
-	history, NotHaveCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId)
+	history, NotHaveCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId, data.BotId)
 	if err != nil {
 		tc.InterruptExecute(task.HistoryRetrievalFailed)
 		return
@@ -74,8 +73,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录，实现数据流式更新后可取消
 	if NotHaveCache {
-		var title string
-		history, title, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId)
+		history, _, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId, data.BotId)
 		if err != nil {
 			tc.InterruptExecute(task.HistoryRetrievalFailed)
 			return
@@ -83,17 +81,12 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 		if funk.IsEmpty(history) {
 			history = new([]*domain.Record)
-
 		} else {
 			// 截取数据
 			if len(*history) >= cache.HistoryDefaultWeight {
 				*history = (*history)[:cache.HistoryDefaultWeight]
 			}
-
-			// 2.1 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
-			//TODO 目前架构下，chat一次请求回写两次缓存，可优化，取消此次回写
-			go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
-				cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId), data.History, data.ChatId, title)
+			//此处无需回写 等成功获取了generation后再进行回写
 		}
 	}
 
@@ -217,6 +210,6 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	} else if funk.Equal(tc.BusinessCode, task.ExecuteTitleAskCode) {
 		c.chatEvent.PublishDbSaveTitle(data)
 		//感觉没必要都上mq 写缓存就直接go好了
-		go c.chatRepository.CacheUpdateTitle(context.Background(), data.ChatId, data.ParsedResponse.GetGenerateText())
+		go c.chatRepository.CacheUpdateTitle(context.Background(), data.ChatId, data.ParsedResponse.GetGenerateText(), data.BotId)
 	}
 }

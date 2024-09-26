@@ -14,15 +14,33 @@ import (
 	"SomersaultCloud/internal/compressutil"
 	"context"
 	"encoding/json"
+	"github.com/jinzhu/gorm"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/thoas/go-funk"
 	"strconv"
 	"time"
 )
 
+// 存在内存中 	维护一个map 记录哪个bot是使用re表的 哪个是使用chat表的
+// 饿汉式单例
+var botId2TableMap map[int]string = make(map[int]string)
+
 type chatRepository struct {
 	redis redis.Client
 	mysql mysql.Client
+}
+
+func getInfixType(botId int) (originInfix string) {
+	originInfix = common.ZeroString
+	switch botId2TableMap[botId] {
+	case dao.RefactorTable:
+		originInfix = cache.OriginTable + common.Infix
+	case dao.OriginTable:
+		originInfix = common.ZeroString
+	default:
+		log.GetTextLogger().Error("get wrong botId mapping table type")
+	}
+	return originInfix
 }
 
 func (c *chatRepository) CacheGetNewestChatId(ctx context.Context) int {
@@ -50,9 +68,12 @@ func (c *chatRepository) CacheLuaInsertNewChatId(ctx context.Context, luaScript 
 	return int(res.(int64)), nil
 }
 
-func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int) (history *[]*domain.Record, isCache bool, isErr error) {
+func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int, botId int) (history *[]*domain.Record, isCache bool, isErr error) {
+	//TODO 获取旧表历史记录可能会有bug,待测试
 	var h []*domain.Record
-	v, err := c.redis.Get(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId))
+	var v string
+	var err error
+	v, err = c.redis.Get(ctx, cache.ChatHistory+common.Infix+getInfixType(botId)+strconv.Itoa(chatId))
 	_ = jsoniter.Unmarshal([]byte(v), &h)
 	if c.redis.IsEmpty(err) {
 		return nil, true, nil
@@ -73,7 +94,8 @@ func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askTe
 	records = make([]*domain.Record, 0)
 	records = append(records, r)
 
-	history, _, err := c.DbGetHistory(ctx, chatId)
+	//history, _, err := c.DbGetHistory(ctx, chatId)
+	history, _, err := refactorTableGetHistory(c.mysql.Gorm(), chatId)
 	if err != nil {
 		log.GetJsonLogger().WithFields("async history", err.Error()).Warn("async history error")
 		panic(err)
@@ -136,18 +158,23 @@ func (c *chatRepository) MemoryDelGeneration(ctx context.Context, chatId int) {
 	delete(chatGenerationMap, chatId)
 }
 
-func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int, title string) error {
+func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, chatId int, title string, botId int) error {
+	originInfix := getInfixType(botId)
+	if funk.IsEmpty(originInfix) {
+		log.GetTextLogger().Error("get wrong type botId mapping history")
+	}
+
 	marshalToString, err2 := jsoniter.MarshalToString(*history)
 	if err2 != nil {
 		log.GetJsonLogger().WithFields("marshal", err2.Error()).Warn("reset history failed")
 	}
 
-	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
+	err2 = c.redis.Set(ctx, cache.ChatHistory+common.Infix+originInfix+strconv.Itoa(chatId), marshalToString)
 	if err2 != nil {
 		log.GetJsonLogger().WithFields("redis_set", err2.Error()).Warn("reset history failed")
 	}
 
-	err2 = c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId), title)
+	err2 = c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+originInfix+strconv.Itoa(chatId), title)
 	if err2 != nil {
 		log.GetJsonLogger().WithFields("redis_set", err2.Error()).Warn("reset history failed")
 	}
@@ -157,13 +184,13 @@ func (c *chatRepository) CacheLuaLruResetHistory(ctx context.Context, cacheKey s
 	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
 	if funk.NotEqual(oldest, common.FalseInt) || funk.NotEqual(oldest, common.ZeroInt) {
 		//证明有元素被移除了
-		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
-		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId))
+		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+originInfix+strconv.Itoa(oldest))
+		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+originInfix+strconv.Itoa(chatId))
 	}
 	return err
 }
 
-func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, askText string, generationText string, chatId int, title string) error {
+func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*domain.Record, askText string, generationText string, chatId int, botId int, title string) error {
 
 	r := &domain.Record{
 		ChatAsks:        &domain.ChatAsk{Message: askText},
@@ -184,16 +211,18 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 		log.GetJsonLogger().WithFields("marshal_res", err2.Error()).Warn("lru put history failed")
 	}
 
-	_ = c.redis.Set(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(chatId), marshalToString)
-	_ = c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId), title)
+	originInfix := getInfixType(botId)
+	_ = c.redis.Set(ctx, cache.ChatHistory+common.Infix+originInfix+strconv.Itoa(chatId), marshalToString)
+	_ = c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+originInfix+strconv.Itoa(chatId), title)
 
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
 	//返回最老的一个元素
 	err, oldest := newLru.Add(ctx, cacheKey, strconv.Itoa(chatId))
 	if !(funk.Equal(oldest, common.FalseInt) || funk.Equal(oldest, common.ZeroInt)) {
+		//TODO 这里应该是有问题的,没有正确删除LRU外数据
 		//证明有元素被移除了
-		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+strconv.Itoa(oldest))
-		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(oldest))
+		_ = c.redis.Del(ctx, cache.ChatHistory+common.Infix+originInfix+strconv.Itoa(oldest))
+		_ = c.redis.Del(ctx, cache.ChatHistoryTitle+common.Infix+originInfix+strconv.Itoa(oldest))
 	}
 	if c.redis.IsEmpty(err) {
 		return nil
@@ -205,42 +234,62 @@ func (c *chatRepository) CacheLuaLruPutHistory(ctx context.Context, cacheKey str
 //
 //	目前的架构一旦db获取历史记录 就是全部获取 初步思路是定时任务 mq以某个时间段为界限（eg7天） 将数据流式更新
 //	保证不出现大Key等 主要是为了提高查询效率
-func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int) (*[]*domain.Record, string, error) {
+func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int, botId int) (history *[]*domain.Record, title string, err error) {
+	botType := botId2TableMap[botId]
+	switch botType {
+	case dao.RefactorTable:
+		return refactorTableGetHistory(c.mysql.Gorm(), chatId)
+	case dao.OriginTable:
+		return originTableGetHistory(c.mysql.Gorm(), chatId)
+	default:
+		log.GetTextLogger().Fatal("bot mapping db table error")
+		return nil, common.ZeroString, nil
+	}
+
+}
+
+// refactorTableGetHistory  重构后的新表获取记录的方法
+// TODO 这里获取标题可能有bug
+func refactorTableGetHistory(db *gorm.DB, chatId int) (*[]*domain.Record, string, error) {
 	var h []*domain.Record
 	var data [][]byte
 
-	if err := c.mysql.Gorm().Table("chat_re").
+	if err := db.Table("chat_re").
 		Where("chat_id = ?", chatId).
 		Select("data,title").
 		Scan(&data).
 		Error; err != nil {
 
-		return nil, "", err
+		return nil, common.ZeroString, err
 	}
 
 	if funk.IsEmpty(data) || funk.IsEmpty(data[0]) {
-		return nil, "", nil
+		return nil, common.ZeroString, nil
 	}
 
 	err := compressutil.NewCompress(sys.GzipCompress).DecompressData(data[0], &h)
 	if err != nil {
-		return nil, "", err
+		return nil, common.ZeroString, err
 	}
 
 	var title string
 	err = jsoniter.Unmarshal(data[1], title)
 	if err != nil {
-		return nil, "", err
+		return nil, common.ZeroString, err
 	}
 
 	return &h, title, nil
 }
 
-func (c *chatRepository) DbGetFuncHistory(ctx context.Context, chatId int) (*[]*domain.Record, error) {
+// TODO 重写
+func originTableGetHistory(db *gorm.DB, chatId int) (*[]*domain.Record, string, error) {
 	var records []*domain.Record
-	err := c.mysql.Gorm().Table("record_info").Where("chat_id = ?", chatId).Find(&records).Error
+	var title string
+	//TODO 没问题的话切换为异步
+	db.Table("chat").Where("chat_id = ?", chatId).Pluck("title", &title)
+	err := db.Table("record_info").Where("chat_id = ?", chatId).Find(&records).Error
 	if err != nil {
-		return nil, err
+		return nil, common.ZeroString, err
 	}
 	for index, record := range records {
 
@@ -257,18 +306,18 @@ func (c *chatRepository) DbGetFuncHistory(ctx context.Context, chatId int) (*[]*
 			records[index].ChatGenerations = &domain.ChatGeneration{}
 		}
 
-		err := c.mysql.Gorm().Table("chat_ask").Where("record_id = ?", record.RecordId).First(records[index].ChatAsks).Error
+		err := db.Table("chat_ask").Where("record_id = ?", record.RecordId).First(records[index].ChatAsks).Error
 		//如果同一段chat在数据库中没找到记录 有可能是这个机器人这一次不需要问题
 		if err != nil && err.Error() != dao.RecordNotFoundError {
-			return nil, nil
+			return nil, common.ZeroString, nil
 		}
-		err = c.mysql.Gorm().Table("chat_generation").Where("record_id = ?", record.RecordId).First(records[index].ChatGenerations).Error
+		err = db.Table("chat_generation").Where("record_id = ?", record.RecordId).First(records[index].ChatGenerations).Error
 		if err != nil && err.Error() != dao.RecordNotFoundError {
-			return nil, nil
+			return nil, common.ZeroString, nil
 		}
 	}
 
-	return &records, nil
+	return &records, title, nil
 }
 
 func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
@@ -287,16 +336,17 @@ func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId 
 	return
 }
 
-func (c *chatRepository) CacheGetTitles(ctx context.Context, userId int) ([]*domain.TitleData, error) {
+// CacheGetTitles 通过LRU找出权重相关 根据权重找出具体值
+func (c *chatRepository) CacheGetTitles(ctx context.Context, userId int, botId int) ([]*domain.TitleData, error) {
 	newLru := lru.NewLru(cache.ContextLruMaxCapacity, cache.RedisZSetType, c.redis)
-	list, err := newLru.List(ctx, cache.ChatHistoryScore+common.Infix+strconv.Itoa(userId))
+	list, err := newLru.List(ctx, cache.ChatHistoryScore+common.Infix+strconv.Itoa(userId)+common.Infix+strconv.Itoa(botId))
+	//获取到指定bot下的热数据 最近交互的5个会话的chatId
 	if err != nil {
 		return nil, err
 	}
-	//var res []string
 	var res []*domain.TitleData
 	for _, v := range list {
-		t, err := c.redis.Get(ctx, cache.ChatHistoryTitle+common.Infix+v)
+		t, err := c.redis.Get(ctx, cache.ChatHistoryTitle+common.Infix+getInfixType(botId)+v)
 		if err != nil {
 			return nil, err
 		}
@@ -319,13 +369,16 @@ func (c *chatRepository) DbUpdateTitle(ctx context.Context, chatId int, newTitle
 }
 
 // CacheUpdateTitle 默认是有这个缓存的 因为这个方法的执行时机在第一次聊天后 并且已经获得了聊天记录。所以一般情况下必定有此次聊天记录的LRU缓存
-func (c *chatRepository) CacheUpdateTitle(ctx context.Context, chatId int, newTitle string) {
-	err := c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+strconv.Itoa(chatId), newTitle)
+func (c *chatRepository) CacheUpdateTitle(ctx context.Context, chatId int, newTitle string, botId int) {
+	err := c.redis.Set(ctx, cache.ChatHistoryTitle+common.Infix+getInfixType(botId)+strconv.Itoa(chatId), newTitle)
 	if err != nil {
 		log.GetTextLogger().Error("update title failed")
 	}
 }
 
 func NewChatRepository(dbs *bootstrap.Databases) domain.ChatRepository {
+	botId2TableMap[dao.DefaultModelBotId] = dao.RefactorTable
+	botId2TableMap[dao.MathSolveBotId] = dao.OriginTable
+	botId2TableMap[dao.CommentBotId] = dao.OriginTable
 	return &chatRepository{redis: dbs.Redis, mysql: dbs.Mysql}
 }

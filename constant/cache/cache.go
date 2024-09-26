@@ -9,8 +9,13 @@ const (
 	ChatHistoryScore = "chatHistoryLruScore"
 	// ChatHistory 历史记录缓存前缀
 	ChatHistory = "chatHistory"
+	// ChatHistoryTitle 历史记标题前缀
+	ChatHistoryTitle = "chatHistoryTitle"
 	// MaxBotId 最大的BotId 用于判断数据是否合法
 	MaxBotId = "maxBotId"
+
+	// OriginTable 原表缓存 由于两种历史记录的格式不一样 旧表用这个进行过渡
+	OriginTable = "ori"
 
 	// RedisListType List数据类型标识符
 	RedisListType = 1
@@ -29,8 +34,6 @@ const (
 	ChatGenerationExpired = "chatGenerationExpired"
 	// ChatGenerationTTL 生成缓存时间
 	ChatGenerationTTL = 500
-	// ChatHistoryTitle 历史记标题前缀
-	ChatHistoryTitle = "chatHistoryTitle"
 	// HistoryTitlePrompt 获取标题的prompt
 	HistoryTitlePrompt = "historyTitlePrompt"
 )

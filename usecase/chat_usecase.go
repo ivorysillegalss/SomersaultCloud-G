@@ -15,6 +15,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/thoas/go-funk"
+	"strconv"
 )
 
 //go:embed lua/increment.lua
@@ -119,23 +120,38 @@ func (c *chatUseCase) DisposableVisionChat(ctx context.Context, token string, ch
 
 // func (c *chatUseCase) InitMainPage(ctx context.Context, token string) (titles []string, err error) {
 // TODO 适应前端接口修改
-func (c *chatUseCase) InitMainPage(ctx context.Context, token string) (titles []*domain.TitleData, err error) {
+func (c *chatUseCase) InitMainPage(ctx context.Context, token string, botId int) (titles []*domain.TitleData, err error) {
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
 		return nil, err
 	}
-	titleStr, err := c.chatRepository.CacheGetTitles(ctx, userId)
+	titleStr, err := c.chatRepository.CacheGetTitles(ctx, userId, botId)
 	return titleStr, nil
 }
 
-func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int) (*[]*domain.Record, error) {
+// TODO 支持旧表
+func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int, botId int, tokenString string) (*[]*domain.Record, error) {
 	var history *[]*domain.Record
-	history, isCache, err := c.chatRepository.CacheGetHistory(ctx, chatId)
+	history, isCache, err := c.chatRepository.CacheGetHistory(ctx, chatId, botId)
 	if err != nil {
 		return nil, err
 	}
+	userId, err := c.tokenUtil.DecodeToId(tokenString)
+	if err != nil {
+		log.GetTextLogger().Error(err.Error())
+		return nil, err
+	}
 	if isCache && funk.IsEmpty(history) {
-		history, _, err = c.chatRepository.DbGetHistory(ctx, chatId)
+		history, title, err := c.chatRepository.DbGetHistory(ctx, chatId, botId)
+		if err != nil {
+			log.GetTextLogger().Error(err.Error())
+			return nil, err
+		}
+
+		// 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
+		go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
+			cache.ChatHistoryScore+common.Infix+cache.OriginTable+strconv.Itoa(userId)+common.Infix+strconv.Itoa(botId), history, chatId, title, botId)
+
 	} else {
 		return history, nil
 	}
@@ -172,7 +188,7 @@ func (c *chatUseCase) GenerateUpdateTitle(ctx context.Context, message *[]domain
 	return response.GenerateText, nil
 }
 
-func (c *chatUseCase) InputUpdateTitle(ctx context.Context, title string, token string, chatId int) bool {
+func (c *chatUseCase) InputUpdateTitle(ctx context.Context, title string, token string, chatId int, botId int) bool {
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
 		log.GetTextLogger().Error("user signed error:")
@@ -180,6 +196,6 @@ func (c *chatUseCase) InputUpdateTitle(ctx context.Context, title string, token 
 	}
 	data := &domain.AskContextData{ChatId: chatId, ParsedResponse: &domain.OpenAIParsedResponse{GenerateText: title}, UserId: userId}
 	c.chatEvent.PublishDbSaveTitle(data)
-	go c.chatRepository.CacheUpdateTitle(context.Background(), chatId, title)
+	go c.chatRepository.CacheUpdateTitle(context.Background(), chatId, title, botId)
 	return true
 }
