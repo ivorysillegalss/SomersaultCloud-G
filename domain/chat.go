@@ -127,5 +127,6 @@ type ChatStorageData struct {
 
 // TODO 适应前端接口
 type TitleData struct {
-	Title string `json:"title"`
+	Title  string `json:"title"`
+	ChatId int    `json:"chat_id"`
 }
