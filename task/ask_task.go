@@ -13,6 +13,7 @@ import (
 	"SomersaultCloud/internal/checkutil"
 	"context"
 	"github.com/thoas/go-funk"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -162,7 +163,7 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	var generation *domain.GenerationResponse
 	//没查到的话有可能是没处理完 等个300ms再查
-	//循环查询最多10次 超过则宣布失败
+	//循环查询最多15次 超过则宣布失败 10次好像查不完
 	for i := 0; i < sys.GenerateQueryRetryLimit; i++ {
 		if funk.IsEmpty(generation) {
 			//轮询等待
@@ -188,7 +189,13 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	//直到此处成功获取到resp对象 此处关流
 	data.Resp = *generation
-	defer generation.Resp.Body.Close()
+	if funk.NotEmpty(generation) && funk.NotEmpty(generation.Resp.Body) {
+		defer generation.Resp.Body.Close()
+	} else {
+		log.GetTextLogger().Fatal(strconv.Itoa(data.UserId) + common.Infix + strconv.Itoa(data.ChatId) + common.Infix + "can't get response")
+		tc.InterruptExecute(task.ChatGenerationError)
+		return
+	}
 
 	log.GetTextLogger().Info("start parsing data")
 	resp, _ := data.Executor.ParseResp(data)

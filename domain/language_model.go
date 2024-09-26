@@ -17,18 +17,22 @@ type LanguageModelExecutor interface {
 	ParseResp(tc *AskContextData) (ParsedResponse, string)
 }
 
+// ParsedResponse 转码的历史记录抽象接口
 type ParsedResponse interface {
 	GetGenerateText() string
+	GetErrorCause() string
 }
 
+// OpenAIParsedResponse 目前的实现在生成的时候 若出现错误直接将错误置为GenerateText
+// 也就是说两者方法实现上本质上一样 只是长得不一样
 type OpenAIParsedResponse struct {
 	GenerateText string
 	FinishReason string
 }
 
-func (o *OpenAIParsedResponse) GetGenerateText() string {
-	return o.GenerateText
-}
+func (o *OpenAIParsedResponse) GetGenerateText() string { return o.GenerateText }
+
+func (o *OpenAIParsedResponse) GetErrorCause() string { return o.GenerateText }
 
 type LanguageModelRequest interface {
 	Req()
