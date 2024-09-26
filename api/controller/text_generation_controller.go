@@ -47,7 +47,7 @@ func (cc *ChatController) ContextTextChat(c *gin.Context) {
 	if isSuccess {
 		c.JSON(http.StatusOK, domain.SuccessResponse{Message: "开启聊天成功", Code: request.StartChatSuccess, Data: parsedResponse})
 	} else {
-		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: "开启聊天失败", Code: request.StartChatError})
+		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: parsedResponse.GetErrorCause(), Code: request.StartChatError})
 	}
 }
 

@@ -8,7 +8,7 @@ const (
 	// GenerationResponseChannelBuffer 新初始化传递rpc数据的channel大小
 	GenerationResponseChannelBuffer = 100
 	// GenerateQueryRetryLimit 查询rpc返回值最大次数
-	GenerateQueryRetryLimit = 10
+	GenerateQueryRetryLimit = 15
 
 	// DefaultPoolGoRoutineAmount 默认的线程池中线程的数量
 	DefaultPoolGoRoutineAmount = 20

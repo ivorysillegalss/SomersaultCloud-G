@@ -20,6 +20,7 @@ const (
 	ReqUploadError           = "请求上传失败"
 	ReqParsedError           = "请求转码失败"
 	ReqCatchError            = "请求获取失败"
+	ChatGenerationError      = "生成内容请求事变"
 	ChatGenerationDelError   = "删除生成缓存失败"
 	RespParedError           = "生成内容转码失败"
 
