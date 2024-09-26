@@ -23,6 +23,7 @@ type storageHistory struct {
 	GenerationContent string
 	ChatId            int
 	UserId            int
+	BotId             int
 	Title             string
 }
 
@@ -33,6 +34,7 @@ func storageDataReady(data *domain.AskContextData) *storageHistory {
 		GenerationContent: data.ParsedResponse.GetGenerateText(),
 		ChatId:            data.ChatId,
 		UserId:            data.UserId,
+		BotId:             data.BotId,
 		Title:             data.ParsedResponse.GetGenerateText(),
 	}
 }
@@ -61,11 +63,12 @@ func (c chatEvent) CachePutHistory(b []byte) error {
 	var data storageHistory
 	_ = jsoniter.Unmarshal(b, &data)
 	err := c.chatRepository.CacheLuaLruPutHistory(context.Background(),
-		cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
+		cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId)+common.Infix+strconv.Itoa(data.BotId),
 		data.Records,
 		data.UserContent,
 		data.GenerationContent,
 		data.ChatId,
+		data.BotId,
 		dao.DefaultTitle)
 	if err != nil {
 		log.GetTextLogger().Error("mq cache put history error:" + err.Error())

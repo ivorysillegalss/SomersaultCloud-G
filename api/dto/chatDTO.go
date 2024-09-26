@@ -56,4 +56,5 @@ type TitleDTO struct {
 	Messages []domain.TextMessage `json:"messages"`
 	Title    string               `json:"title"`
 	ChatId   int                  `json:"chat_id"`
+	BotId    int                  `json:"bot_id"`
 }
