@@ -13,6 +13,8 @@ const (
 	// DefaultPoolGoRoutineAmount 默认的线程池中线程的数量
 	DefaultPoolGoRoutineAmount = 20
 
-	// GzipCompress 压缩方式为Gzip
-	GzipCompress = 1
+	// GzipCompress 压缩方式为Gzip 搭配Json序列化
+	GzipCompress = "gzip&json"
+	// ProtoBufCompress 序列化方式
+	ProtoBufCompress = "protobuf"
 )

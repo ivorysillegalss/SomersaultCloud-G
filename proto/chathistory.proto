@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package recordpb;  // Protobuf 内部的 package 名称
+option go_package = ".proto";  // 指定生成的 Go 包的名称
+
+message Record {
+  int32 record_id = 1;
+  ChatAsk chat_asks = 2;
+  ChatGeneration chat_generations = 3;
+}
+
+message ChatAsk {
+  int32 chat_id = 1;
+  string message = 2;
+  int32 bot_id = 3;
+  int64 time = 4;
+}
+
+message ChatGeneration {
+  string message = 1;
+  int64 time = 2;
+}
+
+message RecordsList {
+  repeated Record records = 1;
+}

@@ -27,7 +27,7 @@ func InitializeApp() (*bootstrap.Application, error) {
 	databases := bootstrap.NewDatabases(env)
 	poolsFactory := bootstrap.NewPoolFactory()
 	channels := bootstrap.NewChannel()
-	chatRepository := repository.NewChatRepository(databases)
+	chatRepository := repository.NewChatRepository(databases, env)
 	botRepository := repository.NewBotRepository(databases)
 	connection := bootstrap.NewRabbitConnection(env)
 	messageHandler := consume.NewMessageHandler(connection)
