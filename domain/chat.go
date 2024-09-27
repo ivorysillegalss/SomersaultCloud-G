@@ -32,8 +32,10 @@ type Record struct {
 //
 // ChatAsk 一次问题
 type ChatAsk struct {
-	//RecordId int    `json:"record_id"`
-	ChatId  int    `json:"chat_id,omitempty" gorm:"-"`
+	//TODO 兼容旧表
+	RecordId int `json:"record_id"`
+	//ChatId   int    `json:"chat_id,omitempty" gorm:"-"`
+	ChatId  int    `json:"chat_id,omitempty"`
 	Message string `json:"message"`
 	BotId   int    `json:"bot_id,omitempty" gorm:"-"`
 	Time    int64  `json:"time"`
@@ -41,8 +43,11 @@ type ChatAsk struct {
 
 // ChatGeneration 一次生成
 type ChatGeneration struct {
-	Message string `json:"message"`
-	Time    int64  `json:"time"`
+	//TODO 兼容旧表
+	ChatId   int    `json:"chat_id,omitempty"`
+	RecordId int    `json:"record_id"`
+	Message  string `json:"message"`
+	Time     int64  `json:"time"`
 }
 
 type ChatRepository interface {
@@ -62,7 +67,7 @@ type ChatRepository interface {
 	DbGetHistory(ctx context.Context, chatId int, botId int) (history *[]*Record, title string, err error)
 
 	// AsyncSaveHistory 异步保存历史记录
-	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string)
+	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string, botId int)
 	// CacheLuaLruResetHistory 这个是在生成前 把从DB拿到的数据回写缓存 维护热点数据          feat:生成前取消回写 在获取冷历史记录时回写
 	CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*Record, chatId int, title string, botId int) error
 	// CacheLuaLruPutHistory 这个是在生成完毕后 回写完整历史记录
@@ -84,7 +89,7 @@ type ChatRepository interface {
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
-	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message ParsedResponse, code int)
+	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
 
 	DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message ParsedResponse, code int)
 

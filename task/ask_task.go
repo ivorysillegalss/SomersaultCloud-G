@@ -40,7 +40,7 @@ func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
 	return &taskchain.TaskContext{
 		BusinessType:    args[4].(string),
 		BusinessCode:    args[5].(int),
-		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message, ExecutorId: args[6].(int)},
+		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message, ExecutorId: args[6].(int), Adjustment: args[7].(bool)},
 	}
 }
 
@@ -62,6 +62,8 @@ func (c *ChatAskTask) PreCheckDataTask(tc *taskchain.TaskContext) {
 func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 	data := tc.TaskContextData.(*domain.AskContextData)
+
+	//TODO 如果是旧表的话,目前其他模块打过来的默认没有cache
 
 	var history *[]*domain.Record
 	// 1. 缓存找
@@ -103,9 +105,12 @@ func (c *ChatAskTask) GetBotTask(tc *taskchain.TaskContext) {
 		tc.InterruptExecute(task.BotRetrievalFailed)
 		return
 	}
-
-	data.SysPrompt = botConfig.InitPrompt
 	data.Model = botConfig.Model
+	if !data.Adjustment {
+		data.SysPrompt = botConfig.InitPrompt
+	} else {
+		data.SysPrompt = botConfig.AdjustmentPrompt
+	}
 }
 
 func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
@@ -212,6 +217,7 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) {
 		log.GetTextLogger().Info("saving history")
 		//回写缓存&DB
+		//TODO 暂且规定如果是旧表就不存缓存
 		c.chatEvent.PublishSaveCacheHistory(data)
 		c.chatEvent.PublishSaveDbHistory(data)
 	} else if funk.Equal(tc.BusinessCode, task.ExecuteTitleAskCode) {

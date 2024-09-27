@@ -43,7 +43,7 @@ func (cc *ChatController) ContextTextChat(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: "请求参数解析失败", Code: request.StartChatError})
 		return
 	}
-	isSuccess, parsedResponse, _ := cc.chatUseCase.ContextChat(c, tokenString, askDTO.Ask.BotId, askDTO.Ask.ChatId, askDTO.Ask.Message)
+	isSuccess, parsedResponse, _ := cc.chatUseCase.ContextChat(c, tokenString, askDTO.Ask.BotId, askDTO.Ask.ChatId, askDTO.Ask.Message, askDTO.Adjustment)
 	if isSuccess {
 		c.JSON(http.StatusOK, domain.SuccessResponse{Message: "开启聊天成功", Code: request.StartChatSuccess, Data: parsedResponse})
 	} else {

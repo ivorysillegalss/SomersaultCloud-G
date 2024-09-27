@@ -62,7 +62,7 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	return chatId
 }
 
-func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message domain.ParsedResponse, code int) {
+func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message domain.ParsedResponse, code int) {
 	chatTask := c.chatTask
 
 	userId, err := c.tokenUtil.DecodeToId(token)
@@ -71,7 +71,7 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 	}
 
 	//我他妈太优雅了
-	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId)
+	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId, adjustment)
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,

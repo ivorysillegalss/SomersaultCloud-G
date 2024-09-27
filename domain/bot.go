@@ -21,9 +21,10 @@ type BotInfo struct {
 }
 
 type BotConfig struct {
-	BotId      int    `json:"bot_id"`
-	InitPrompt string `json:"init_prompt"`
-	Model      string `json:"model"`
+	BotId            int    `json:"bot_id"`
+	InitPrompt       string `json:"init_prompt"`
+	Model            string `json:"model"`
+	AdjustmentPrompt string `json:"adjustment_prompt"`
 }
 
 type BotRepository interface {

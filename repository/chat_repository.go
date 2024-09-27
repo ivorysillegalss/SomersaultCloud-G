@@ -100,16 +100,67 @@ func (c *chatRepository) CacheGetHistory(ctx context.Context, chatId int, botId 
 	return &h, false, nil
 }
 
-func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string) {
+func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string, botId int) {
 
-	history, _, err := refactorTableGetHistory(c.mysql.Gorm(), chatId, c.env)
+	switch botId2TableMap[botId] {
+	case dao.OriginTable:
+		originTableSaveHistory(c.mysql.Gorm(), chatId, askText, generationText)
+	case dao.RefactorTable:
+		refactorTableSaveHistory(c.mysql.Gorm(), chatId, askText, generationText, c.env)
+	default:
+		log.GetTextLogger().Error("get wrong botId mapping table type")
+	}
+}
+
+// 写入数据库的聊天记录映射类
+type recordToStruct struct {
+	ID     int `gorm:"primaryKey column:record_id" `
+	ChatId int `gorm:"column:chat_id"`
+}
+
+func originTableSaveHistory(db *gorm.DB, chatId int, askText string, generationText string) {
+	r := &recordToStruct{
+		ChatId: chatId,
+	}
+
+	//主键回显获取自增后ID
+	if err := db.Table("record_info").Create(r).Error; err != nil {
+		log.GetTextLogger().Error(err.Error())
+	}
+
+	chatAsk := &domain.ChatAsk{
+		RecordId: r.ID,
+		ChatId:   chatId,
+		Message:  askText,
+		Time:     time.Now().Unix(),
+	}
+
+	chatGeneration := &domain.ChatGeneration{
+		RecordId: r.ID,
+		Message:  generationText,
+		Time:     time.Now().Unix(),
+	}
+
+	if err := db.Table("chat_ask").Save(chatAsk).Error; err != nil {
+		log.GetTextLogger().Fatal(err.Error())
+	}
+	if err := db.Table("chat_generation").Save(chatGeneration).Error; err != nil {
+		log.GetTextLogger().Fatal(err.Error())
+	}
+	if err := db.Table("chat").Where("chat_id = ?", chatId).Update("last_update_time", time.Now().Unix()).Error; err != nil {
+		log.GetTextLogger().Error(err.Error())
+	}
+}
+
+func refactorTableSaveHistory(db *gorm.DB, chatId int, askText string, generationText string, env *bootstrap.Env) {
+	history, _, err := refactorTableGetHistory(db, chatId, env)
 	if err != nil {
 		log.GetJsonLogger().WithFields("async history", err.Error()).Warn("async history error")
 		panic(err)
 	}
 
 	var marshal []byte
-	switch c.env.Serializer {
+	switch env.Serializer {
 	case sys.GzipCompress:
 		r := &domain.Record{
 			ChatAsks:        &domain.ChatAsk{Message: askText},
@@ -146,7 +197,7 @@ func (c *chatRepository) AsyncSaveHistory(ctx context.Context, chatId int, askTe
 		}
 	}
 
-	if err = c.mysql.Gorm().Table("chat_re").Where("chat_id = ?", chatId).Update("data", marshal).Error; err != nil {
+	if err = db.Table("chat_re").Where("chat_id = ?", chatId).Update("data", marshal).Error; err != nil {
 		panic(err)
 	}
 }
@@ -402,13 +453,14 @@ func refactorTableGetHistory(db *gorm.DB, chatId int, env *bootstrap.Env) (*hist
 	return &hs, h[0].Title, nil
 }
 
-// TODO 重写
+// TODO 得测，重写
 func originTableGetHistory(db *gorm.DB, chatId int) (*[]*domain.Record, string, error) {
 	var records []*domain.Record
-	var title string
+	var titles []string
 	//TODO 没问题的话切换为异步
-	db.Table("chat").Where("chat_id = ?", chatId).Pluck("title", &title)
+	db.Table("chat").Where("chat_id = ?", chatId).Pluck("title", &titles)
 	err := db.Table("record_info").Where("chat_id = ?", chatId).Find(&records).Error
+
 	if err != nil {
 		return nil, common.ZeroString, err
 	}
@@ -438,7 +490,7 @@ func originTableGetHistory(db *gorm.DB, chatId int) (*[]*domain.Record, string, 
 		}
 	}
 
-	return &records, title, nil
+	return &records, titles[0], nil
 }
 
 func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
