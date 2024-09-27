@@ -5,6 +5,7 @@ type AskContextData struct {
 	UserId         int
 	Message        string
 	BotId          int
+	Adjustment     bool
 	History        *[]*Record
 	SysPrompt      string
 	Model          string

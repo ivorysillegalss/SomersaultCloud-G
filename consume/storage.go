@@ -46,6 +46,7 @@ func (c chatEvent) DbPutHistory(b []byte) error {
 		data.ChatId,
 		data.UserContent,
 		data.GenerationContent,
+		data.BotId,
 	)
 	return nil
 }
