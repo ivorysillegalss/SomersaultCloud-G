@@ -317,14 +317,16 @@ func originTableGetHistory(db *gorm.DB, chatId int) (*[]*domain.Record, string, 
 
 func (c *chatRepository) DbInsertNewChat(ctx context.Context, userId int, botId int) {
 	marshal, _ := jsoniter.Marshal(dao.DefaultData)
+	data, _ := compressutil.NewCompress(sys.GzipCompress).CompressData(marshal)
 	chat := &domain.Chat{
 		UserId:         userId,
 		BotId:          botId,
 		Title:          dao.DefaultTitle,
 		LastUpdateTime: time.Now().Unix(),
 		IsDelete:       false,
-		Data:           marshal,
+		Data:           data,
 	}
+
 	if err := c.mysql.Gorm().Table("chat_re").Create(chat).Error; err != nil {
 		//TODO 异步 写入日志
 	}
