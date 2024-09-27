@@ -33,6 +33,8 @@ type Env struct {
 
 	JwtSecretToken     string `mapstructure:"JWT_SECRET_KEY"`
 	ApiOpenaiSecretKey string `mapstructure:"API_OPENAI_SECRET_KEY"`
+
+	Serializer string `mapstructure:"SERIALIZER"`
 }
 
 func NewEnv() *Env {
