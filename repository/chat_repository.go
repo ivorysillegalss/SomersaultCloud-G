@@ -327,6 +327,9 @@ func (c *chatRepository) DbGetHistory(ctx context.Context, chatId int, botId int
 		switch c.env.Serializer {
 		case sys.GzipCompress:
 			getHistory, s, err := refactorTableGetHistory(c.mysql.Gorm(), chatId, c.env)
+			if funk.IsEmpty(getHistory) {
+				getHistory = new(historySerializer)
+			}
 			return getHistory.gzipRecord, s, err
 		case sys.ProtoBufCompress:
 			getHistory, s, err := refactorTableGetHistory(c.mysql.Gorm(), chatId, c.env)
