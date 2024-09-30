@@ -8,11 +8,13 @@ const (
 	// GenerationResponseChannelBuffer 新初始化传递rpc数据的channel大小
 	GenerationResponseChannelBuffer = 100
 	// GenerateQueryRetryLimit 查询rpc返回值最大次数
-	GenerateQueryRetryLimit = 10
+	GenerateQueryRetryLimit = 15
 
 	// DefaultPoolGoRoutineAmount 默认的线程池中线程的数量
 	DefaultPoolGoRoutineAmount = 20
 
-	// GzipCompress 压缩方式为Gzip
-	GzipCompress = 1
+	// GzipCompress 压缩方式为Gzip 搭配Json序列化
+	GzipCompress = "gzip&json"
+	// ProtoBufCompress 序列化方式
+	ProtoBufCompress = "protobuf"
 )

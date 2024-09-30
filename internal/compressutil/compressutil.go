@@ -3,13 +3,18 @@ package compressutil
 import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
+	"SomersaultCloud/infrastructure/log"
+	__proto "SomersaultCloud/proto/.proto"
 	"bytes"
+	"errors"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/klauspost/compress/gzip"
-	"github.com/thoas/go-funk"
+	"google.golang.org/protobuf/proto"
 	"io"
 )
 
+// Compress 序列化压缩数据统一接口
+// 提供Gzip+Jsontier & Protobuf实现
 type Compress interface {
 	// CompressData 序列化数据并进行压缩
 	CompressData(data any) ([]byte, error)
@@ -17,8 +22,7 @@ type Compress interface {
 	DecompressData(data []byte, v any) error
 }
 
-type GzipCompress struct {
-}
+type GzipCompress struct{}
 
 func (g GzipCompress) CompressData(data any) ([]byte, error) {
 	marshal, err := jsoniter.Marshal(data)
@@ -63,9 +67,43 @@ func (g GzipCompress) DecompressData(data []byte, v any) error {
 	return nil
 }
 
-// NewCompress TODO 可补充不同的解压方案
-func NewCompress(args ...int) Compress {
-	if funk.Equal(args[0], sys.GzipCompress) {
+type ProtoBufCompress struct{}
+
+func (p ProtoBufCompress) CompressData(data any) ([]byte, error) {
+	//message, ok := data.([]*proto.Message)
+	//if !ok {
+	//	log.GetTextLogger().Fatal("data does not implement proto.Message")
+	//	return nil, errors.New("data does not implement proto.Message")
+	//}
+	//TODO 暂时想不到更好的解决办法 赶时间暂时写死类型了
+	message, ok := data.([]*__proto.Record)
+	if !ok {
+		log.GetTextLogger().Fatal("data does not implement proto.Message")
+		return nil, errors.New("data does not implement proto.Message")
 	}
-	return &GzipCompress{}
+	return proto.Marshal(&__proto.RecordsList{Records: message})
+}
+
+func (p ProtoBufCompress) DecompressData(data []byte, v any) error {
+	//message, ok := v.(proto.Message)
+	//if !ok {
+	//	log.GetTextLogger().Fatal("v does not implement proto.Message")
+	//	return errors.New("v does not implement proto.Message")
+	//}
+
+	h := new(__proto.RecordsList)
+	err := proto.Unmarshal(data, h)
+	return err
+}
+
+func NewCompress(args ...string) Compress {
+	switch args[0] {
+	case sys.GzipCompress:
+		return &GzipCompress{}
+	case sys.ProtoBufCompress:
+		return &ProtoBufCompress{}
+	default:
+		log.GetTextLogger().Fatal("error Compress sign")
+		panic("error Compress sign")
+	}
 }

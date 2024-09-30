@@ -9,6 +9,7 @@ import (
 	"SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/checkutil"
 	"context"
 	"github.com/thoas/go-funk"
@@ -37,9 +38,9 @@ func (c *ChatAskTask) InitContextData(args ...any) *taskchain.TaskContext {
 	chatId := args[2].(int)
 	message := args[3].(string)
 	return &taskchain.TaskContext{
-		BusinessType:    task.ExecuteChatAskType,
-		BusinessCode:    task.ExecuteChatAskCode,
-		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message},
+		BusinessType:    args[4].(string),
+		BusinessCode:    args[5].(int),
+		TaskContextData: &domain.AskContextData{UserId: userId, BotId: botId, ChatId: chatId, Message: message, ExecutorId: args[6].(int), Adjustment: args[7].(bool)},
 	}
 }
 
@@ -62,9 +63,11 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 	data := tc.TaskContextData.(*domain.AskContextData)
 
+	//TODO 如果是旧表的话,目前其他模块打过来的默认没有cache
+
 	var history *[]*domain.Record
 	// 1. 缓存找
-	history, NotHaveCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId)
+	history, NotHaveCache, err := c.chatRepository.CacheGetHistory(context.Background(), data.ChatId, data.BotId)
 	if err != nil {
 		tc.InterruptExecute(task.HistoryRetrievalFailed)
 		return
@@ -73,7 +76,7 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 	// 2. 缓存miss db找
 	//TODO 目前查DB后需要截取历史记录，实现数据流式更新后可取消
 	if NotHaveCache {
-		history, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId)
+		history, _, err = c.chatRepository.DbGetHistory(context.Background(), data.ChatId, data.BotId)
 		if err != nil {
 			tc.InterruptExecute(task.HistoryRetrievalFailed)
 			return
@@ -81,17 +84,12 @@ func (c *ChatAskTask) GetHistoryTask(tc *taskchain.TaskContext) {
 
 		if funk.IsEmpty(history) {
 			history = new([]*domain.Record)
-
 		} else {
 			// 截取数据
 			if len(*history) >= cache.HistoryDefaultWeight {
 				*history = (*history)[:cache.HistoryDefaultWeight]
 			}
-
-			// 2.1 回写缓存 (把从DB拿到的回写缓存 维护热点数据)
-			//TODO 目前架构下，chat一次请求回写两次缓存，可优化，取消此次回写
-			go c.chatRepository.CacheLuaLruResetHistory(context.Background(),
-				cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId), data.History, data.ChatId)
+			//此处无需回写 等成功获取了generation后再进行回写
 		}
 	}
 
@@ -107,9 +105,12 @@ func (c *ChatAskTask) GetBotTask(tc *taskchain.TaskContext) {
 		tc.InterruptExecute(task.BotRetrievalFailed)
 		return
 	}
-
-	data.Prompt = botConfig.InitPrompt
 	data.Model = botConfig.Model
+	if !data.Adjustment {
+		data.SysPrompt = botConfig.InitPrompt
+	} else {
+		data.SysPrompt = botConfig.AdjustmentPrompt
+	}
 }
 
 func (c *ChatAskTask) AdjustmentTask(tc *taskchain.TaskContext) {
@@ -122,7 +123,7 @@ func (c *ChatAskTask) AssembleReqTask(tc *taskchain.TaskContext) {
 	data := tc.TaskContextData.(*domain.AskContextData)
 
 	//TODO id在此处没什么作用 主要为了之后多实现 策略化 先随便传一个
-	executor := handler.NewLanguageModelExecutor(c.env, c.channels, 0)
+	executor := handler.NewLanguageModelExecutor(c.env, c.channels, data.ExecutorId)
 
 	data.Executor = executor
 	data.HistoryMessage = executor.AssemblePrompt(data)
@@ -167,7 +168,7 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	var generation *domain.GenerationResponse
 	//没查到的话有可能是没处理完 等个300ms再查
-	//循环查询最多10次 超过则宣布失败
+	//循环查询最多15次 超过则宣布失败 10次好像查不完
 	for i := 0; i < sys.GenerateQueryRetryLimit; i++ {
 		if funk.IsEmpty(generation) {
 			//轮询等待
@@ -193,36 +194,35 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	//直到此处成功获取到resp对象 此处关流
 	data.Resp = *generation
-	defer generation.Resp.Body.Close()
+	if funk.NotEmpty(generation.Resp) && funk.NotEmpty(generation.Resp.Body) {
+		defer generation.Resp.Body.Close()
+	} else {
+		log.GetTextLogger().Error(strconv.Itoa(data.UserId) + common.Infix + strconv.Itoa(data.ChatId) + common.Infix + "can't get response")
+		tc.InterruptExecute(task.ChatGenerationError)
+		return
+	}
 
-	//直接go模式下未优化需generationText rabbit不用
-	//resp, generationText := data.Executor.ParseResp(data)
-
+	log.GetTextLogger().Info("start parsing data")
 	resp, _ := data.Executor.ParseResp(data)
 
 	if funk.IsEmpty(resp) {
+		log.GetTextLogger().Error("can't get data")
 		tc.InterruptExecute(task.RespParedError)
+	} else {
+		log.GetTextLogger().Info("successfully get data")
 	}
 
 	data.ParsedResponse = resp
 
-	//回写缓存  (可直接调用or交给rabbit------chatEvent板块)
-	c.chatEvent.PublishSaveCacheHistory(data)
-	//go c.chatRepository.CacheLuaLruPutHistory(
-	//	context.Background(),
-	//	cache.ChatHistoryScore+common.Infix+strconv.Itoa(data.UserId),
-	//	data.History,
-	//	data.Message,
-	//	generationText,
-	//	data.ChatId,
-	//)
-
-	//回写db  (可直接调用or交给rabbit------chatEvent板块)
-	c.chatEvent.PublishSaveDbHistory(data)
-	//go c.chatRepository.AsyncSaveHistory(
-	//	context.Background(),
-	//	data.ChatId,
-	//	data.Message,
-	//	generationText,
-	//)
+	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) {
+		log.GetTextLogger().Info("saving history")
+		//回写缓存&DB
+		//TODO 暂且规定如果是旧表就不存缓存
+		c.chatEvent.PublishSaveCacheHistory(data)
+		c.chatEvent.PublishSaveDbHistory(data)
+	} else if funk.Equal(tc.BusinessCode, task.ExecuteTitleAskCode) {
+		c.chatEvent.PublishDbSaveTitle(data)
+		//感觉没必要都上mq 写缓存就直接go好了
+		go c.chatRepository.CacheUpdateTitle(context.Background(), data.ChatId, data.ParsedResponse.GetGenerateText(), data.BotId)
+	}
 }

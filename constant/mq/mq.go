@@ -19,4 +19,8 @@ const (
 	HistoryDbSaveExchange = "user.save.history.db.direct"
 	HistoryDbSaveQueue    = "user.save.history.db.queue"
 	HistoryDbSaveKey      = "user.save.history.db.event"
+
+	UpdateChatTitleExchange = "user.update.title.direct"
+	UpdateChatTitleQueue    = "user.update.title.queue"
+	UpdateChatTitleKey      = "user.update.title.event"
 )

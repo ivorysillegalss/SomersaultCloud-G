@@ -29,6 +29,12 @@ const (
 	UserRole = "user"
 	// GPTRole GPT角色
 	GPTRole = "assistant"
+	// TextType 文字类型
+	TextType = "text"
+	// ImageURLType 图片链接类型
+	ImageURLType = "image_url"
+	// HighDetail 图片分辨率细节
+	HighDetail = "high"
 	// ApiServerOpenAI OpenAI-API服务器默认网址
 	ApiServerOpenAI = "https://api.openai.com/v1/chat/completions"
 )

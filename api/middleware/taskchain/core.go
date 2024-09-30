@@ -36,8 +36,7 @@ func NewTaskContextFactory() *TaskContextFactory {
 // InterruptExecute 错误执行包装类
 func (t *TaskContext) InterruptExecute(message string) {
 	t.Exception = true
-	t.TaskContextResponse.Code = task2.FailCode
-	t.TaskContextResponse.Message = message
+	t.TaskContextResponse = &TaskContextResponse{Code: task2.FailCode, Message: message}
 }
 
 // ExecuteChain 执行责任链

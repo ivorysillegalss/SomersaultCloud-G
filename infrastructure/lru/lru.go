@@ -3,10 +3,18 @@ package lru
 import (
 	"SomersaultCloud/constant/cache"
 	"SomersaultCloud/constant/common"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/redis"
-	"SomersaultCloud/internal/ioutil"
 	"context"
+	_ "embed"
+	"strconv"
 )
+
+//go:embed lua/zsetlru.lua
+var zsetLruLuaScript string
+
+//go:embed lua/listlru.lua
+var listLruLuaScript string
 
 func NewLru(maxCapacity int, dataType int, middleware any) Lru {
 	var redisClient redis.Client
@@ -51,17 +59,19 @@ func (r *redisLuaLruZSet) isExist(ctx context.Context, k string, member string) 
 }
 
 func (r *redisLuaLruZSet) List(ctx context.Context, k string) ([]string, error) {
-	return r.rcl.LRange(ctx, k, 0, -1)
+	return r.rcl.ZRange(ctx, k)
 }
 
 func (r *redisLuaLruZSet) Add(ctx context.Context, key, value string) (error, int) {
-	luaScript, _ := ioutil.LoadLuaScript("infrastructure/lru/lua/zsetlru.lua")
+	//luaScript, _ := ioutil.LoadLuaScript("infrastructure/lru/lua/zsetlru.lua")
+	luaScript := zsetLruLuaScript
 	err, retValue := r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
 	if err != nil {
 		return err, common.FalseInt
 	}
-
-	return nil, retValue[0].(int)
+	log.GetTextLogger().Warn("lru lua add")
+	atoi, _ := strconv.Atoi(retValue[0].(string))
+	return nil, atoi
 }
 
 // redisLuaLruList List实现类型
@@ -108,7 +118,8 @@ func (r *redisLuaLruList) List(ctx context.Context, k string) ([]string, error) 
 }
 
 func (r *redisLuaLruList) Add(ctx context.Context, key, value string) (error, int) {
-	luaScript, _ := ioutil.LoadLuaScript("infrastructure/lru/lua/listlru.lua")
+	//luaScript, _ := ioutil.LoadLuaScript("infrastructure/lru/lua/listlru.lua")
+	luaScript := listLruLuaScript
 	err, retValue := r.rcl.ExecuteArgsLuaScript(ctx, luaScript, []string{key, key + common.Infix + cache.LruPrefix}, value, r.maxCapacity)
 	if err != nil {
 		return err, common.FalseInt

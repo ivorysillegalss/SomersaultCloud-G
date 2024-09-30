@@ -36,7 +36,8 @@ type Channels struct {
 }
 
 type Controllers struct {
-	ChatController *controller.ChatController
+	ChatController           *controller.ChatController
+	HistoryMessageController *controller.HistoryMessageController
 }
 
 type Executor struct {
@@ -48,8 +49,8 @@ func (app *Application) CloseDBConnection() {
 	CloseMongoDBConnection(app.Databases.Mongo)
 }
 
-func NewControllers(chatController *controller.ChatController) *Controllers {
-	return &Controllers{ChatController: chatController}
+func NewControllers(chatController *controller.ChatController, messageController *controller.HistoryMessageController) *Controllers {
+	return &Controllers{ChatController: chatController, HistoryMessageController: messageController}
 }
 
 func NewExecutors(ce *executor.CronExecutor, cse *executor.ConsumeExecutor) *Executor {

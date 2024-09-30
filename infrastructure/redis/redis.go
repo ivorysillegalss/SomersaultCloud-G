@@ -20,7 +20,9 @@ type Client interface {
 	LRem(ctx context.Context, k string, count int, v any) (int64, error)
 
 	ZRem(ctx context.Context, k string, vs ...any) (int64, error)
+	// ZScore 获取指定元素的分数 Zset
 	ZScore(ctx context.Context, k string, member string) (isExist bool, score int)
+	ZRange(ctx context.Context, k string) ([]string, error)
 
 	SetStruct(ctx context.Context, k string, vStruct any) error
 	SetStructExpire(ctx context.Context, k string, vStruct any, ddl time.Duration) error
@@ -112,6 +114,10 @@ func (r *redisClient) ZScore(ctx context.Context, k string, member string) (isEx
 		return false, common.FalseInt
 	}
 	return true, int(result)
+}
+
+func (r *redisClient) ZRange(ctx context.Context, k string) ([]string, error) {
+	return r.rcl.ZRange(ctx, k, 0, -1).Result()
 }
 
 func (r *redisClient) LRem(ctx context.Context, k string, count int, v any) (int64, error) {

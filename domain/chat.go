@@ -2,7 +2,12 @@ package domain
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 )
+
+type ChatHistoryTitle struct {
+	Title []string `json:"title"`
+}
 
 type Chat struct {
 	ID             int        `json:"chat_id"  gorm:"primaryKey"`
@@ -17,16 +22,20 @@ type Chat struct {
 
 type Record struct {
 	//ChatId int `json:"chat_id"`
-	//RecordId        int             `json:"record_id"`
+	RecordId        int             `json:"record_id"`
 	ChatAsks        *ChatAsk        `json:"chat_asks"`
 	ChatGenerations *ChatGeneration `json:"chat_generations"`
 	//Weights         float64
 }
 
+//	TODO 加一个imageurllist，应付提问中有多张图片
+//
 // ChatAsk 一次问题
 type ChatAsk struct {
-	//RecordId int    `json:"record_id"`
-	ChatId  int    `json:"chat_id,omitempty" gorm:"-"`
+	//TODO 兼容旧表
+	RecordId int `json:"record_id"`
+	//ChatId   int    `json:"chat_id,omitempty" gorm:"-"`
+	ChatId  int    `json:"chat_id,omitempty"`
 	Message string `json:"message"`
 	BotId   int    `json:"bot_id,omitempty" gorm:"-"`
 	Time    int64  `json:"time"`
@@ -34,8 +43,11 @@ type ChatAsk struct {
 
 // ChatGeneration 一次生成
 type ChatGeneration struct {
-	Message string `json:"message"`
-	Time    int64  `json:"time"`
+	//TODO 兼容旧表
+	ChatId   int    `json:"chat_id,omitempty"`
+	RecordId int    `json:"record_id"`
+	Message  string `json:"message"`
+	Time     int64  `json:"time"`
 }
 
 type ChatRepository interface {
@@ -50,27 +62,45 @@ type ChatRepository interface {
 	DbInsertNewChat(ctx context.Context, userId int, botId int)
 
 	// CacheGetHistory 从缓存中取出历史记录 存的时候确保最大条数 取时无需注意
-	CacheGetHistory(ctx context.Context, chatId int) (*[]*Record, bool, error)
+	CacheGetHistory(ctx context.Context, chatId int, botId int) (*[]*Record, bool, error)
 	// DbGetHistory miss缓存 从DB中获取历史记录
-	DbGetHistory(ctx context.Context, chatId int) (*[]*Record, error)
+	DbGetHistory(ctx context.Context, chatId int, botId int) (history *[]*Record, title string, err error)
 
 	// AsyncSaveHistory 异步保存历史记录
-	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string)
-	// CacheLuaLruResetHistory 这个是在生成前 把从DB拿到的数据回写缓存 维护热点数据
-	CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*Record, chatId int) error
-	// CacheLuaLruPutHistory 这个是在生成完毕后 回写完整
-	CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*Record, askText string, generationText string, chatId int) error
+	AsyncSaveHistory(ctx context.Context, chatId int, askText string, generationText string, botId int)
+	// CacheLuaLruResetHistory 这个是在生成前 把从DB拿到的数据回写缓存 维护热点数据          feat:生成前取消回写 在获取冷历史记录时回写
+	CacheLuaLruResetHistory(ctx context.Context, cacheKey string, history *[]*Record, chatId int, title string, botId int) error
+	// CacheLuaLruPutHistory 这个是在生成完毕后 回写完整历史记录
+	CacheLuaLruPutHistory(ctx context.Context, cacheKey string, history *[]*Record, askText string, generationText string, chatId int, botId int, title string) error
 
 	//由于http.response对象不可序列化 转为inmemory存储
 	MemoryGetGeneration(ctx context.Context, chatId int) *GenerationResponse
 	CacheGetGeneration(ctx context.Context, chatId int) (*GenerationResponse, error)
 	MemoryDelGeneration(ctx context.Context, chatId int)
 	CacheDelGeneration(ctx context.Context, chatId int) error
+
+	// CacheGetTitlePrompt 获取根据历史记录获取标题的prompt
+	CacheGetTitlePrompt(ctx context.Context) string
+	CacheGetTitles(ctx context.Context, userId int, botId int) ([]*TitleData, error)
+
+	DbUpdateTitle(ctx context.Context, chatId int, newTitle string)
+	CacheUpdateTitle(ctx context.Context, chatId int, newTitle string, botId int)
 }
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
-	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string) (isSuccess bool, message ParsedResponse, code int)
+	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
+
+	DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message ParsedResponse, code int)
+
+	//TODO 同上适应前端接口
+	//InitMainPage(ctx context.Context, token string) (titles []string, err error)
+	InitMainPage(ctx context.Context, token string, botId int) (titles []*TitleData, err error)
+	// GetChatHistory 获取历史记录 若从DB取的记录 则回写缓存
+	GetChatHistory(c *gin.Context, chatId int, botId int, tokenString string) (*[]*Record, error)
+
+	GenerateUpdateTitle(ctx context.Context, message *[]TextMessage, token string, chatId int) (string, error)
+	InputUpdateTitle(ctx context.Context, title string, token string, chatId int, botId int) bool
 }
 
 type ChatEvent interface {
@@ -86,10 +116,22 @@ type ChatEvent interface {
 	AsyncConsumeDbHistory()
 	AsyncConsumeCacheHistory()
 	AsyncConsumeDbNewChat()
+
+	DbUpdateTitle(b []byte) error
+
+	PublishDbSaveTitle(data *AskContextData)
+
+	AsyncConsumeDbUpdateTitle()
 }
 
 type ChatStorageData struct {
 	UserId int
 	ChatId int
 	BotId  int
+}
+
+// TODO 适应前端接口
+type TitleData struct {
+	Title  string `json:"title"`
+	ChatId int    `json:"chat_id"`
 }
