@@ -194,10 +194,10 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	//直到此处成功获取到resp对象 此处关流
 	data.Resp = *generation
-	if funk.NotEmpty(generation) && funk.NotEmpty(generation.Resp.Body) {
+	if funk.NotEmpty(generation.Resp) && funk.NotEmpty(generation.Resp.Body) {
 		defer generation.Resp.Body.Close()
 	} else {
-		log.GetTextLogger().Fatal(strconv.Itoa(data.UserId) + common.Infix + strconv.Itoa(data.ChatId) + common.Infix + "can't get response")
+		log.GetTextLogger().Error(strconv.Itoa(data.UserId) + common.Infix + strconv.Itoa(data.ChatId) + common.Infix + "can't get response")
 		tc.InterruptExecute(task.ChatGenerationError)
 		return
 	}
