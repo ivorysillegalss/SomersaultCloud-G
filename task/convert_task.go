@@ -6,11 +6,11 @@ import (
 )
 
 type ChatConvertTask struct {
-	chatEvent domain.GenerateEvent
+	generateEvent domain.GenerateEvent
 }
 
 func (c ChatConvertTask) StreamPublishTask(tc *taskchain.TaskContext) {
-	c.chatEvent.PublishApiCalling(tc.TaskContextData.(*domain.AskContextData))
+	c.generateEvent.PublishApiCalling(tc.TaskContextData.(*domain.AskContextData))
 }
 
 func (c ChatConvertTask) StreamArgsTask(tc *taskchain.TaskContext) {
@@ -18,6 +18,6 @@ func (c ChatConvertTask) StreamArgsTask(tc *taskchain.TaskContext) {
 	data.Stream = true
 }
 
-func NewConvertTask(event domain.StorageEvent) ConvertTask {
-	return ChatConvertTask{chatEvent: event}
+func NewConvertTask(event domain.GenerateEvent) ConvertTask {
+	return &ChatConvertTask{generateEvent: event}
 }
