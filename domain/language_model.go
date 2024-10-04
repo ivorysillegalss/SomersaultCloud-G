@@ -21,18 +21,25 @@ type LanguageModelExecutor interface {
 type ParsedResponse interface {
 	GetGenerateText() string
 	GetErrorCause() string
+	GetIndex() int
 }
 
 // OpenAIParsedResponse 目前的实现在生成的时候 若出现错误直接将错误置为GenerateText
 // 也就是说两者方法实现上本质上一样 只是长得不一样
+//
+//	流式生成的时候 通过UserId作为标识 保证时序性
 type OpenAIParsedResponse struct {
+	UserId       int
 	GenerateText string
 	FinishReason string
+	Index        int //索引 流式输出的索引
 }
 
 func (o *OpenAIParsedResponse) GetGenerateText() string { return o.GenerateText }
 
 func (o *OpenAIParsedResponse) GetErrorCause() string { return o.GenerateText }
+
+func (o *OpenAIParsedResponse) GetIndex() int { return o.Index }
 
 type LanguageModelRequest interface {
 	Req()

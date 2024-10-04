@@ -15,6 +15,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/thoas/go-funk"
+	"net/http"
 	"strconv"
 )
 
@@ -27,12 +28,13 @@ type chatUseCase struct {
 	botRepository  domain.BotRepository
 	chatTask       task.AskTask
 	tokenUtil      *tokenutil.TokenUtil
-	chatEvent      domain.ChatEvent
+	chatEvent      domain.StorageEvent
 	titleTask      task.TitleTask
+	convertTask    task.ConvertTask
 }
 
-func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.ChatEvent, tt task.TitleTask) domain.ChatUseCase {
-	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce, titleTask: tt}
+func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.StorageEvent, tt task.TitleTask, cvt task.ConvertTask) domain.ChatUseCase {
+	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce, titleTask: tt, convertTask: cvt}
 	return chat
 }
 
@@ -88,6 +90,39 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 
 	response := parsedResponse.(*domain.OpenAIParsedResponse)
 	return true, response, task2.SuccessCode
+}
+
+func (c *chatUseCase) StreamContextChatSetup(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message domain.ParsedResponse, code int) {
+	chatTask := c.chatTask
+	convertTask := c.convertTask
+
+	userId, err := c.tokenUtil.DecodeToId(token)
+	if err != nil {
+		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
+	}
+
+	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId, adjustment)
+	factory := taskchain.NewTaskContextFactory()
+	factory.TaskContext = taskContext
+
+	//StreamTask开启流式输出
+	//至此组装好请求 向mq发布任务 mq消费 向指定客户端send generation
+	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask, convertTask.StreamArgsTask, chatTask.AssembleReqTask, convertTask.StreamPublishTask)
+	factory.ExecuteChain()
+
+	taskContext = factory.TaskContext
+	if taskContext.Exception {
+		return false, &domain.OpenAIParsedResponse{GenerateText: taskContext.TaskContextResponse.Message}, taskContext.TaskContextResponse.Code
+	}
+	return true, nil, task2.SuccessCode
+}
+
+func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string, gc *gin.Context, flusher http.Flusher) {
+	_, err := c.tokenUtil.DecodeToId(token)
+	if err != nil {
+		return
+	}
+
 }
 
 func (c *chatUseCase) DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message domain.ParsedResponse, code int) {

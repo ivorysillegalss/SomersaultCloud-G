@@ -22,13 +22,13 @@ import (
 type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
-	chatEvent      domain.ChatEvent
+	chatEvent      domain.StorageEvent
 	env            *bootstrap.Env
 	channels       *bootstrap.Channels
 	poolFactory    *bootstrap.PoolsFactory
 }
 
-func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory, ce domain.ChatEvent) AskTask {
+func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory, ce domain.StorageEvent) AskTask {
 	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch, poolFactory: p, chatEvent: ce}
 }
 
