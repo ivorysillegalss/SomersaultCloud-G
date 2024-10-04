@@ -30,3 +30,10 @@ type TitleTask interface {
 	// Convert2AskTask 其他的逻辑同AskTask
 	Convert2AskTask(tc *taskchain.TaskContext)
 }
+
+// ConvertTask 责任链中节点在不同方法中使用的时候 需要根据需求进行一定定制修改
+// 对于变化较小的改动 直接在此定义节点并使用即可 上方title_task那其实也可以这么干
+type ConvertTask interface {
+	StreamArgsTask(tc *taskchain.TaskContext)
+	StreamPublishTask(tc *taskchain.TaskContext)
+}

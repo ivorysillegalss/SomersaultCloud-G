@@ -6,7 +6,7 @@ import (
 )
 
 type ConsumeExecutor struct {
-	ChatEvent domain.ChatEvent
+	ChatEvent domain.StorageEvent
 }
 
 func (d *ConsumeExecutor) SetupConsume() {
@@ -20,6 +20,6 @@ func (d *ConsumeExecutor) SetupConsume() {
 	//在这里全部启动消费者逻辑
 }
 
-func NewConsumeExecutor(c domain.ChatEvent) *ConsumeExecutor {
+func NewConsumeExecutor(c domain.StorageEvent) *ConsumeExecutor {
 	return &ConsumeExecutor{ChatEvent: c}
 }
