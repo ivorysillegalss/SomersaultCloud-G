@@ -102,6 +102,7 @@ func (o OpenaiChatModelExecutor) ConfigureProxy(tc *domain.AskContextData) *http
 func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 	conn := tc.Conn
 	response, err := conn.Client.Do(conn.Request)
+	//TODO scanner改造适应流式输出
 	generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
 
 	rpcRes := o.res.RpcRes
