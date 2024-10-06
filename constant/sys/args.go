@@ -17,4 +17,7 @@ const (
 	GzipCompress = "gzip&json"
 	// ProtoBufCompress 序列化方式
 	ProtoBufCompress = "protobuf"
+
+	StreamOverSignal = "data: [DONE]"
+	StreamPrefix     = "data: "
 )

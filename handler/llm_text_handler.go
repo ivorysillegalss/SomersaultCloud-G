@@ -7,12 +7,14 @@ import (
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/internal/requtil"
+	"bufio"
 	"bytes"
 	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/thoas/go-funk"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type OpenaiChatModelExecutor struct {
@@ -103,19 +105,42 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 	conn := tc.Conn
 	response, err := conn.Client.Do(conn.Request)
 	//TODO scanner改造适应流式输出
-	generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
 
-	rpcRes := o.res.RpcRes
-	if rpcRes == nil {
-		rpcRes = make(chan *domain.GenerationResponse, sys.GenerationResponseChannelBuffer)
-	}
-	//若使用stream流式输出 则在发布到消息队列 下发客户端前就进行消息格式的转换
+	//若使用stream流式输出 则在发布到消息队列后 下发客户端前 进行消息格式的转换
 	//若不使用流式输出 则在主线程中的channel中 再调用下方parse进行消息格式转换
 	//why？ 消息队列网络传输需将数据序列化后传 而generationResponse中某些字段如http.Response不可进行序列化
 	if tc.Stream {
+
+		// 使用 bufio.NewScanner 逐行读取 SSE 响应
+		scanner := bufio.NewScanner(response.Body)
+
+		//记录每一次循环所查询到的数据
+		var jsonData string
+
+		for scanner.Scan() {
+			line := scanner.Text()
+
+			//TODO	此处SSE的信令和前缀以OpenAI的为主，拓展模型可添加
+			if line == sys.StreamOverSignal {
+				return
+			}
+			// 过滤空行 并确保解析以 "data: " 开头的行
+			if line == common.ZeroString || !strings.HasPrefix(line, sys.StreamPrefix) {
+				continue
+			}
+			// 去除 "data: " 前缀并解析 JSON 数据
+			jsonData = line[6:]
+		}
+
+		generationResponse := domain.NewStreamGenerationResponse(jsonData, tc.ChatId, err)
 		tc.Resp = *generationResponse
 		o.generateEvent.PublishGeneration(tc)
 	} else {
+		generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
+		rpcRes := o.res.RpcRes
+		if rpcRes == nil {
+			rpcRes = make(chan *domain.GenerationResponse, sys.GenerationResponseChannelBuffer)
+		}
 		rpcRes <- generationResponse
 	}
 }
@@ -123,27 +148,23 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 // ParseResp 关于
 // go-channel方案 设计一个异步线程 始终轮询rpcRes channel  并将轮询所得结果存到map当中 此处只需要GET MAP就可以了
 func (o OpenaiChatModelExecutor) ParseResp(tc *domain.AskContextData) (domain.ParsedResponse, string) {
-	resp := tc.Resp
-	body, err := io.ReadAll(resp.Resp.Body)
-	if err != nil {
-		return nil, ""
-	}
 
-	//根据流式输出或否修改
+	streamData := tc.Resp.StreamRespData
 	if tc.Stream {
 		var data *StreamChatCompletionResponse
-		err = json.Unmarshal(body, &data)
+		err := json.Unmarshal([]byte(streamData), &data)
 		if err != nil {
-			return nil, ""
+			return nil, common.ZeroString
 		}
-		//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 
 		args := data.Choices
 		if args == nil {
-			return nil, ""
+			return nil, common.ZeroString
 		}
 		textBody := args[0]
 		generateMessage := domain.OpenAIParsedResponse{
+			//openAI返回的json中请求体中的文本是一个数组 暂取第0项
+			//根据流式输出或否修改
 			GenerateText: textBody.Delta.Content,
 			FinishReason: textBody.FinishReason,
 			Index:        textBody.Index,
@@ -152,16 +173,22 @@ func (o OpenaiChatModelExecutor) ParseResp(tc *domain.AskContextData) (domain.Pa
 		return &generateMessage, textBody.Delta.Content
 
 	} else {
+		resp := tc.Resp
+		body, err := io.ReadAll(resp.Resp.Body)
+		if err != nil {
+			return nil, common.ZeroString
+		}
+
 		var data *ChatCompletionResponse
 		err = json.Unmarshal(body, &data)
 		if err != nil {
-			return nil, ""
+			return nil, common.ZeroString
 		}
 		//openAI返回的json中请求体中的文本是一个数组 暂取第0项
 
 		args := data.Choices
 		if args == nil {
-			return nil, ""
+			return nil, common.ZeroString
 		}
 		textBody := args[0]
 		generateMessage := domain.OpenAIParsedResponse{

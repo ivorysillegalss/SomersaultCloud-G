@@ -23,6 +23,7 @@ type ParsedResponse interface {
 	GetErrorCause() string
 	GetIndex() int
 	GetIdentity() int
+	GetFinishReason() string
 }
 
 // OpenAIParsedResponse 目前的实现在生成的时候 若出现错误直接将错误置为GenerateText
@@ -43,6 +44,8 @@ func (o *OpenAIParsedResponse) GetErrorCause() string { return o.GenerateText }
 func (o *OpenAIParsedResponse) GetIndex() int { return o.Index }
 
 func (o *OpenAIParsedResponse) GetIdentity() int { return o.UserId }
+
+func (o *OpenAIParsedResponse) GetFinishReason() string { return o.FinishReason }
 
 type LanguageModelRequest interface {
 	Req()

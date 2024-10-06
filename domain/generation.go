@@ -6,18 +6,21 @@ import (
 )
 
 // GenerationResponse 程序响应结构体
+// 非Stream式的直接使用*http.Response对数据进行传输
+// 而流式输出因为结尾数据格式不一样 并且穿插空行 需要先对输出后的数据进行前置处理 此处处理成为	StreamRespData string 格式
 type GenerationResponse struct {
-	Resp   *http.Response
-	ChatId int
-	Err    error
+	Resp           *http.Response
+	StreamRespData string
+	ChatId         int
+	Err            error
 }
 
 func NewGenerationResponse(response *http.Response, chatId int, err error) *GenerationResponse {
-	return &GenerationResponse{
-		Resp:   response,
-		ChatId: chatId,
-		Err:    err,
-	}
+	return &GenerationResponse{Resp: response, ChatId: chatId, Err: err}
+}
+
+func NewStreamGenerationResponse(streamData string, chatId int, err error) *GenerationResponse {
+	return &GenerationResponse{StreamRespData: streamData, ChatId: chatId, Err: err}
 }
 
 type GenerationRepository interface {
