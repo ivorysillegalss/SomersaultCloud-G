@@ -35,6 +35,7 @@ var appSet = wire.NewSet(
 	repository.NewBotRepository,
 
 	consume.NewStorageEvent,
+	consume.NewGenerateEvent,
 	consume.NewMessageHandler,
 
 	cron.NewGenerationCron,
