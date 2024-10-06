@@ -25,7 +25,8 @@ func (g GenerateEvent) GetGeneration(b []byte) error {
 	var parsedResp domain.ParsedResponse
 	_ = jsoniter.Unmarshal(b, &parsedResp)
 	//此处保证节点的原序,将MQ消费后的信息存到channel中，等待客户端处理并下发
-	sequencer.Setup(parsedResp)
+	newSequencer := sequencer.NewSequencer()
+	newSequencer.Setup(parsedResp)
 	return nil
 }
 func (g GenerateEvent) PublishGeneration(data *domain.AskContextData) {
@@ -57,6 +58,22 @@ func (g GenerateEvent) PublishApiCalling(data *domain.AskContextData) {
 	g.PublishMessage(mq.UserChatReadyCallingQueue, marshal)
 }
 
-func NewGenerateEvent() domain.GenerateEvent {
-	return &GenerateEvent{}
+func NewGenerateEvent(h MessageHandler, e *bootstrap.Env, c *bootstrap.Channels) domain.GenerateEvent {
+	messageHandler := h.(*baseMessageHandler)
+	chatReadyCalling := &MessageQueueArgs{
+		ExchangeName: mq.UserChatReadyCallingExchange,
+		QueueName:    mq.UserChatReadyCallingQueue,
+		KeyName:      mq.UserChatReadyCallingKey,
+	}
+	chatGetGeneration := &MessageQueueArgs{
+		ExchangeName: mq.UserChatGenerationExchange,
+		QueueName:    mq.UserChatGenerationQueue,
+		KeyName:      mq.UserChatGenerationKey,
+	}
+	messageHandler.InitMessageQueue(chatGetGeneration, chatReadyCalling)
+	return &GenerateEvent{
+		baseMessageHandler: messageHandler,
+		env:                e,
+		channels:           c,
+	}
 }

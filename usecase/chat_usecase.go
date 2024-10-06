@@ -9,11 +9,14 @@ import (
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/tokenutil"
+	"SomersaultCloud/sequencer"
 	"SomersaultCloud/task"
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/thoas/go-funk"
 	"net/http"
 	"strconv"
@@ -118,11 +121,40 @@ func (c *chatUseCase) StreamContextChatSetup(ctx context.Context, token string, 
 }
 
 func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string, gc *gin.Context, flusher http.Flusher) {
-	_, err := c.tokenUtil.DecodeToId(token)
+	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
+		log.GetTextLogger().Error(err.Error())
 		return
 	}
+	// 发送事件
+	newSequencer := sequencer.NewSequencer()
+	streamDataChan, streamActiveChan := newSequencer.GetData(userId)
+	for {
+		select {
+		case v := <-streamDataChan:
+			// 模拟数据推送
+			marshal, _ := jsoniter.Marshal(v)
+			_, err = gc.Writer.Write(marshal)
+			if err != nil {
+				log.GetTextLogger().Error(err.Error())
+			}
+			// 发送符合SSE格式的数据到前端
+			_, err = fmt.Fprintf(gc.Writer, "data: %s\n\n", marshal)
+			if err != nil {
+				log.GetTextLogger().Error(err.Error())
+			}
+			flusher.Flush() // 刷新输出到客户端
 
+		case code := <-streamActiveChan:
+			log.GetTextLogger().Info(fmt.Sprintf("Finish once push with active code %d", code))
+			return
+
+		case <-ctx.Done():
+			// 上下文取消信号，优雅退出
+			log.GetTextLogger().Info("Context canceled, stopping worker")
+			return
+		}
+	}
 }
 
 func (c *chatUseCase) DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message domain.ParsedResponse, code int) {
