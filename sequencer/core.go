@@ -1,9 +1,11 @@
 package sequencer
 
 import (
+	"SomersaultCloud/constant/common"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
 	"fmt"
+	"github.com/thoas/go-funk"
 	"sync"
 	"time"
 
@@ -16,6 +18,7 @@ type StreamData struct {
 	sequenceValue   chan domain.ParsedResponse    // 存储按序到达的消息
 	timer           *timingwheel.Timer            // 管理该流的计时器
 	active          bool                          // 标记流的状态，是否仍然活跃
+	version         int64                         // 以时间戳作为版本控制 CAS
 }
 
 var (
@@ -24,9 +27,9 @@ var (
 	tw      = timingwheel.NewTimingWheel(100*time.Millisecond, 10)
 )
 
-const streamTimeout = 10 * time.Second // 设置整个流的超时时间
-// 第一条信息的索引
-const firstMessageIndex = 1
+const normallyEndExpiration = time.Second //指单次会话所有流信息存储在channel中的缓存时间
+const streamTimeout = 10 * time.Second    // 设置整个流的超时时间
+const firstMessageIndex = 1               // 第一条信息的索引
 
 func init() {
 	// 启动时间轮
@@ -35,15 +38,20 @@ func init() {
 
 // Setup 将传过来的流式数据进行顺序的判断
 // 若没问题则放入管道中 等待客户端请求下发
-// TODO 差一个正常发送信息，正常断流的情况
 func Setup(parsedResp domain.ParsedResponse) {
 	identity := parsedResp.GetIdentity() // 获取消息的身份标识
 	index := parsedResp.GetIndex()       // 获取消息的序号
+	finishReason := parsedResp.GetFinishReason()
 
 	mu.Lock()
 	defer mu.Unlock()
 
 	stream, exists := streams[identity]
+
+	if funk.NotEmpty(finishReason) {
+		normallyEndStream(identity, stream.version)
+		return
+	}
 
 	if !exists {
 		//若流不存在
@@ -125,6 +133,7 @@ func checkUnorderedMessages(stream *StreamData) {
 func resetStreamData(stream *StreamData) {
 	stream.sequenceIndex = 0
 	stream.unSequenceValue = make(map[int]domain.ParsedResponse)
+	stream.version = time.Now().UnixNano()
 	// 清空管道中的残留数据
 	for len(stream.sequenceValue) > 0 {
 		<-stream.sequenceValue
@@ -145,21 +154,39 @@ func startStreamTimer(identity int) {
 
 	// 使用时间轮的 AfterFunc 来设定超时
 	stream.timer = tw.AfterFunc(streamTimeout, func() {
-		handleStreamTimeout(identity)
+		handleStreamTimeout(identity, stream.version)
 	})
 }
 
 // 超时处理函数
-func handleStreamTimeout(identity int) {
+func handleStreamTimeout(identity int, version int64) {
+	timeOutText := fmt.Sprintf("Stream for identity %d timed out. Cleaning up...\n", identity)
+	garbageCollectStream(timeOutText, common.Error, identity, version)
+}
+
+func normallyEndStream(identity int, version int64) {
+	normallyEndText := fmt.Sprintf("Stream for identity %d normally end. Cleaning up...\n", identity)
+	tw.AfterFunc(normallyEndExpiration, func() {
+		garbageCollectStream(normallyEndText, common.Info, identity, version)
+	})
+}
+
+func garbageCollectStream(logText string, logLevel string, identity int, version int64) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	stream, exists := streams[identity]
-	if !exists {
+	if !exists || stream.version != version {
+		//流已经不存在 或者版本不一致 （已经被其他goroutine回收了等等情况）
 		return
 	}
 
-	log.GetTextLogger().Error(fmt.Sprintf("Stream for identity %d timed out. Cleaning up...\n", identity))
+	switch logLevel {
+	case common.Error:
+		log.GetTextLogger().Error(logText)
+	case common.Info:
+		log.GetTextLogger().Info(logText)
+	}
 
 	// 标记流为非活跃状态
 	stream.active = false
