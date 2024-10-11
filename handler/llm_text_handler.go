@@ -6,7 +6,6 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
-	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/requtil"
 	"bufio"
 	"bytes"
@@ -115,7 +114,6 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 
 		//记录每一次循环所查询到的数据
 		var jsonData string
-
 		for scanner.Scan() {
 			line := scanner.Text()
 
@@ -129,8 +127,7 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 			}
 			// 去除 "data: " 前缀并解析 JSON 数据
 			jsonData = line[6:]
-			//log.GetTextLogger().Info(fmt.Sprintf("get stream data"))
-			log.GetTextLogger().Info(jsonData)
+
 			generationResponse := domain.NewStreamGenerationResponse(jsonData, tc.ChatId, err, tc.ExecutorId, tc.UserId)
 			o.res.StreamRpcRes <- generationResponse
 		}
@@ -168,9 +165,9 @@ func (o OpenaiChatModelExecutor) ParseResp(tc *domain.AskContextData) (domain.Pa
 			//根据流式输出或否修改
 			GenerateText: textBody.Delta.Content,
 			FinishReason: textBody.FinishReason,
-			Index:        textBody.Index,
 			UserId:       tc.Resp.UserId,
 			ExecutorId:   tc.ExecutorId,
+			ChatcmplId:   data.Id,
 		}
 		return &generateMessage, textBody.Delta.Content
 

@@ -59,6 +59,7 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	}
 	identity := parsedResp.GetIdentity() // 获取消息的身份标识
 	index := parsedResp.GetIndex()       // 获取消息的序号
+
 	finishReason := parsedResp.GetFinishReason()
 
 	mu.Lock()
@@ -67,7 +68,11 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	stream, exists := streams[identity]
 
 	if funk.NotEmpty(finishReason) {
-
+		if funk.IsEmpty(stream.activeChan) {
+			stream.activeChan = make(chan int)
+		}
+		stream.activeChan <- sys.Finish
+		//stream.active = false
 		log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason())
 		//normallyEndStream(identity, stream.version)
 
@@ -86,8 +91,6 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 			}
 			streams[identity] = stream
 			startStreamTimer(identity)
-
-			fmt.Println(parsedResp.GetIndex())
 
 			stream.sequenceValue <- parsedResp
 		} else {
@@ -123,7 +126,6 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 
 			if index == i+1 {
 				// 按序接收到消息
-				fmt.Println(parsedResp.GetIndex())
 
 				stream.sequenceValue <- parsedResp
 				stream.sequenceIndex = i + 1

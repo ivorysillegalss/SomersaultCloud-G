@@ -132,6 +132,7 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 	// 发送事件
 	newSequencer := sequencer.NewSequencer()
 	streamDataChan, streamActiveChan := newSequencer.GetData(userId)
+	//TODO 这里最后还有问题，activeChan无法正常传值。通道船用也有问题
 	if funk.IsEmpty(streamActiveChan) || funk.IsEmpty(streamDataChan) {
 		log.GetTextLogger().Error("empty value for user :" + strconv.Itoa(userId))
 		_, _ = fmt.Fprintf(gc.Writer, "data: nil")
