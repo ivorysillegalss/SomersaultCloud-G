@@ -9,7 +9,6 @@ import (
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/sequencer"
 	"encoding/json"
-	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/thoas/go-funk"
 	"strconv"
@@ -32,8 +31,6 @@ func getParseType(parsedResp map[string]any) domain.ParsedResponse {
 	generateText := parsedResp["GenerateText"].(string)
 	finishReason := parsedResp["FinishReason"].(string)
 	index := int(parsedResp["Index"].(float64))
-	fmt.Println(parsedResp["Index"])
-	//fmt.Println(index)
 	executorId := int(parsedResp["ExecutorId"].(float64))
 	switch executorId {
 	case task.ChatAskExecutorId:

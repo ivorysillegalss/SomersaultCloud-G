@@ -7,10 +7,17 @@ import (
 	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
 	"SomersaultCloud/infrastructure/log"
+	"SomersaultCloud/internal/kvutil"
 	"context"
 	"github.com/thoas/go-funk"
 	"time"
 )
+
+var chatcmplCache kvutil.KVStore
+
+func init() {
+	chatcmplCache = *kvutil.NewKVStore(time.Second, 20)
+}
 
 type generationCron struct {
 	generationRepository domain.GenerationRepository
@@ -58,5 +65,7 @@ func (g generationCron) AsyncPollerGeneration() {
 func consumeAndParse(streamTask *domain.GenerationResponse, env *bootstrap.Env, channels *bootstrap.Channels, event domain.GenerateEvent) {
 	executor := handler.NewLanguageModelExecutor(env, channels, streamTask.ExecutorId)
 	parsedResp, _ := executor.ParseResp(&domain.AskContextData{Resp: *streamTask, Stream: true, ExecutorId: streamTask.ExecutorId})
+	index := chatcmplCache.IndexIncIfExist(parsedResp.GetChatcmplId())
+	parsedResp.SetIndex(index)
 	event.PublishGeneration(parsedResp)
 }
