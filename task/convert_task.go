@@ -9,7 +9,9 @@ type ChatConvertTask struct {
 	generateEvent domain.GenerateEvent
 }
 
+// TODO remove
 func (c ChatConvertTask) StreamPublishTask(tc *taskchain.TaskContext) {
+	//由于包含不可用字段 所以此处不能使用消息队列发布任务
 	c.generateEvent.PublishApiCalling(tc.TaskContextData.(*domain.AskContextData))
 }
 

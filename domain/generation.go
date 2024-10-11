@@ -13,14 +13,16 @@ type GenerationResponse struct {
 	StreamRespData string
 	ChatId         int
 	Err            error
+	ExecutorId     int
+	UserId         int
 }
 
 func NewGenerationResponse(response *http.Response, chatId int, err error) *GenerationResponse {
 	return &GenerationResponse{Resp: response, ChatId: chatId, Err: err}
 }
 
-func NewStreamGenerationResponse(streamData string, chatId int, err error) *GenerationResponse {
-	return &GenerationResponse{StreamRespData: streamData, ChatId: chatId, Err: err}
+func NewStreamGenerationResponse(streamData string, chatId int, err error, executorId int, userId int) *GenerationResponse {
+	return &GenerationResponse{StreamRespData: streamData, ChatId: chatId, Err: err, ExecutorId: executorId, UserId: userId}
 }
 
 type GenerationRepository interface {

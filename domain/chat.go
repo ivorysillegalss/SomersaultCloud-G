@@ -130,7 +130,7 @@ type GenerateEvent interface {
 	ApiCalling(b []byte) error
 	GetGeneration(b []byte) error
 	PublishApiCalling(data *AskContextData)
-	PublishGeneration(data *AskContextData)
+	PublishGeneration(data ParsedResponse)
 	AsyncConsumeApiCalling()
 	AsyncConsumeGeneration()
 }

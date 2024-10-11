@@ -31,8 +31,9 @@ type PoolsFactory struct {
 }
 
 type Channels struct {
-	RpcRes chan *domain.GenerationResponse
-	Stop   chan bool
+	RpcRes       chan *domain.GenerationResponse
+	Stop         chan bool
+	StreamRpcRes chan *domain.GenerationResponse
 }
 
 type Controllers struct {

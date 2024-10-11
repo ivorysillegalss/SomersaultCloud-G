@@ -6,20 +6,26 @@ import (
 )
 
 type ConsumeExecutor struct {
-	ChatEvent domain.StorageEvent
+	storageEvent  domain.StorageEvent
+	generateEvent domain.GenerateEvent
 }
 
 func (d *ConsumeExecutor) SetupConsume() {
-	d.ChatEvent.AsyncConsumeDbHistory()
+	d.storageEvent.AsyncConsumeDbHistory()
 	log.GetTextLogger().Info("AsyncConsumeDbHistory QUEUE start")
-	d.ChatEvent.AsyncConsumeCacheHistory()
+	d.storageEvent.AsyncConsumeCacheHistory()
 	log.GetTextLogger().Info("AsyncConsumeCacheHistory QUEUE start")
-	d.ChatEvent.AsyncConsumeDbUpdateTitle()
+	d.storageEvent.AsyncConsumeDbUpdateTitle()
 	log.GetTextLogger().Info("AsyncConsumeDbUpdateTitle QUEUE start")
+	d.generateEvent.AsyncConsumeApiCalling()
+	log.GetTextLogger().Info("AsyncConsumeApiCalling QUEUE start")
+	d.generateEvent.AsyncConsumeGeneration()
+	log.GetTextLogger().Info("AsyncConsumeGeneration QUEUE start")
+	log.GetTextLogger().Info("ALL-----QUEUE----START-----SUCCESSFULLY")
 	//TODO
 	//在这里全部启动消费者逻辑
 }
 
-func NewConsumeExecutor(c domain.StorageEvent) *ConsumeExecutor {
-	return &ConsumeExecutor{ChatEvent: c}
+func NewConsumeExecutor(c domain.StorageEvent, g domain.GenerateEvent) *ConsumeExecutor {
+	return &ConsumeExecutor{storageEvent: c, generateEvent: g}
 }

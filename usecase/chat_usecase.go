@@ -110,7 +110,10 @@ func (c *chatUseCase) StreamContextChatSetup(ctx context.Context, token string, 
 
 	//StreamTask开启流式输出
 	//至此组装好请求 向mq发布任务 mq消费 向指定客户端send generation
-	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask, convertTask.StreamArgsTask, chatTask.AssembleReqTask, convertTask.StreamPublishTask)
+	//TODO remove
+	//factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask, convertTask.StreamArgsTask, chatTask.AssembleReqTask, convertTask.StreamPublishTask)
+	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
+		convertTask.StreamArgsTask, chatTask.AssembleReqTask, chatTask.CallApiTask)
 	factory.ExecuteChain()
 
 	taskContext = factory.TaskContext
@@ -129,6 +132,12 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 	// 发送事件
 	newSequencer := sequencer.NewSequencer()
 	streamDataChan, streamActiveChan := newSequencer.GetData(userId)
+	if funk.IsEmpty(streamActiveChan) || funk.IsEmpty(streamDataChan) {
+		log.GetTextLogger().Error("empty value for user :" + strconv.Itoa(userId))
+		_, _ = fmt.Fprintf(gc.Writer, "data: nil")
+		flusher.Flush()
+		return
+	}
 	for {
 		select {
 		case v := <-streamDataChan:
@@ -147,6 +156,8 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 
 		case code := <-streamActiveChan:
 			log.GetTextLogger().Info(fmt.Sprintf("Finish once push with active code %d", code))
+			_, _ = fmt.Fprintf(gc.Writer, "data:%d\n\n", code)
+			flusher.Flush()
 			return
 
 		case <-ctx.Done():

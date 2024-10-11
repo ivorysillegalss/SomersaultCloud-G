@@ -12,6 +12,7 @@ import (
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/checkutil"
 	"context"
+	"fmt"
 	"github.com/thoas/go-funk"
 	"strconv"
 	"sync"
@@ -147,6 +148,7 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 	t := func() {
 		defer wg.Done()
 		data.Executor.Execute(data)
+		log.GetTextLogger().Info(fmt.Sprintf("api calling for %d has been submit,with chatId = %d and executorId = %d", data.UserId, data.ChatId, data.ExecutorId))
 	}
 	config := c.poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
 	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
@@ -158,8 +160,6 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 		tc.InterruptExecute(task.ReqUploadError)
 		return
 	}
-
-	//TODO 消息队列
 }
 
 func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {

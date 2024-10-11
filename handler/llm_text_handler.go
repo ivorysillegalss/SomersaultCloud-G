@@ -6,6 +6,7 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/requtil"
 	"bufio"
 	"bytes"
@@ -104,8 +105,6 @@ func (o OpenaiChatModelExecutor) ConfigureProxy(tc *domain.AskContextData) *http
 func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 	conn := tc.Conn
 	response, err := conn.Client.Do(conn.Request)
-	//TODO scanner改造适应流式输出
-
 	//若使用stream流式输出 则在发布到消息队列后 下发客户端前 进行消息格式的转换
 	//若不使用流式输出 则在主线程中的channel中 再调用下方parse进行消息格式转换
 	//why？ 消息队列网络传输需将数据序列化后传 而generationResponse中某些字段如http.Response不可进行序列化
@@ -130,14 +129,16 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 			}
 			// 去除 "data: " 前缀并解析 JSON 数据
 			jsonData = line[6:]
+			//log.GetTextLogger().Info(fmt.Sprintf("get stream data"))
+			log.GetTextLogger().Info(jsonData)
+			generationResponse := domain.NewStreamGenerationResponse(jsonData, tc.ChatId, err, tc.ExecutorId, tc.UserId)
+			o.res.StreamRpcRes <- generationResponse
 		}
 
-		generationResponse := domain.NewStreamGenerationResponse(jsonData, tc.ChatId, err)
-		tc.Resp = *generationResponse
-		o.generateEvent.PublishGeneration(tc)
 	} else {
 		generationResponse := domain.NewGenerationResponse(response, tc.ChatId, err)
 		rpcRes := o.res.RpcRes
+		//TODO remove
 		if rpcRes == nil {
 			rpcRes = make(chan *domain.GenerationResponse, sys.GenerationResponseChannelBuffer)
 		}
@@ -168,7 +169,8 @@ func (o OpenaiChatModelExecutor) ParseResp(tc *domain.AskContextData) (domain.Pa
 			GenerateText: textBody.Delta.Content,
 			FinishReason: textBody.FinishReason,
 			Index:        textBody.Index,
-			UserId:       tc.UserId,
+			UserId:       tc.Resp.UserId,
+			ExecutorId:   tc.ExecutorId,
 		}
 		return &generateMessage, textBody.Delta.Content
 

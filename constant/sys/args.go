@@ -22,6 +22,9 @@ const (
 
 	StreamOverSignal = "data: [DONE]"
 	StreamPrefix     = "data: "
+
+	// StreamGenerationResponseChannelBuffer 新初始化流式传递rpc数据的channel大小
+	StreamGenerationResponseChannelBuffer = 100
 )
 
 // 排序相关
@@ -32,6 +35,6 @@ const (
 
 	NormallyEndExpiration = time.Second      //指单次会话所有流信息存储在channel中的缓存时间
 	StreamTimeout         = 10 * time.Second // 设置整个流的超时时间
-	FirstMessageIndex     = 1                // 第一条信息的索引
+	FirstMessageIndex     = 0                // 第一条信息的索引
 
 )
