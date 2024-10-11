@@ -31,18 +31,20 @@ func InitializeApp() (*bootstrap.Application, error) {
 	botRepository := repository.NewBotRepository(databases)
 	connection := bootstrap.NewRabbitConnection(env)
 	messageHandler := consume.NewMessageHandler(connection)
-	chatEvent := consume.NewStorageEvent(chatRepository, messageHandler)
-	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels, poolsFactory, chatEvent)
+	storageEvent := consume.NewStorageEvent(chatRepository, messageHandler)
+	askTask := task.NewAskChatTask(botRepository, chatRepository, env, channels, poolsFactory, storageEvent)
 	tokenUtil := tokenutil.NewTokenUtil(env)
 	titleTask := task.NewChatTitleTask(chatRepository, env, channels)
-	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, tokenUtil, chatEvent, titleTask)
+	generateEvent := consume.NewGenerateEvent(messageHandler, env, channels)
+	convertTask := task.NewConvertTask(generateEvent)
+	chatUseCase := usecase.NewChatUseCase(env, chatRepository, botRepository, askTask, tokenUtil, storageEvent, titleTask, convertTask)
 	chatController := controller.NewChatController(chatUseCase)
 	historyMessageController := controller.NewHistoryMessageController(chatUseCase)
 	controllers := bootstrap.NewControllers(chatController, historyMessageController)
 	generationRepository := repository.NewGenerationRepository(databases)
-	generationCron := cron.NewGenerationCron(generationRepository, channels)
+	generationCron := cron.NewGenerationCron(generationRepository, channels, env, generateEvent)
 	cronExecutor := executor.NewCronExecutor(generationCron)
-	consumeExecutor := executor.NewConsumeExecutor(chatEvent)
+	consumeExecutor := executor.NewConsumeExecutor(storageEvent, generateEvent)
 	bootstrapExecutor := bootstrap.NewExecutors(cronExecutor, consumeExecutor)
 	application := &bootstrap.Application{
 		Env:          env,
@@ -57,4 +59,4 @@ func InitializeApp() (*bootstrap.Application, error) {
 
 // wire.go:
 
-var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewStorageEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, task.NewChatTitleTask, controller.NewChatController, controller.NewHistoryMessageController, wire.Struct(new(bootstrap.Application), "*"))
+var appSet = wire.NewSet(bootstrap.NewEnv, tokenutil.NewTokenUtil, bootstrap.NewDatabases, bootstrap.NewRedisDatabase, bootstrap.NewMysqlDatabase, bootstrap.NewMongoDatabase, bootstrap.NewPoolFactory, bootstrap.NewChannel, bootstrap.NewRabbitConnection, bootstrap.NewControllers, bootstrap.NewExecutors, repository.NewGenerationRepository, repository.NewChatRepository, repository.NewBotRepository, consume.NewStorageEvent, consume.NewGenerateEvent, consume.NewMessageHandler, cron.NewGenerationCron, executor.NewCronExecutor, executor.NewConsumeExecutor, usecase.NewChatUseCase, task.NewAskChatTask, task.NewChatTitleTask, task.NewConvertTask, controller.NewChatController, controller.NewHistoryMessageController, wire.Struct(new(bootstrap.Application), "*"))

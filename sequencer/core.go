@@ -7,6 +7,7 @@ import (
 	"SomersaultCloud/infrastructure/log"
 	"fmt"
 	"github.com/thoas/go-funk"
+	"strconv"
 	"sync"
 	"time"
 
@@ -43,12 +44,19 @@ func NewSequencer() *Sequencer {
 
 func (c *Sequencer) GetData(userId int) (chan domain.ParsedResponse, chan int) {
 	data := streams[userId]
+	if funk.IsEmpty(data) {
+		return nil, nil
+	}
 	return data.sequenceValue, data.activeChan
 }
 
 // Setup 将传过来的流式数据进行顺序的判断
 // 若没问题则放入管道中 等待客户端请求下发
 func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
+	if funk.IsEmpty(parsedResp) {
+		log.GetTextLogger().Error("nil message")
+		return
+	}
 	identity := parsedResp.GetIdentity() // 获取消息的身份标识
 	index := parsedResp.GetIndex()       // 获取消息的序号
 	finishReason := parsedResp.GetFinishReason()
@@ -59,7 +67,10 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	stream, exists := streams[identity]
 
 	if funk.NotEmpty(finishReason) {
-		normallyEndStream(identity, stream.version)
+
+		log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason())
+		//normallyEndStream(identity, stream.version)
+
 		return
 	}
 
@@ -75,10 +86,13 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 			}
 			streams[identity] = stream
 			startStreamTimer(identity)
+
+			fmt.Println(parsedResp.GetIndex())
+
 			stream.sequenceValue <- parsedResp
 		} else {
 			// 收到了非第一条消息，但流并不存在，记录错误
-			log.GetTextLogger().Error(fmt.Sprintf("No active stream for identity %d. Discarding message.\n", identity))
+			log.GetTextLogger().Error(fmt.Sprintf("No active stream for identity %d. Discarding message.\n with Index %d", identity, index))
 			return
 		}
 	} else {
@@ -109,6 +123,8 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 
 			if index == i+1 {
 				// 按序接收到消息
+				fmt.Println(parsedResp.GetIndex())
+
 				stream.sequenceValue <- parsedResp
 				stream.sequenceIndex = i + 1
 				checkUnorderedMessages(stream)
@@ -165,9 +181,11 @@ func startStreamTimer(identity int) {
 	}
 
 	// 使用时间轮的 AfterFunc 来设定超时
-	stream.timer = tw.AfterFunc(sys.StreamTimeout, func() {
-		handleStreamTimeout(identity, stream.version)
-	})
+
+	//stream.timer = tw.AfterFunc(sys.StreamTimeout, func() {
+	//	handleStreamTimeout(identity, stream.version)
+	//})
+
 }
 
 // 超时处理函数

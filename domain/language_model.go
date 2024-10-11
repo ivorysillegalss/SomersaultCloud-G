@@ -24,6 +24,7 @@ type ParsedResponse interface {
 	GetIndex() int
 	GetIdentity() int
 	GetFinishReason() string
+	GetExecutorId() int
 }
 
 // OpenAIParsedResponse 目前的实现在生成的时候 若出现错误直接将错误置为GenerateText
@@ -35,6 +36,7 @@ type OpenAIParsedResponse struct {
 	GenerateText string
 	FinishReason string
 	Index        int //索引 流式输出的索引
+	ExecutorId   int // 执行器ID 用于标识发送数据时反序列化进度
 }
 
 func (o *OpenAIParsedResponse) GetGenerateText() string { return o.GenerateText }
@@ -46,6 +48,9 @@ func (o *OpenAIParsedResponse) GetIndex() int { return o.Index }
 func (o *OpenAIParsedResponse) GetIdentity() int { return o.UserId }
 
 func (o *OpenAIParsedResponse) GetFinishReason() string { return o.FinishReason }
+
+// TODO
+func (o *OpenAIParsedResponse) GetExecutorId() int { return o.ExecutorId }
 
 type LanguageModelRequest interface {
 	Req()
