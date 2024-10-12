@@ -52,7 +52,7 @@ func (g generationCron) AsyncPollerGeneration() {
 			log.GetJsonLogger().WithFields("res channel stop", nil).Info("Stopping async poller")
 			return
 		case streamTask := <-g.channels.StreamRpcRes:
-			log.GetTextLogger().Info("STREAM RPCRES CHANNEL < -- SUCCESSFULLY RECEIVED STREAM RESPONSE")
+			//log.GetTextLogger().Info("STREAM RPCRES CHANNEL < -- SUCCESSFULLY RECEIVED STREAM RESPONSE")
 			//TODO 测试，目前go一个线程parse是我想到的最好方法
 			go consumeAndParse(streamTask, g.env, g.channels, g.generateEvent)
 		default:

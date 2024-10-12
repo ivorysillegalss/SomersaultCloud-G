@@ -29,7 +29,7 @@ const (
 
 // 排序相关
 const (
-	Finish         = 0
+	Finish         = 1
 	Timeout        = -1
 	IllegalRequest = -2
 

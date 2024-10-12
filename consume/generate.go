@@ -32,9 +32,10 @@ func getParseType(parsedResp map[string]any) domain.ParsedResponse {
 	finishReason := parsedResp["FinishReason"].(string)
 	index := int(parsedResp["Index"].(float64))
 	executorId := int(parsedResp["ExecutorId"].(float64))
+	chatcmplId := parsedResp["ChatcmplId"].(string)
 	switch executorId {
 	case task.ChatAskExecutorId:
-		return &domain.OpenAIParsedResponse{UserId: userId, GenerateText: generateText, FinishReason: finishReason, Index: index}
+		return &domain.OpenAIParsedResponse{UserId: userId, GenerateText: generateText, FinishReason: finishReason, Index: index, ChatcmplId: chatcmplId}
 	default:
 		log.GetTextLogger().Error("GET wrong parse type for UserId:" + strconv.Itoa(userId) + "with executorId : " + strconv.Itoa(executorId))
 		return nil

@@ -57,6 +57,7 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 		log.GetTextLogger().Error("nil message")
 		return
 	}
+
 	identity := parsedResp.GetIdentity() // 获取消息的身份标识
 	index := parsedResp.GetIndex()       // 获取消息的序号
 
@@ -66,13 +67,15 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	defer mu.Unlock()
 
 	stream, exists := streams[identity]
+	//调试的时候 需要注意这里的问题 如果上一次有消息传过来没有处理完 此处上方的stream会报错nil 因为消息是以内存中的map为单位存储的
+	//当调试重启的时候 内存会丢失 而消息还在 就会造成这个问题 此时只需要主动丢弃这一次的信息即可 即取消下方的return
+	//return
 
 	if funk.NotEmpty(finishReason) {
 		if funk.IsEmpty(stream.activeChan) {
-			stream.activeChan = make(chan int)
+			stream.activeChan = make(chan int, 2)
 		}
 		stream.activeChan <- sys.Finish
-		//stream.active = false
 		log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason())
 		//normallyEndStream(identity, stream.version)
 

@@ -144,10 +144,6 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 		case v := <-streamDataChan:
 			// 模拟数据推送
 			marshal, _ := jsoniter.Marshal(v)
-			_, err = gc.Writer.Write(marshal)
-			if err != nil {
-				log.GetTextLogger().Error(err.Error())
-			}
 			// 发送符合SSE格式的数据到前端
 			_, err = fmt.Fprintf(gc.Writer, "data: %s\n\n", marshal)
 			if err != nil {
