@@ -47,6 +47,7 @@ func (g GenerateEvent) GetGeneration(b []byte) error {
 	var parsedResp map[string]any
 	_ = jsoniter.Unmarshal(b, &parsedResp)
 	//此处保证节点的原序,将MQ消费后的信息存到channel中，等待客户端处理并下发
+	//TODO 以下planA
 	newSequencer := sequencer.NewSequencer()
 	newSequencer.Setup(getParseType(parsedResp))
 	return nil

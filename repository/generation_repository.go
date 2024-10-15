@@ -14,11 +14,13 @@ import (
 )
 
 var chatGenerationMap map[int]*domain.GenerationResponse
+var chatStreamValue map[int]chan domain.ParsedResponse
 
 //go:embed lua/hash_expired.lua
 var hashExpiredLuaScript string
 
 type generationRepository struct {
+	//streamValue chan domain.ParsedResponse
 	rcl redis.Client
 }
 
@@ -41,6 +43,30 @@ func (g generationRepository) InMemoryPollHistory(ctx context.Context, response 
 	}
 	chatGenerationMap[response.ChatId] = response
 }
+
+func (g generationRepository) InMemorySetStreamValue(ctx context.Context, response domain.ParsedResponse) {
+	identity := response.GetIdentity()
+
+	chatStreamValue[identity] <- response
+}
+
+func (g generationRepository) InMemoryGetStreamValue(userId int) chan domain.ParsedResponse {
+	responses := chatStreamValue[userId]
+	return responses
+}
+
+//func (g generationRepository) GetStreamChannel() chan domain.ParsedResponse {
+//	return g.streamValue
+//}
+//
+//func (g generationRepository) SendStreamValueChannel(response domain.ParsedResponse) {
+//	value := g.streamValue
+//	if funk.IsEmpty(value) {
+//		//TODO 常量替换
+//		value = make(chan domain.ParsedResponse, 100)
+//	}
+//	value <- response
+//}
 
 func NewGenerationRepository(dbs *bootstrap.Databases) domain.GenerationRepository {
 	return &generationRepository{rcl: dbs.Redis}

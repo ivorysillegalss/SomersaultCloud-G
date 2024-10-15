@@ -26,18 +26,19 @@ import (
 var incrementLuaScript string
 
 type chatUseCase struct {
-	env            *bootstrap.Env
-	chatRepository domain.ChatRepository
-	botRepository  domain.BotRepository
-	chatTask       task.AskTask
-	tokenUtil      *tokenutil.TokenUtil
-	chatEvent      domain.StorageEvent
-	titleTask      task.TitleTask
-	convertTask    task.ConvertTask
+	env                  *bootstrap.Env
+	chatRepository       domain.ChatRepository
+	botRepository        domain.BotRepository
+	generationRepository domain.GenerationRepository
+	chatTask             task.AskTask
+	tokenUtil            *tokenutil.TokenUtil
+	chatEvent            domain.StorageEvent
+	titleTask            task.TitleTask
+	convertTask          task.ConvertTask
 }
 
-func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.StorageEvent, tt task.TitleTask, cvt task.ConvertTask) domain.ChatUseCase {
-	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce, titleTask: tt, convertTask: cvt}
+func NewChatUseCase(e *bootstrap.Env, c domain.ChatRepository, b domain.BotRepository, ct task.AskTask, util *tokenutil.TokenUtil, ce domain.StorageEvent, tt task.TitleTask, cvt task.ConvertTask, gr domain.GenerationRepository) domain.ChatUseCase {
+	chat := &chatUseCase{chatRepository: c, botRepository: b, env: e, chatTask: ct, tokenUtil: util, chatEvent: ce, titleTask: tt, convertTask: cvt, generationRepository: gr}
 	return chat
 }
 
@@ -111,7 +112,6 @@ func (c *chatUseCase) StreamContextChatSetup(ctx context.Context, token string, 
 	//StreamTask开启流式输出
 	//至此组装好请求 向mq发布任务 mq消费 向指定客户端send generation
 	//TODO remove
-	//factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask, convertTask.StreamArgsTask, chatTask.AssembleReqTask, convertTask.StreamPublishTask)
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
 		convertTask.StreamArgsTask, chatTask.AssembleReqTask, chatTask.CallApiTask)
 	factory.ExecuteChain()
@@ -129,16 +129,23 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 		log.GetTextLogger().Error(err.Error())
 		return
 	}
-	// 发送事件
+
+	//TODO PLAN A代码搁置
+	//发送事件
 	newSequencer := sequencer.NewSequencer()
-	streamDataChan, streamActiveChan := newSequencer.GetData(userId)
-	//TODO 这里最后还有问题，activeChan无法正常传值。通道船用也有问题
-	if funk.IsEmpty(streamActiveChan) || funk.IsEmpty(streamDataChan) {
-		log.GetTextLogger().Error("empty value for user :" + strconv.Itoa(userId))
-		_, _ = fmt.Fprintf(gc.Writer, "data: nil")
-		flusher.Flush()
-		return
-	}
+	//streamDataChan, streamActiveChan := newSequencer.GetData(userId)
+	streamDataChan, _ := newSequencer.GetData(userId)
+	////TODO 这里最后还有问题，activeChan无法正常传值。通道船用也有问题
+	//if funk.IsEmpty(streamActiveChan) || funk.IsEmpty(streamDataChan) {
+	//if funk.IsEmpty(streamDataChan) {
+	//	log.GetTextLogger().Error("empty value for user :" + strconv.Itoa(userId))
+	//	_, _ = fmt.Fprintf(gc.Writer, "data: nil")
+	//	flusher.Flush()
+	//	return
+	//}
+
+	//streamDataChan := c.generationRepository.InMemoryGetStreamValue(userId)
+	log.GetTextLogger().Info("successfully getting the channel for: userId:" + strconv.Itoa(userId))
 	for {
 		select {
 		case v := <-streamDataChan:
@@ -151,11 +158,16 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 			}
 			flusher.Flush() // 刷新输出到客户端
 
-		case code := <-streamActiveChan:
-			log.GetTextLogger().Info(fmt.Sprintf("Finish once push with active code %d", code))
-			_, _ = fmt.Fprintf(gc.Writer, "data:%d\n\n", code)
-			flusher.Flush()
-			return
+			if funk.NotEmpty(v.GetFinishReason()) {
+				log.GetTextLogger().Info(fmt.Sprintf("Finish once push with finish reason " + v.GetFinishReason() + "  ,with chatcmplId:" + v.GetChatcmplId()))
+				return
+			}
+
+		//case code := <-streamActiveChan:
+		//	log.GetTextLogger().Info(fmt.Sprintf("Finish once push with active code %d", code))
+		//	_, _ = fmt.Fprintf(gc.Writer, "data:%d\n\n", code)
+		//	flusher.Flush()
+		//	return
 
 		case <-ctx.Done():
 			// 上下文取消信号，优雅退出

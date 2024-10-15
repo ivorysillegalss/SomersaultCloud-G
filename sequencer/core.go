@@ -25,15 +25,21 @@ type StreamData struct {
 }
 
 var (
-	streams = make(map[int]*StreamData) // 管理所有流的数据
-	mu      sync.Mutex                  // 用于并发控制
-	tw      = timingwheel.NewTimingWheel(100*time.Millisecond, 10)
+	dataReadyStreams = make(map[int]chan bool)
+	streams          = make(map[int]*StreamData) // 管理所有流的数据
+	mu               sync.Mutex                  // 用于并发控制
+	tw               = timingwheel.NewTimingWheel(100*time.Millisecond, 10)
 )
 
 func init() {
 	// 启动时间轮
 	tw.Start()
 }
+
+const (
+	ready    = true
+	notReady = false
+)
 
 type Sequencer struct {
 }
@@ -43,11 +49,31 @@ func NewSequencer() *Sequencer {
 }
 
 func (c *Sequencer) GetData(userId int) (chan domain.ParsedResponse, chan int) {
-	data := streams[userId]
-	if funk.IsEmpty(data) {
-		return nil, nil
+	//mu.Lock()
+	//defer mu.Unlock()
+
+	for {
+		select {
+		case v := <-dataReadyStreams[userId]:
+			if v {
+				// 当 v 为 true 时，执行操作
+				log.GetTextLogger().Info("Data is ready, proceeding...")
+				data, exists := streams[userId]
+				//if !exists || data == nil {
+				if !exists {
+					log.GetTextLogger().Error("error for get stream data,channel is empty for user " + strconv.Itoa(userId))
+					return nil, nil
+				}
+				return data.sequenceValue, data.activeChan
+			} else {
+				// 如果 v 为 false，则阻塞继续等待
+				log.GetTextLogger().Warn("Data not ready, waiting...")
+			}
+		}
+		// 阻塞1秒后继续循环检查
+		time.Sleep(time.Second)
 	}
-	return data.sequenceValue, data.activeChan
+
 }
 
 // Setup 将传过来的流式数据进行顺序的判断
@@ -57,14 +83,16 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 		log.GetTextLogger().Error("nil message")
 		return
 	}
-
 	identity := parsedResp.GetIdentity() // 获取消息的身份标识
 	index := parsedResp.GetIndex()       // 获取消息的序号
 
 	finishReason := parsedResp.GetFinishReason()
 
-	mu.Lock()
-	defer mu.Unlock()
+	//TODO 整个方案全部爆炸，这里要加锁 因为之前是go一个异步任务的 所有的流信息都是并发 需要保持单次会话中信息的有序性 就必须保证这里所指的索引的有序性 但是加锁会带来很大资源代价
+
+	//死锁
+	//mu.Lock()
+	//defer mu.Unlock()
 
 	stream, exists := streams[identity]
 	//调试的时候 需要注意这里的问题 如果上一次有消息传过来没有处理完 此处上方的stream会报错nil 因为消息是以内存中的map为单位存储的
@@ -72,11 +100,8 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	//return
 
 	if funk.NotEmpty(finishReason) {
-		if funk.IsEmpty(stream.activeChan) {
-			stream.activeChan = make(chan int, 2)
-		}
 		stream.activeChan <- sys.Finish
-		log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason())
+		log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason() + " ,with ChatcmplId :" + parsedResp.GetChatcmplId())
 		//normallyEndStream(identity, stream.version)
 
 		return
@@ -85,17 +110,28 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	if !exists {
 		//若流不存在
 		if index == sys.FirstMessageIndex {
+
+			log.GetTextLogger().Info("start receiving message for userId:" + strconv.Itoa(identity) + ", with chatcmplId:" + parsedResp.GetChatcmplId())
+
 			// 第一种情况：这是第一条消息，创建新的流数据
 			stream = &StreamData{
 				sequenceIndex:   sys.FirstMessageIndex,
 				unSequenceValue: make(map[int]domain.ParsedResponse),
 				sequenceValue:   make(chan domain.ParsedResponse, 100), // 可根据需要设置缓冲区大小
 				active:          true,
+				activeChan:      make(chan int, 2),
 			}
 			streams[identity] = stream
 			startStreamTimer(identity)
 
 			stream.sequenceValue <- parsedResp
+
+			//TODO 在这里打一个信令，告诉可以开始获取数据？
+
+			if dataReadyStreams[identity] == nil {
+				dataReadyStreams[identity] = make(chan bool, 1)
+			}
+			dataReadyStreams[identity] <- ready
 		} else {
 			// 收到了非第一条消息，但流并不存在，记录错误
 			log.GetTextLogger().Error(fmt.Sprintf("No active stream for identity %d. Discarding message.\n with Index %d", identity, index))
