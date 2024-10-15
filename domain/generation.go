@@ -30,6 +30,12 @@ type GenerationRepository interface {
 	CacheLuaPollHistory(ctx context.Context, generationResp GenerationResponse)
 	// InMemoryPollHistory 内存存储
 	InMemoryPollHistory(ctx context.Context, response *GenerationResponse)
+
+	InMemorySetStreamValue(ctx context.Context, response ParsedResponse)
+	InMemoryGetStreamValue(userId int) chan ParsedResponse
+
+	//GetStreamChannel() chan ParsedResponse
+	//SendStreamValueChannel(ParsedResponse)
 }
 
 type GenerationCron interface {

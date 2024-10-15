@@ -23,7 +23,7 @@ func RegisterChatRouter(group *gin.RouterGroup, controllers *bootstrap.Controlle
 	streamGroup := chatGroup.Group("/stream")
 	{
 		streamGroup.POST("/setup", cc.StreamContextTextChatSetup)
-		streamGroup.POST("/work", cc.StreamContextTextChatWorker)
+		streamGroup.GET("/work", cc.StreamContextTextChatWorker)
 	}
 
 	mc := controllers.HistoryMessageController
