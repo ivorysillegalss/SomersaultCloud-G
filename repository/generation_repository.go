@@ -3,18 +3,18 @@ package repository
 import (
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
+	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/redis"
 	"context"
 	_ "embed"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/thoas/go-funk"
 	"strconv"
 )
 
-var chatGenerationMap map[int]*domain.GenerationResponse
-var chatStreamValue map[int]chan domain.ParsedResponse
+var chatGenerationMap = make(map[int]*domain.GenerationResponse)
+var chatStreamValue = make(map[int]chan domain.ParsedResponse)
 
 //go:embed lua/hash_expired.lua
 var hashExpiredLuaScript string
@@ -38,21 +38,21 @@ func (g generationRepository) CacheLuaPollHistory(ctx context.Context, generatio
 }
 
 func (g generationRepository) InMemoryPollHistory(ctx context.Context, response *domain.GenerationResponse) {
-	if funk.IsEmpty(chatGenerationMap) {
-		chatGenerationMap = make(map[int]*domain.GenerationResponse)
-	}
 	chatGenerationMap[response.ChatId] = response
 }
 
 func (g generationRepository) InMemorySetStreamValue(ctx context.Context, response domain.ParsedResponse) {
 	identity := response.GetIdentity()
-
-	chatStreamValue[identity] <- response
+	responsesChan := chatStreamValue[identity]
+	if responsesChan == nil {
+		responsesChan = make(chan domain.ParsedResponse, sys.StreamGenerationResponseChannelBuffer)
+	}
+	responsesChan <- response
 }
 
-func (g generationRepository) InMemoryGetStreamValue(userId int) chan domain.ParsedResponse {
+func (g generationRepository) InMemoryGetStreamValue(userId int) *chan domain.ParsedResponse {
 	responses := chatStreamValue[userId]
-	return responses
+	return &responses
 }
 
 //func (g generationRepository) GetStreamChannel() chan domain.ParsedResponse {

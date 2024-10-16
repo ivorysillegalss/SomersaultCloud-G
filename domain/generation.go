@@ -32,7 +32,7 @@ type GenerationRepository interface {
 	InMemoryPollHistory(ctx context.Context, response *GenerationResponse)
 
 	InMemorySetStreamValue(ctx context.Context, response ParsedResponse)
-	InMemoryGetStreamValue(userId int) chan ParsedResponse
+	InMemoryGetStreamValue(userId int) *chan ParsedResponse
 
 	//GetStreamChannel() chan ParsedResponse
 	//SendStreamValueChannel(ParsedResponse)

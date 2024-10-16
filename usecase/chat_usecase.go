@@ -20,6 +20,7 @@ import (
 	"github.com/thoas/go-funk"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 //go:embed lua/increment.lua
@@ -130,21 +131,8 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 		return
 	}
 
-	//TODO PLAN A代码搁置
-	//发送事件
 	newSequencer := sequencer.NewSequencer()
-	//streamDataChan, streamActiveChan := newSequencer.GetData(userId)
 	streamDataChan, _ := newSequencer.GetData(userId)
-	////TODO 这里最后还有问题，activeChan无法正常传值。通道船用也有问题
-	//if funk.IsEmpty(streamActiveChan) || funk.IsEmpty(streamDataChan) {
-	//if funk.IsEmpty(streamDataChan) {
-	//	log.GetTextLogger().Error("empty value for user :" + strconv.Itoa(userId))
-	//	_, _ = fmt.Fprintf(gc.Writer, "data: nil")
-	//	flusher.Flush()
-	//	return
-	//}
-
-	//streamDataChan := c.generationRepository.InMemoryGetStreamValue(userId)
 	log.GetTextLogger().Info("successfully getting the channel for: userId:" + strconv.Itoa(userId))
 	for {
 		select {
@@ -162,17 +150,12 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 				log.GetTextLogger().Info(fmt.Sprintf("Finish once push with finish reason " + v.GetFinishReason() + "  ,with chatcmplId:" + v.GetChatcmplId()))
 				return
 			}
-
-		//case code := <-streamActiveChan:
-		//	log.GetTextLogger().Info(fmt.Sprintf("Finish once push with active code %d", code))
-		//	_, _ = fmt.Fprintf(gc.Writer, "data:%d\n\n", code)
-		//	flusher.Flush()
-		//	return
-
 		case <-ctx.Done():
 			// 上下文取消信号，优雅退出
 			log.GetTextLogger().Info("Context canceled, stopping worker")
 			return
+		default:
+			time.Sleep(time.Second)
 		}
 	}
 }

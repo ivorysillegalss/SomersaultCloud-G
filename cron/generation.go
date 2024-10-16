@@ -8,6 +8,7 @@ import (
 	"SomersaultCloud/handler"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/kvutil"
+	"SomersaultCloud/sequencer"
 	"context"
 	"github.com/thoas/go-funk"
 	"time"
@@ -56,8 +57,7 @@ func (g generationCron) AsyncPollerGeneration() {
 			//TODO planA本身是go这个转码的函数，然后再下发的时候，通过排序器对失序做处理再下发的，但是太多bug了，先用同步上线
 			// 在同步的情况下，由于openai是经过http1.1or2的流式传输，所以是可以保证消息的有序的。唯一的可失序的地方就是mq 消息丢失
 			// 待优化
-			go consumeAndParse(streamTask, g.env, g.channels, g.generateEvent, g.generationRepository)
-			//consumeAndParse(streamTask, g.env, g.channels, g.generateEvent, g.generationRepository)
+			consumeAndParse(streamTask, g.env, g.channels, g.generateEvent, g.generationRepository)
 		default:
 			time.Sleep(500 * time.Millisecond) // 控制轮询频率
 		}
@@ -68,10 +68,10 @@ func (g generationCron) AsyncPollerGeneration() {
 func consumeAndParse(streamTask *domain.GenerationResponse, env *bootstrap.Env, channels *bootstrap.Channels, event domain.GenerateEvent, repository domain.GenerationRepository) {
 	executor := handler.NewLanguageModelExecutor(env, channels, streamTask.ExecutorId)
 	parsedResp, _ := executor.ParseResp(&domain.AskContextData{Resp: *streamTask, Stream: true, ExecutorId: streamTask.ExecutorId})
-	//这里其实如果不做其他处理 就可以将值直接下发了 对于值的删除 等前端来了再删
-	//repository.InMemorySetStreamValue(context.Background(), parsedResp)
-	//以下planA源代码
 	index := chatcmplCache.IndexIncIfExist(parsedResp.GetChatcmplId())
 	parsedResp.SetIndex(index)
-	event.PublishGeneration(parsedResp)
+	log.GetTextLogger().Info("start parsing value for chatcmplId: " + parsedResp.GetChatcmplId())
+
+	newSequencer := sequencer.NewSequencer()
+	newSequencer.Setup(parsedResp)
 }
