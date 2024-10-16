@@ -69,9 +69,10 @@ func (c *Sequencer) GetData(userId int) (chan domain.ParsedResponse, chan int) {
 				// 如果 v 为 false，则阻塞继续等待
 				log.GetTextLogger().Warn("Data not ready, waiting...")
 			}
+		default:
+			// 阻塞1秒后继续循环检查
+			time.Sleep(time.Second)
 		}
-		// 阻塞1秒后继续循环检查
-		time.Sleep(time.Second)
 	}
 
 }
