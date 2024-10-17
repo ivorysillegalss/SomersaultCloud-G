@@ -91,10 +91,13 @@ type ChatRepository interface {
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
 	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
+
 	// StreamContextChatSetup 流式输出启动
 	StreamContextChatSetup(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
 	// StreamContextChatWorker 流式输出 信息下发
 	StreamContextChatWorker(ctx context.Context, token string, gc *gin.Context, flusher http.Flusher)
+	// StreamContextStorage 流式输出缓存
+	StreamContextStorage(ctx context.Context, token string) bool
 
 	DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message ParsedResponse, code int)
 
@@ -127,12 +130,10 @@ type StorageEvent interface {
 }
 
 type GenerateEvent interface {
-	ApiCalling(b []byte) error
-	GetGeneration(b []byte) error
-	PublishApiCalling(data *AskContextData)
-	PublishGeneration(data ParsedResponse)
-	AsyncConsumeApiCalling()
-	AsyncConsumeGeneration()
+	// StreamDataReady 提前缓存流请求需保存信息 成功则换成不成功则删除
+	StreamDataReady(b []byte) error
+	PublishStreamReadyStorageData(data *StreamGenerationReadyStorageData)
+	AsyncStreamStorageDataReady()
 }
 
 type ChatStorageData struct {

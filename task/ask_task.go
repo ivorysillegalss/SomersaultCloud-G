@@ -214,8 +214,12 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	data.ParsedResponse = resp
 
-	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) {
-		log.GetTextLogger().Info("saving history")
+}
+
+func (c *ChatAskTask) StorageTask(tc *taskchain.TaskContext) {
+	data := tc.TaskContextData.(*domain.AskContextData)
+	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) || funk.Equal(tc.BusinessCode, task.StorageStreamCode) {
+		log.GetTextLogger().Info("saving history...  with userId :" + strconv.Itoa(data.UserId))
 		//回写缓存&DB
 		//TODO 暂且规定如果是旧表就不存缓存
 		c.chatEvent.PublishSaveCacheHistory(data)

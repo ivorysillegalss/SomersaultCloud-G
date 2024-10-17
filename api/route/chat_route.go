@@ -24,6 +24,7 @@ func RegisterChatRouter(group *gin.RouterGroup, controllers *bootstrap.Controlle
 	{
 		streamGroup.POST("/setup", cc.StreamContextTextChatSetup)
 		streamGroup.GET("/work", cc.StreamContextTextChatWorker)
+		streamGroup.POST("/storage", cc.StreamContextChatStorage)
 	}
 
 	mc := controllers.HistoryMessageController

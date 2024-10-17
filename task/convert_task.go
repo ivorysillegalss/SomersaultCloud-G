@@ -2,17 +2,18 @@ package task
 
 import (
 	"SomersaultCloud/api/middleware/taskchain"
+	task2 "SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
 )
 
 type ChatConvertTask struct {
-	generateEvent domain.GenerateEvent
+	generateEvent        domain.GenerateEvent
+	generationRepository domain.GenerationRepository
 }
 
-// TODO remove
-func (c ChatConvertTask) StreamPublishTask(tc *taskchain.TaskContext) {
-	//由于包含不可用字段 所以此处不能使用消息队列发布任务
-	c.generateEvent.PublishApiCalling(tc.TaskContextData.(*domain.AskContextData))
+func (c ChatConvertTask) InitStreamStorageTask(args ...any) *taskchain.TaskContext {
+	userId := args[0].(int)
+	return &taskchain.TaskContext{BusinessType: task2.StorageStreamType, BusinessCode: task2.StorageStreamCode, TaskContextData: &domain.AskContextData{UserId: userId}}
 }
 
 func (c ChatConvertTask) StreamArgsTask(tc *taskchain.TaskContext) {
@@ -20,6 +21,12 @@ func (c ChatConvertTask) StreamArgsTask(tc *taskchain.TaskContext) {
 	data.Stream = true
 }
 
-func NewConvertTask(event domain.GenerateEvent) ConvertTask {
-	return &ChatConvertTask{generateEvent: event}
+func (c ChatConvertTask) StreamStorageTask(tc *taskchain.TaskContext) {
+	data := tc.TaskContextData.(*domain.AskContextData)
+	dataReady := &domain.StreamGenerationReadyStorageData{ChatId: data.ChatId, UserContent: data.Message, UserId: data.UserId, BotId: data.BotId, Records: data.History}
+	c.generateEvent.PublishStreamReadyStorageData(dataReady)
+}
+
+func NewConvertTask(event domain.GenerateEvent, g domain.GenerationRepository) ConvertTask {
+	return &ChatConvertTask{generateEvent: event, generationRepository: g}
 }

@@ -20,6 +20,7 @@ type LanguageModelExecutor interface {
 // ParsedResponse 转码的历史记录抽象接口
 type ParsedResponse interface {
 	GetGenerateText() string
+	SetGenerateText(string)
 	GetErrorCause() string
 	GetIndex() int
 	GetIdentity() int
@@ -55,6 +56,8 @@ func (o *OpenAIParsedResponse) SetIndex(index int) { o.Index = index }
 func (o *OpenAIParsedResponse) GetIdentity() int { return o.UserId }
 
 func (o *OpenAIParsedResponse) GetFinishReason() string { return o.FinishReason }
+
+func (o *OpenAIParsedResponse) SetGenerateText(string2 string) { o.GenerateText = string2 }
 
 // TODO
 func (o *OpenAIParsedResponse) GetExecutorId() int { return o.ExecutorId }

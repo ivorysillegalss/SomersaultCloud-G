@@ -17,6 +17,15 @@ type GenerationResponse struct {
 	UserId         int
 }
 
+type StreamGenerationReadyStorageData struct {
+	Records     *[]*Record
+	UserContent string
+	ChatId      int
+	UserId      int
+	BotId       int
+	Title       string
+}
+
 func NewGenerationResponse(response *http.Response, chatId int, err error) *GenerationResponse {
 	return &GenerationResponse{Resp: response, ChatId: chatId, Err: err}
 }
@@ -31,11 +40,8 @@ type GenerationRepository interface {
 	// InMemoryPollHistory 内存存储
 	InMemoryPollHistory(ctx context.Context, response *GenerationResponse)
 
-	InMemorySetStreamValue(ctx context.Context, response ParsedResponse)
-	InMemoryGetStreamValue(userId int) *chan ParsedResponse
-
-	//GetStreamChannel() chan ParsedResponse
-	//SendStreamValueChannel(ParsedResponse)
+	ReadyStreamDataStorage(ctx context.Context, ready StreamGenerationReadyStorageData)
+	GetStreamDataStorage(ctx context.Context, userId int) *AskContextData
 }
 
 type GenerationCron interface {
