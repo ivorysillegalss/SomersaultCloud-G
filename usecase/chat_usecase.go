@@ -7,9 +7,9 @@ import (
 	"SomersaultCloud/constant/common"
 	task2 "SomersaultCloud/constant/task"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/handler/stream"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/tokenutil"
-	"SomersaultCloud/sequencer"
 	"SomersaultCloud/task"
 	"context"
 	_ "embed"
@@ -25,6 +25,9 @@ import (
 
 //go:embed lua/increment.lua
 var incrementLuaScript string
+
+// StreamStorageMap 以用户ID为细粒度 存储成功下发的流信息
+var streamStorageMap = make(map[int]chan string)
 
 type chatUseCase struct {
 	env                  *bootstrap.Env
@@ -82,7 +85,7 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
-		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask)
+		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask, chatTask.StorageTask)
 	factory.ExecuteChain()
 
 	//按理来说 上面的taskContext == factory.TaskContext 但是下面再赋值一下比较稳妥一点
@@ -114,7 +117,8 @@ func (c *chatUseCase) StreamContextChatSetup(ctx context.Context, token string, 
 	//至此组装好请求 向mq发布任务 mq消费 向指定客户端send generation
 	//TODO remove
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,
-		convertTask.StreamArgsTask, chatTask.AssembleReqTask, chatTask.CallApiTask)
+		convertTask.StreamArgsTask, chatTask.AssembleReqTask, convertTask.StreamStorageTask, chatTask.CallApiTask)
+	//问题 我现在可以获取到用户的请求体 用以存储 但是如果想要存储的话 还需要生成 问题是 如何将生成的内容匹配请求体
 	factory.ExecuteChain()
 
 	taskContext = factory.TaskContext
@@ -131,9 +135,12 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 		return
 	}
 
-	newSequencer := sequencer.NewSequencer()
+	newSequencer := stream.NewSequencer()
 	streamDataChan, _ := newSequencer.GetData(userId)
 	log.GetTextLogger().Info("successfully getting the channel for: userId:" + strconv.Itoa(userId))
+
+	var generateText string
+
 	for {
 		select {
 		case v := <-streamDataChan:
@@ -146,13 +153,27 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 			}
 			flusher.Flush() // 刷新输出到客户端
 
+			generateText += v.GetGenerateText()
+
 			if funk.NotEmpty(v.GetFinishReason()) {
 				log.GetTextLogger().Info(fmt.Sprintf("Finish once push with finish reason " + v.GetFinishReason() + "  ,with chatcmplId:" + v.GetChatcmplId()))
+				streamStorage := streamStorageMap[userId]
+				if streamStorage == nil {
+					streamStorage = make(chan string, 1)
+				}
+				streamStorage <- generateText
 				return
 			}
 		case <-ctx.Done():
 			// 上下文取消信号，优雅退出
 			log.GetTextLogger().Info("Context canceled, stopping worker")
+
+			streamStorage := streamStorageMap[userId]
+			if streamStorage == nil {
+				streamStorage = make(chan string, 1)
+			}
+			streamStorage <- generateText
+
 			return
 		default:
 			//带超时的select语句 就算是在等待的时候 如果发生了事件
@@ -164,11 +185,50 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 	}
 }
 
+func (c *chatUseCase) StreamContextStorage(ctx context.Context, token string) bool {
+	chatTask := c.chatTask
+	convertTask := c.convertTask
+
+	userId, err := c.tokenUtil.DecodeToId(token)
+	if err != nil {
+		log.GetTextLogger().Error(err.Error())
+		return false
+	}
+
+	var generateText string
+
+	streamResChan := streamStorageMap[userId]
+	if streamResChan == nil {
+		log.GetTextLogger().Error("cannot get target channel resource")
+		return false
+	} else {
+		generateText = <-streamResChan
+	}
+
+	if funk.IsEmpty(generateText) {
+		log.GetTextLogger().Error("empty generateText for userId: " + strconv.Itoa(userId))
+		return false
+	}
+
+	taskContext := convertTask.InitStreamStorageTask(userId)
+
+	factory := taskchain.NewTaskContextFactory()
+	factory.TaskContext = taskContext
+
+	storage := c.generationRepository.GetStreamDataStorage(context.Background(), userId)
+	storage.ParsedResponse.SetGenerateText(generateText)
+	factory.TaskContext.TaskContextData = storage
+
+	factory.Puts(chatTask.StorageTask)
+
+	log.GetTextLogger().Info("successfully storage stream message for userId: " + strconv.Itoa(userId))
+	return true
+}
+
 func (c *chatUseCase) DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message domain.ParsedResponse, code int) {
 	chatTask := c.chatTask
 
 	userId, err := c.tokenUtil.DecodeToId(token)
-	//TODO
 	if err != nil {
 		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
 	}
@@ -178,7 +238,7 @@ func (c *chatUseCase) DisposableVisionChat(ctx context.Context, token string, ch
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetBotTask,
-		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask)
+		chatTask.AssembleReqTask, chatTask.CallApiTask, chatTask.ParseRespTask, chatTask.StorageTask)
 	factory.ExecuteChain()
 
 	taskContext = factory.TaskContext
@@ -247,7 +307,7 @@ func (c *chatUseCase) GenerateUpdateTitle(ctx context.Context, message *[]domain
 	titleTask := c.titleTask
 	chatTask := c.chatTask
 	factory.Puts(titleTask.PreTitleTask, titleTask.AssembleTitleReqTask,
-		chatTask.CallApiTask, chatTask.ParseRespTask)
+		chatTask.CallApiTask, chatTask.ParseRespTask, chatTask.StorageTask)
 	factory.ExecuteChain()
 
 	//TODO 包装链子上出现的任务,继续提取其中共同点

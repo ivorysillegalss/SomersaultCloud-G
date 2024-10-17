@@ -17,10 +17,9 @@ func (d *ConsumeExecutor) SetupConsume() {
 	log.GetTextLogger().Info("AsyncConsumeCacheHistory QUEUE start")
 	d.storageEvent.AsyncConsumeDbUpdateTitle()
 	log.GetTextLogger().Info("AsyncConsumeDbUpdateTitle QUEUE start")
-	d.generateEvent.AsyncConsumeApiCalling()
-	log.GetTextLogger().Info("AsyncConsumeApiCalling QUEUE start")
-	d.generateEvent.AsyncConsumeGeneration()
-	log.GetTextLogger().Info("AsyncConsumeGeneration QUEUE start")
+	d.generateEvent.AsyncStreamStorageDataReady()
+	log.GetTextLogger().Info("AsyncStreamStorageDataReady QUEUE start")
+
 	log.GetTextLogger().Info("ALL-----QUEUE----START-----SUCCESSFULLY")
 	//TODO
 	//在这里全部启动消费者逻辑

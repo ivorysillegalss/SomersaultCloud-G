@@ -27,8 +27,4 @@ const (
 	UserChatReadyCallingExchange = "user.call.chat.ready.direct"
 	UserChatReadyCallingQueue    = "user.call.chat.ready.queue"
 	UserChatReadyCallingKey      = "user.call.chat.ready.event"
-
-	UserChatGenerationExchange = "user.call.chat.finish.direct"
-	UserChatGenerationQueue    = "user.call.chat.finish.queue"
-	UserChatGenerationKey      = "user.call.chat.finish.event"
 )

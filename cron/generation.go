@@ -6,9 +6,9 @@ import (
 	"SomersaultCloud/constant/dao"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/handler"
+	"SomersaultCloud/handler/stream"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/kvutil"
-	"SomersaultCloud/sequencer"
 	"context"
 	"github.com/thoas/go-funk"
 	"time"
@@ -72,6 +72,6 @@ func consumeAndParse(streamTask *domain.GenerationResponse, env *bootstrap.Env, 
 	parsedResp.SetIndex(index)
 	//log.GetTextLogger().Info("start parsing value for chatcmplId: " + parsedResp.GetChatcmplId())
 
-	newSequencer := sequencer.NewSequencer()
+	newSequencer := stream.NewSequencer()
 	newSequencer.Setup(parsedResp)
 }

@@ -1,4 +1,4 @@
-package sequencer
+package stream
 
 import (
 	"SomersaultCloud/constant/common"
@@ -89,16 +89,11 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 
 	finishReason := parsedResp.GetFinishReason()
 
-	//TODO 整个方案全部爆炸，这里要加锁 因为之前是go一个异步任务的 所有的流信息都是并发 需要保持单次会话中信息的有序性 就必须保证这里所指的索引的有序性 但是加锁会带来很大资源代价
-
 	//死锁
 	//mu.Lock()
 	//defer mu.Unlock()
 
 	stream, exists := streams[identity]
-	//调试的时候 需要注意这里的问题 如果上一次有消息传过来没有处理完 此处上方的stream会报错nil 因为消息是以内存中的map为单位存储的
-	//当调试重启的时候 内存会丢失 而消息还在 就会造成这个问题 此时只需要主动丢弃这一次的信息即可 即取消下方的return
-	//return
 
 	if !exists {
 		//若流不存在

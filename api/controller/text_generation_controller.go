@@ -6,6 +6,7 @@ import (
 	"SomersaultCloud/constant/request"
 	"SomersaultCloud/domain"
 	"github.com/gin-gonic/gin"
+	"github.com/thoas/go-funk"
 	"net/http"
 )
 
@@ -68,7 +69,7 @@ func (cc *ChatController) StreamContextTextChatSetup(c *gin.Context) {
 }
 
 func (cc *ChatController) StreamContextTextChatWorker(c *gin.Context) {
-	token := c.Request.Header.Get("Token")
+	token := c.Request.Header.Get("token")
 	//TODO REMOVE:测试用
 	//token := "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOi0xLCJleHAiOjEwMDAwMTcyNTQ2NTUzN30.nlW5kKPgBZwqdxafrt_VTEPwVg7x9OWWOsKTM4Xk0B4"
 
@@ -84,6 +85,20 @@ func (cc *ChatController) StreamContextTextChatWorker(c *gin.Context) {
 		return
 	}
 	cc.chatUseCase.StreamContextChatWorker(c.Request.Context(), token, c, flusher)
+}
+
+func (cc *ChatController) StreamContextChatStorage(c *gin.Context) {
+	token := c.Request.Header.Get("Token")
+	if funk.IsEmpty(token) {
+		c.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: "请求参数解析失败", Code: request.StartChatError})
+		return
+	}
+	isSuccess := cc.chatUseCase.StreamContextStorage(c, token)
+	if isSuccess {
+		c.JSON(http.StatusOK, domain.SuccessResponse{Message: "流式信息存储成功", Code: request.StorageStreamTextSuccess})
+	} else {
+		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: "流式信息存储失败", Code: request.StorageStreamTextFail})
+	}
 }
 
 func (cc *ChatController) VisionChat(c *gin.Context) {

@@ -35,4 +35,7 @@ const (
 	ExecuteTitleAskType    = "ExecuteTitleAsk"
 	ExecuteTitleAskCode    = 30
 	ChatTitleAskExecutorId = 3
+
+	StorageStreamType = "StorageStreamCode"
+	StorageStreamCode = 40
 )

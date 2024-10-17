@@ -3,7 +3,7 @@ package repository
 import (
 	"SomersaultCloud/bootstrap"
 	"SomersaultCloud/constant/cache"
-	"SomersaultCloud/constant/sys"
+	"SomersaultCloud/constant/common"
 	"SomersaultCloud/domain"
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/infrastructure/redis"
@@ -14,13 +14,11 @@ import (
 )
 
 var chatGenerationMap = make(map[int]*domain.GenerationResponse)
-var chatStreamValue = make(map[int]chan domain.ParsedResponse)
 
 //go:embed lua/hash_expired.lua
 var hashExpiredLuaScript string
 
 type generationRepository struct {
-	//streamValue chan domain.ParsedResponse
 	rcl redis.Client
 }
 
@@ -41,32 +39,20 @@ func (g generationRepository) InMemoryPollHistory(ctx context.Context, response 
 	chatGenerationMap[response.ChatId] = response
 }
 
-func (g generationRepository) InMemorySetStreamValue(ctx context.Context, response domain.ParsedResponse) {
-	identity := response.GetIdentity()
-	responsesChan := chatStreamValue[identity]
-	if responsesChan == nil {
-		responsesChan = make(chan domain.ParsedResponse, sys.StreamGenerationResponseChannelBuffer)
+func (g generationRepository) ReadyStreamDataStorage(ctx context.Context, ready domain.StreamGenerationReadyStorageData) {
+	_ = g.rcl.SetExpire(ctx, cache.StreamStorageReadyData+common.Infix+strconv.Itoa(ready.UserId), ready, cache.StreamStorageReadyDataExpire)
+}
+
+func (g generationRepository) GetStreamDataStorage(ctx context.Context, userId int) *domain.AskContextData {
+	get, err := g.rcl.Get(ctx, cache.StreamStorageReadyData+common.Infix+strconv.Itoa(userId))
+	if g.rcl.IsEmpty(err) {
+		log.GetTextLogger().Error("can't find target id stream data cache , with userId: " + strconv.Itoa(userId))
+		return nil
 	}
-	responsesChan <- response
+	var dataReady domain.StreamGenerationReadyStorageData
+	_ = jsoniter.Unmarshal([]byte(get), dataReady)
+	return &domain.AskContextData{UserId: userId, ChatId: dataReady.ChatId, BotId: dataReady.BotId, Message: dataReady.UserContent, History: dataReady.Records}
 }
-
-func (g generationRepository) InMemoryGetStreamValue(userId int) *chan domain.ParsedResponse {
-	responses := chatStreamValue[userId]
-	return &responses
-}
-
-//func (g generationRepository) GetStreamChannel() chan domain.ParsedResponse {
-//	return g.streamValue
-//}
-//
-//func (g generationRepository) SendStreamValueChannel(response domain.ParsedResponse) {
-//	value := g.streamValue
-//	if funk.IsEmpty(value) {
-//		//TODO 常量替换
-//		value = make(chan domain.ParsedResponse, 100)
-//	}
-//	value <- response
-//}
 
 func NewGenerationRepository(dbs *bootstrap.Databases) domain.GenerationRepository {
 	return &generationRepository{rcl: dbs.Redis}
