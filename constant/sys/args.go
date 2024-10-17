@@ -33,7 +33,7 @@ const (
 	Timeout        = -1
 	IllegalRequest = -2
 
-	NormallyEndExpiration = time.Second      //指单次会话所有流信息存储在channel中的缓存时间
+	NormallyEndExpiration = time.Second * 3  //指单次会话所有流信息存储在channel中的缓存时间
 	StreamTimeout         = 10 * time.Second // 设置整个流的超时时间
 	FirstMessageIndex     = 0                // 第一条信息的索引
 

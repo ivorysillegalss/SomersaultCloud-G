@@ -70,7 +70,7 @@ func consumeAndParse(streamTask *domain.GenerationResponse, env *bootstrap.Env, 
 	parsedResp, _ := executor.ParseResp(&domain.AskContextData{Resp: *streamTask, Stream: true, ExecutorId: streamTask.ExecutorId})
 	index := chatcmplCache.IndexIncIfExist(parsedResp.GetChatcmplId())
 	parsedResp.SetIndex(index)
-	log.GetTextLogger().Info("start parsing value for chatcmplId: " + parsedResp.GetChatcmplId())
+	//log.GetTextLogger().Info("start parsing value for chatcmplId: " + parsedResp.GetChatcmplId())
 
 	newSequencer := sequencer.NewSequencer()
 	newSequencer.Setup(parsedResp)

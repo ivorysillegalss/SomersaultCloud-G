@@ -100,14 +100,6 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 	//当调试重启的时候 内存会丢失 而消息还在 就会造成这个问题 此时只需要主动丢弃这一次的信息即可 即取消下方的return
 	//return
 
-	if funk.NotEmpty(finishReason) {
-		stream.activeChan <- sys.Finish
-		log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason() + " ,with ChatcmplId :" + parsedResp.GetChatcmplId())
-		//normallyEndStream(identity, stream.version)
-
-		return
-	}
-
 	if !exists {
 		//若流不存在
 		if index == sys.FirstMessageIndex {
@@ -126,8 +118,6 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 			startStreamTimer(identity)
 
 			stream.sequenceValue <- parsedResp
-
-			//TODO 在这里打一个信令，告诉可以开始获取数据？
 
 			if dataReadyStreams[identity] == nil {
 				dataReadyStreams[identity] = make(chan bool, 1)
@@ -152,6 +142,11 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 			stream.active = true
 			startStreamTimer(identity)
 			stream.sequenceValue <- parsedResp
+
+			if dataReadyStreams[identity] == nil {
+				dataReadyStreams[identity] = make(chan bool, 1)
+			}
+			dataReadyStreams[identity] <- ready
 		} else {
 			// 第三种情况：正常接收后续消息
 			if stream.sequenceValue == nil {
@@ -166,6 +161,14 @@ func (c *Sequencer) Setup(parsedResp domain.ParsedResponse) {
 
 			if index == i+1 {
 				// 按序接收到消息
+
+				if funk.NotEmpty(finishReason) {
+					stream.sequenceValue <- parsedResp
+					stream.activeChan <- sys.Finish
+					log.GetTextLogger().Info("finish receiving message for user : " + strconv.Itoa(parsedResp.GetIdentity()) + ", end for reason :" + parsedResp.GetFinishReason() + " ,with ChatcmplId :" + parsedResp.GetChatcmplId())
+					normallyEndStream(identity, stream.version)
+					return
+				}
 
 				stream.sequenceValue <- parsedResp
 				stream.sequenceIndex = i + 1
@@ -203,7 +206,6 @@ func checkUnorderedMessages(stream *StreamData) {
 func resetStreamData(stream *StreamData) {
 	stream.sequenceIndex = 0
 	stream.unSequenceValue = make(map[int]domain.ParsedResponse)
-	stream.version = time.Now().UnixNano()
 	// 清空管道中的残留数据
 	for len(stream.sequenceValue) > 0 {
 		<-stream.sequenceValue
@@ -216,6 +218,7 @@ func resetStreamData(stream *StreamData) {
 // 使用 timingwheel 启动计时器
 func startStreamTimer(identity int) {
 	stream := streams[identity]
+	stream.version = time.Now().UnixNano()
 
 	// 如果已有计时器，则先停止它
 	if stream.timer != nil {
@@ -224,9 +227,9 @@ func startStreamTimer(identity int) {
 
 	// 使用时间轮的 AfterFunc 来设定超时
 
-	//stream.timer = tw.AfterFunc(sys.StreamTimeout, func() {
-	//	handleStreamTimeout(identity, stream.version)
-	//})
+	stream.timer = tw.AfterFunc(sys.StreamTimeout, func() {
+		handleStreamTimeout(identity, stream.version)
+	})
 
 }
 
@@ -241,7 +244,6 @@ func normallyEndStream(identity int, version int64) {
 	normallyEndText := fmt.Sprintf("Stream for identity %d normally end. Cleaning up...\n", identity)
 	tw.AfterFunc(sys.NormallyEndExpiration, func() {
 		garbageCollectStream(normallyEndText, common.Info, identity, version)
-		streams[identity].activeChan <- sys.Finish
 	})
 }
 

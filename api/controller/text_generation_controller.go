@@ -5,7 +5,6 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/request"
 	"SomersaultCloud/domain"
-	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -69,8 +68,10 @@ func (cc *ChatController) StreamContextTextChatSetup(c *gin.Context) {
 }
 
 func (cc *ChatController) StreamContextTextChatWorker(c *gin.Context) {
-	//token := c.Request.Header.Get("Token")
-	token := "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOi0xLCJleHAiOjEwMDAwMTcyNTQ2NTUzN30.nlW5kKPgBZwqdxafrt_VTEPwVg7x9OWWOsKTM4Xk0B4"
+	token := c.Request.Header.Get("Token")
+	//TODO REMOVE:测试用
+	//token := "eyJhbGciOiJIUzI1NiJ9.eyJ1aWQiOi0xLCJleHAiOjEwMDAwMTcyNTQ2NTUzN30.nlW5kKPgBZwqdxafrt_VTEPwVg7x9OWWOsKTM4Xk0B4"
+
 	//SSE处理函数
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
@@ -82,8 +83,7 @@ func (cc *ChatController) StreamContextTextChatWorker(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Streaming unsupported!")
 		return
 	}
-	//fmt.Println(flusher, token)
-	cc.chatUseCase.StreamContextChatWorker(context.Background(), token, c, flusher)
+	cc.chatUseCase.StreamContextChatWorker(c.Request.Context(), token, c, flusher)
 }
 
 func (cc *ChatController) VisionChat(c *gin.Context) {
