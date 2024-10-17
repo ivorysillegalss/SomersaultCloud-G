@@ -155,7 +155,11 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 			log.GetTextLogger().Info("Context canceled, stopping worker")
 			return
 		default:
-			time.Sleep(time.Second)
+			//带超时的select语句 就算是在等待的时候 如果发生了事件
+			//也可以立马响应 本质上是一个事件驱动架构的一个体现
+			select {
+			case <-time.After(time.Second):
+			}
 		}
 	}
 }
