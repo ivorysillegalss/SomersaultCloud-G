@@ -18,6 +18,8 @@ type AskTask interface {
 	CallApiTask(tc *taskchain.TaskContext)
 	// ParseRespTask 转换rpc后响应数据
 	ParseRespTask(tc *taskchain.TaskContext)
+	// StorageTask 存储相关
+	StorageTask(tc *taskchain.TaskContext)
 }
 
 // TitleTask 更新标题的时候 所调用的责任链方法 较为简单 可以与上方节点混着用
@@ -29,4 +31,12 @@ type TitleTask interface {
 	AssembleTitleReqTask(tc *taskchain.TaskContext)
 	// Convert2AskTask 其他的逻辑同AskTask
 	Convert2AskTask(tc *taskchain.TaskContext)
+}
+
+// ConvertTask 责任链中节点在不同方法中使用的时候 需要根据需求进行一定定制修改
+// 对于变化较小的改动 直接在此定义节点并使用即可 上方title_task那其实也可以这么干
+type ConvertTask interface {
+	InitStreamStorageTask(args ...any) *taskchain.TaskContext
+	StreamArgsTask(tc *taskchain.TaskContext)
+	StreamStorageTask(*taskchain.TaskContext)
 }

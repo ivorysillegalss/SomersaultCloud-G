@@ -31,8 +31,9 @@ type PoolsFactory struct {
 }
 
 type Channels struct {
-	RpcRes chan *domain.GenerationResponse
-	Stop   chan bool
+	RpcRes       chan *domain.GenerationResponse
+	Stop         chan bool
+	StreamRpcRes chan *domain.GenerationResponse
 }
 
 type Controllers struct {
@@ -43,6 +44,7 @@ type Controllers struct {
 type Executor struct {
 	CronExecutor    *executor.CronExecutor
 	ConsumeExecutor *executor.ConsumeExecutor
+	DataExecutor    *executor.DataExecutor
 }
 
 func (app *Application) CloseDBConnection() {
@@ -53,9 +55,10 @@ func NewControllers(chatController *controller.ChatController, messageController
 	return &Controllers{ChatController: chatController, HistoryMessageController: messageController}
 }
 
-func NewExecutors(ce *executor.CronExecutor, cse *executor.ConsumeExecutor) *Executor {
+func NewExecutors(ce *executor.CronExecutor, cse *executor.ConsumeExecutor, de *executor.DataExecutor) *Executor {
 	return &Executor{
 		CronExecutor:    ce,
 		ConsumeExecutor: cse,
+		DataExecutor:    de,
 	}
 }

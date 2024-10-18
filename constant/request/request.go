@@ -30,6 +30,9 @@ const (
 	UpdateTitleSuccess = 160
 	UpdateTitleError   = 161
 
+	StorageStreamTextSuccess = 160
+	StorageStreamTextFail    = 161
+
 	//ShowRecycled 展示回收站
 	ShowRecycledSuccess = 170
 	ShowRecycledError   = 171

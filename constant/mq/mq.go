@@ -23,4 +23,8 @@ const (
 	UpdateChatTitleExchange = "user.update.title.direct"
 	UpdateChatTitleQueue    = "user.update.title.queue"
 	UpdateChatTitleKey      = "user.update.title.event"
+
+	UserChatReadyCallingExchange = "user.call.chat.ready.direct"
+	UserChatReadyCallingQueue    = "user.call.chat.ready.queue"
+	UserChatReadyCallingKey      = "user.call.chat.ready.event"
 )

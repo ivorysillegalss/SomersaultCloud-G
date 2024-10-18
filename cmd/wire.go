@@ -34,18 +34,21 @@ var appSet = wire.NewSet(
 	repository.NewChatRepository,
 	repository.NewBotRepository,
 
-	consume.NewChatEvent,
+	consume.NewStorageEvent,
+	consume.NewGenerateEvent,
 	consume.NewMessageHandler,
 
 	cron.NewGenerationCron,
 
 	executor.NewCronExecutor,
 	executor.NewConsumeExecutor,
+	executor.NewDataExecutor,
 
 	usecase.NewChatUseCase,
 
 	task.NewAskChatTask,
 	task.NewChatTitleTask,
+	task.NewConvertTask,
 
 	controller.NewChatController,
 	controller.NewHistoryMessageController,

@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type ChatHistoryTitle struct {
@@ -91,6 +92,13 @@ type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
 	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
 
+	// StreamContextChatSetup 流式输出启动
+	StreamContextChatSetup(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
+	// StreamContextChatWorker 流式输出 信息下发
+	StreamContextChatWorker(ctx context.Context, token string, gc *gin.Context, flusher http.Flusher)
+	// StreamContextStorage 流式输出缓存
+	StreamContextStorage(ctx context.Context, token string) bool
+
 	DisposableVisionChat(ctx context.Context, token string, chatId int, botId int, askMessage string, picUrl string) (isSuccess bool, message ParsedResponse, code int)
 
 	//TODO 同上适应前端接口
@@ -103,25 +111,29 @@ type ChatUseCase interface {
 	InputUpdateTitle(ctx context.Context, title string, token string, chatId int, botId int) bool
 }
 
-type ChatEvent interface {
+type StorageEvent interface {
 	//对repository中方法进行二次封装
 	DbPutHistory(b []byte) error
 	CachePutHistory(b []byte) error
 	DbNewChat(b []byte) error
+	DbUpdateTitle(b []byte) error
 
 	PublishSaveDbHistory(data *AskContextData)
 	PublishSaveCacheHistory(data *AskContextData)
 	PublishDbNewChat(data *ChatStorageData)
+	PublishDbSaveTitle(data *AskContextData)
 
 	AsyncConsumeDbHistory()
 	AsyncConsumeCacheHistory()
 	AsyncConsumeDbNewChat()
-
-	DbUpdateTitle(b []byte) error
-
-	PublishDbSaveTitle(data *AskContextData)
-
 	AsyncConsumeDbUpdateTitle()
+}
+
+type GenerateEvent interface {
+	// StreamDataReady 提前缓存流请求需保存信息 成功则换成不成功则删除
+	StreamDataReady(b []byte) error
+	PublishStreamReadyStorageData(data *StreamGenerationReadyStorageData)
+	AsyncStreamStorageDataReady()
 }
 
 type ChatStorageData struct {

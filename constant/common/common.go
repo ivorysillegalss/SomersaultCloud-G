@@ -37,4 +37,8 @@ const (
 	HighDetail = "high"
 	// ApiServerOpenAI OpenAI-API服务器默认网址
 	ApiServerOpenAI = "https://api.openai.com/v1/chat/completions"
+	// Info 日志级别 info
+	Info = "info"
+	// Error 日志级别 Error
+	Error = "Error"
 )

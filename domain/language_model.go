@@ -20,19 +20,47 @@ type LanguageModelExecutor interface {
 // ParsedResponse 转码的历史记录抽象接口
 type ParsedResponse interface {
 	GetGenerateText() string
+	SetGenerateText(string)
 	GetErrorCause() string
+	GetIndex() int
+	GetIdentity() int
+	GetFinishReason() string
+	GetExecutorId() int
+	GetChatcmplId() string
+	SetIndex(index int)
 }
 
 // OpenAIParsedResponse 目前的实现在生成的时候 若出现错误直接将错误置为GenerateText
 // 也就是说两者方法实现上本质上一样 只是长得不一样
+//
+//	流式生成的时候 通过UserId作为标识 保证时序性
 type OpenAIParsedResponse struct {
+	ChatcmplId   string // openai官方的 以单次请求为颗粒度的ID
+	UserId       int
 	GenerateText string
 	FinishReason string
+	Index        int //索引 流式输出的索引
+	ExecutorId   int // 执行器ID 用于标识发送数据时反序列化进度
 }
+
+func (o *OpenAIParsedResponse) GetChatcmplId() string { return o.ChatcmplId }
 
 func (o *OpenAIParsedResponse) GetGenerateText() string { return o.GenerateText }
 
 func (o *OpenAIParsedResponse) GetErrorCause() string { return o.GenerateText }
+
+func (o *OpenAIParsedResponse) GetIndex() int { return o.Index }
+
+func (o *OpenAIParsedResponse) SetIndex(index int) { o.Index = index }
+
+func (o *OpenAIParsedResponse) GetIdentity() int { return o.UserId }
+
+func (o *OpenAIParsedResponse) GetFinishReason() string { return o.FinishReason }
+
+func (o *OpenAIParsedResponse) SetGenerateText(string2 string) { o.GenerateText = string2 }
+
+// TODO
+func (o *OpenAIParsedResponse) GetExecutorId() int { return o.ExecutorId }
 
 type LanguageModelRequest interface {
 	Req()

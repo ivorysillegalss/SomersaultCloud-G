@@ -29,6 +29,7 @@ type TaskContextFactory struct {
 	TaskContext *TaskContext
 }
 
+// TODO 有参构造
 func NewTaskContextFactory() *TaskContextFactory {
 	return &TaskContextFactory{}
 }

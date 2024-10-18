@@ -1,70 +1,62 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  web:
+  go-app:
+    image: golang:1.22.3
+    container_name: SomersaultCloud-G
     build:
       context: .
       dockerfile: Dockerfile
-    image: app
-    container_name: app
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "3000:3000"
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=123456
+      - MYSQL_DATABASE=mini_gpt
+      - RABBITMQ_URL=${RABBITMQ_URL:-rabbitmq-g}
+      - REDIS_URL=${REDIS_URL:-redis:6379}
     depends_on:
-      - redis
       - mysql
       - rabbitmq
+      - redis
+    ports:
+      - "3000:3000"    # 映射端口
+    command: ["go", "run", "./cmd"]  # 你可以根据需求调整这部分
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-g
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
 
   redis:
-    image: redis:alpine
+    image: redis:latest
     container_name: redis
-    restart: unless-stopped
     ports:
       - "6379:6379"
 
   mysql:
     image: mysql:8.0
     container_name: mysql
-    restart: unless-stopped
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: mini_gpt
-      MYSQL_USER:
-      MYSQL_PASSWORD:
-    ports:
-      - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/SomersaultCloud.sql
 
-  rabbitmq:
-    image: rabbitmq:management
-    container_name: rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  db-init:
+    image: mysql:8.0
+    depends_on:
+      - mysql
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq/mnesia
-      - rabbitmq_log:/var/log/rabbitmq
-
-volumes:
-  mysql_data:
-  rabbitmq_data:
-  rabbitmq_log:
-
-#  mongodb:
-#    image: mongo:6.0
-#    container_name: mongodb
-#    restart: unless-stopped
-#    env_file: .env
-#    environment:
-#      - MONGO_INITDB_ROOT_USERNAME=$DB_USER
-#      - MONGO_INITDB_ROOT_PASSWORD=$DB_PASS
-#    ports:
-#      - "$DB_PORT:$DB_PORT"
-#    volumes:
-#      - dbdata:/data/db
-#
-#volumes:
-#  dbdata:
+      - ./SomersaultCloud.sql:/docker-entrypoint-initdb.d/SomersaultCloud.sql
+    entrypoint: /bin/sh -c "until mysqladmin ping -h mysql --silent; do echo waiting for mysql; sleep 2; done && exit 0"

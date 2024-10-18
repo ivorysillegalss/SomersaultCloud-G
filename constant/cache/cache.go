@@ -1,5 +1,7 @@
 package cache
 
+import "time"
+
 const (
 	// NewestChatIdKey 最新chatId
 	NewestChatIdKey = "newestChatId"
@@ -36,4 +38,9 @@ const (
 	ChatGenerationTTL = 500
 	// HistoryTitlePrompt 获取标题的prompt
 	HistoryTitlePrompt = "historyTitlePrompt"
+
+	// StreamStorageReadyData 提前缓存流信息请求时数据
+	StreamStorageReadyData = "StreamStorageReadyData"
+	// StreamStorageReadyDataExpire 缓存信息保存的DDL
+	StreamStorageReadyDataExpire = 5 * time.Second
 )

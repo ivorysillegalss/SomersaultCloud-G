@@ -12,6 +12,7 @@ import (
 	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/checkutil"
 	"context"
+	"fmt"
 	"github.com/thoas/go-funk"
 	"strconv"
 	"sync"
@@ -22,13 +23,13 @@ import (
 type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
-	chatEvent      domain.ChatEvent
+	chatEvent      domain.StorageEvent
 	env            *bootstrap.Env
 	channels       *bootstrap.Channels
 	poolFactory    *bootstrap.PoolsFactory
 }
 
-func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory, ce domain.ChatEvent) AskTask {
+func NewAskChatTask(b domain.BotRepository, c domain.ChatRepository, e *bootstrap.Env, ch *bootstrap.Channels, p *bootstrap.PoolsFactory, ce domain.StorageEvent) AskTask {
 	return &ChatAskTask{chatRepository: c, botRepository: b, env: e, channels: ch, poolFactory: p, chatEvent: ce}
 }
 
@@ -147,6 +148,7 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 	t := func() {
 		defer wg.Done()
 		data.Executor.Execute(data)
+		log.GetTextLogger().Info(fmt.Sprintf("api calling for %d has been submit,with chatId = %d and executorId = %d", data.UserId, data.ChatId, data.ExecutorId))
 	}
 	config := c.poolFactory.Pools[sys.ExecuteRpcGoRoutinePool]
 	//使用Invoke方法 所返回的是线程池本身在操作中遇到的err
@@ -158,8 +160,6 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 		tc.InterruptExecute(task.ReqUploadError)
 		return
 	}
-
-	//TODO 消息队列
 }
 
 func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
@@ -214,8 +214,12 @@ func (c *ChatAskTask) ParseRespTask(tc *taskchain.TaskContext) {
 
 	data.ParsedResponse = resp
 
-	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) {
-		log.GetTextLogger().Info("saving history")
+}
+
+func (c *ChatAskTask) StorageTask(tc *taskchain.TaskContext) {
+	data := tc.TaskContextData.(*domain.AskContextData)
+	if funk.Equal(tc.BusinessCode, task.ExecuteChatAskCode) || funk.Equal(tc.BusinessCode, task.StorageStreamCode) {
+		log.GetTextLogger().Info("saving history...  with userId :" + strconv.Itoa(data.UserId))
 		//回写缓存&DB
 		//TODO 暂且规定如果是旧表就不存缓存
 		c.chatEvent.PublishSaveCacheHistory(data)
