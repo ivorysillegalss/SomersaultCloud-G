@@ -42,6 +42,7 @@ var appSet = wire.NewSet(
 
 	executor.NewCronExecutor,
 	executor.NewConsumeExecutor,
+	executor.NewDataExecutor,
 
 	usecase.NewChatUseCase,
 
