@@ -45,7 +45,8 @@ func InitializeApp() (*bootstrap.Application, error) {
 	generationCron := cron.NewGenerationCron(generationRepository, channels, env, generateEvent)
 	cronExecutor := executor.NewCronExecutor(generationCron)
 	consumeExecutor := executor.NewConsumeExecutor(storageEvent, generateEvent)
-	bootstrapExecutor := bootstrap.NewExecutors(cronExecutor, consumeExecutor)
+	dataExecutor := executor.NewDataExecutor(databases.Redis)
+	bootstrapExecutor := bootstrap.NewExecutors(cronExecutor, consumeExecutor, dataExecutor)
 	application := &bootstrap.Application{
 		Env:          env,
 		Databases:    databases,
