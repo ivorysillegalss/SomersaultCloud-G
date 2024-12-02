@@ -172,6 +172,8 @@ func refactorTableSaveHistory(db *gorm.DB, chatId int, askText string, generatio
 		if funk.NotEmpty(history) {
 			*history.gzipRecord = append(*history.gzipRecord, records...)
 		} else {
+			//TODO
+			history = &historySerializer{}
 			history.gzipRecord = &records
 		}
 		marshal, err = compressutil.NewCompress(sys.GzipCompress).CompressData(*history.gzipRecord)

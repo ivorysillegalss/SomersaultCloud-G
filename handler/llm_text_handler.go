@@ -6,6 +6,7 @@ import (
 	"SomersaultCloud/constant/common"
 	"SomersaultCloud/constant/sys"
 	"SomersaultCloud/domain"
+	"SomersaultCloud/infrastructure/log"
 	"SomersaultCloud/internal/requtil"
 	"bufio"
 	"bytes"
@@ -14,6 +15,7 @@ import (
 	"github.com/thoas/go-funk"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -107,8 +109,13 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 	//若使用stream流式输出 则在发布到消息队列后 下发客户端前 进行消息格式的转换
 	//若不使用流式输出 则在主线程中的channel中 再调用下方parse进行消息格式转换
 	//why？ 消息队列网络传输需将数据序列化后传 而generationResponse中某些字段如http.Response不可进行序列化
-	if tc.Stream {
 
+	if response == nil {
+		log.GetTextLogger().Warn("fail remote request ,response is nil, userId: " + strconv.Itoa(tc.UserId) + "   chatId: " + strconv.Itoa(tc.ChatId))
+		return
+	}
+
+	if tc.Stream {
 		// 使用 bufio.NewScanner 逐行读取 SSE 响应
 		scanner := bufio.NewScanner(response.Body)
 
