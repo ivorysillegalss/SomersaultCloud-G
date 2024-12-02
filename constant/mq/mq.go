@@ -27,4 +27,8 @@ const (
 	UserChatReadyCallingExchange = "user.call.chat.ready.direct"
 	UserChatReadyCallingQueue    = "user.call.chat.ready.queue"
 	UserChatReadyCallingKey      = "user.call.chat.ready.event"
+
+	UserChatDeadLetterRetryKey      = "user.call.chat.retry.key"
+	UserChatDeadLetterRetryQueue    = "user.call.chat.retry.queue"
+	UserChatDeadLetterRetryExchange = "user.call.chat.retry.exchange"
 )

@@ -29,11 +29,14 @@ type baseMessageHandler struct {
 }
 
 type MessageQueueArgs struct {
-	ExchangeName    string
-	QueueName       string
-	KeyName         string
-	ProducerChannel *rabbitmq.RabbitMqChannel
-	ConsumerChannel *rabbitmq.RabbitMqChannel
+	ExchangeName         string
+	QueueName            string
+	KeyName              string
+	ExistDeadLetterQueue bool
+	DeadLetterExchange   string
+	DeadLetterRoutingKey string
+	ProducerChannel      *rabbitmq.RabbitMqChannel
+	ConsumerChannel      *rabbitmq.RabbitMqChannel
 }
 
 func (b baseMessageHandler) InitMessageQueue(args ...any) {
@@ -61,11 +64,16 @@ func (b baseMessageHandler) InitMessageQueue(args ...any) {
 			log.GetTextLogger().Info("create exchange success")
 		}
 
-		if err := prodCh.QueueDeclare(arg.QueueName); err != nil {
-			log.GetJsonLogger().WithFields("create queue err:", err.Error()).Fatal(mq.MqPublishErr)
+		if arg.ExistDeadLetterQueue {
+			if err := prodCh.QueueDeclareDeadLetter(arg.QueueName, arg.DeadLetterExchange, arg.DeadLetterRoutingKey); err != nil {
+				log.GetJsonLogger().WithFields("create queue err:", err.Error()).Fatal(mq.MqPublishErr)
+			}
 		} else {
-			log.GetTextLogger().Info("create queue success")
+			if err := prodCh.QueueDeclare(arg.QueueName); err != nil {
+				log.GetJsonLogger().WithFields("create queue err:", err.Error()).Fatal(mq.MqPublishErr)
+			}
 		}
+		log.GetTextLogger().Info("create queue success")
 
 		if err := prodCh.QueueBind(arg.QueueName, arg.KeyName, arg.ExchangeName); err != nil {
 			log.GetJsonLogger().WithFields("bind queue err:", err.Error()).Fatal(mq.MqPublishErr)

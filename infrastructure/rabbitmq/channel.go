@@ -17,14 +17,14 @@ type MessageQueue interface {
 	// Publish 发布消息.
 	Publish(exchange, key string, body []byte) (err error)
 
-	// PublishWithDelay 发布延迟消息.
+	// PublishWithDelay 发布消息带TTL.
 	PublishWithDelay(exchange, key string, body []byte, timer time.Duration) (err error)
 
 	// QueueDeclare 创建队列.
 	QueueDeclare(name string) (err error)
 
-	// QueueDeclareWithDelay 创建延迟队列.
-	QueueDeclareWithDelay(name, exchange, key string) (err error)
+	// QueueDeclareDeadLetter 创建死信队列.
+	QueueDeclareDeadLetter(name, exchange, key string) (err error)
 
 	// QueueBind 绑定队列.
 	QueueBind(name, key, exchange string) (err error)
@@ -48,7 +48,7 @@ func (ch *RabbitMqChannel) Publish(exchange, key string, body []byte) (err error
 	return err
 }
 
-// PublishWithDelay 发布延迟消息.
+// PublishWithDelay 发布消息 带TTL.
 func (ch *RabbitMqChannel) PublishWithDelay(exchange, key string, body []byte, timer time.Duration) (err error) {
 	_, err = ch.Channel.PublishWithDeferredConfirmWithContext(context.Background(), exchange, key, false, false,
 		amqp.Publishing{ContentType: "text/plain", Body: body, Expiration: fmt.Sprintf("%d", timer.Milliseconds())})
@@ -61,8 +61,8 @@ func (ch *RabbitMqChannel) QueueDeclare(name string) (err error) {
 	return
 }
 
-// QueueDeclareWithDelay 创建延迟队列.
-func (ch *RabbitMqChannel) QueueDeclareWithDelay(name, exchange, key string) (err error) {
+// QueueDeclareDeadLetter 创建死信队列.
+func (ch *RabbitMqChannel) QueueDeclareDeadLetter(name, exchange, key string) (err error) {
 	_, err = ch.Channel.QueueDeclare(name, true, false, false, false, amqp.Table{
 		"x-dead-letter-exchange":    exchange,
 		"x-dead-letter-routing-key": key,

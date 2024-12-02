@@ -35,11 +35,23 @@ func (g GenerateEvent) PublishStreamReadyStorageData(data *domain.StreamGenerati
 func NewGenerateEvent(h MessageHandler, e *bootstrap.Env, c *bootstrap.Channels, g domain.GenerationRepository) domain.GenerateEvent {
 	messageHandler := h.(*baseMessageHandler)
 	chatReadyCalling := &MessageQueueArgs{
-		ExchangeName: mq.UserChatReadyCallingExchange,
-		QueueName:    mq.UserChatReadyCallingQueue,
-		KeyName:      mq.UserChatReadyCallingKey,
+		ExchangeName:         mq.UserChatReadyCallingExchange,
+		QueueName:            mq.UserChatReadyCallingQueue,
+		KeyName:              mq.UserChatReadyCallingKey,
+		ExistDeadLetterQueue: true,
+		DeadLetterExchange:   mq.UserChatDeadLetterRetryExchange,
+		DeadLetterRoutingKey: mq.UserChatDeadLetterRetryKey,
 	}
-	messageHandler.InitMessageQueue(chatReadyCalling)
+	//TODO 死信队列设置代码抽离
+	chatDeadLetterRetry := &MessageQueueArgs{
+		ExchangeName:         mq.UserChatDeadLetterRetryExchange,
+		QueueName:            mq.UserChatDeadLetterRetryQueue,
+		KeyName:              mq.UserChatDeadLetterRetryKey,
+		ExistDeadLetterQueue: true,
+		DeadLetterExchange:   mq.UserChatDeadLetterRetryExchange,
+		DeadLetterRoutingKey: mq.UserChatDeadLetterRetryKey,
+	}
+	messageHandler.InitMessageQueue(chatReadyCalling, chatDeadLetterRetry)
 	return &GenerateEvent{
 		baseMessageHandler:   messageHandler,
 		env:                  e,
