@@ -64,6 +64,7 @@ func NewServiceDiscovery(ctx context.Context, endpoints []string, timeout time.D
 		Endpoints:   endpoints,
 		DialTimeout: timeout,
 	})
+	defer cli.Close()
 	if err != nil {
 		log.Fatal(err.Error())
 	}

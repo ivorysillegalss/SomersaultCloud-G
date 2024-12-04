@@ -17,6 +17,6 @@ func NewDispatcher(env *IpConfigEnv) *dispatcher.Dispatcher {
 	return &dispatcher.Dispatcher{IpConfigEnv: env}
 }
 
-func NewDataHandler(env *IpConfigEnv) *source.DataHandler {
-	return &source.DataHandler{IpConfigEnv: env}
+func NewDataHandler(env *IpConfigEnv, dis discovery.ServiceDiscovery) *source.DataHandler {
+	return &source.DataHandler{IpConfigEnv: env, ServiceDiscovery: dis}
 }

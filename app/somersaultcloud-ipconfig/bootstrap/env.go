@@ -12,6 +12,7 @@ type IpConfigEnv struct {
 		Endpoints []string      `mapstructure:"endpoints"`
 		Timeout   time.Duration `mapstructure:"timeout"`
 	}
+	ServicePath string `mapstructure:"service_path"`
 }
 
 func NewEnv() *IpConfigEnv {
