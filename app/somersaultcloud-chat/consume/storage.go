@@ -6,7 +6,6 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/dao"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/mq"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"context"
 	jsoniter "github.com/json-iterator/go"

@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/mq"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/rabbitmq"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"fmt"

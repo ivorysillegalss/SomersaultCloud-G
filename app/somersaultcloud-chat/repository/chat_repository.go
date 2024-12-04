@@ -7,7 +7,6 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/dao"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/sys"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/lru"
 	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/mysql"
 	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/redis"

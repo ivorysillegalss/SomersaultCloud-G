@@ -9,7 +9,6 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/task"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
 	"SomersaultCloud/app/somersaultcloud-chat/handler"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	"SomersaultCloud/app/somersaultcloud-chat/internal/checkutil"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"context"

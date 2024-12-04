@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/mq"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"

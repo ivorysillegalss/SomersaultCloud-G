@@ -4,7 +4,6 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/bootstrap"
 	task2 "SomersaultCloud/app/somersaultcloud-chat/constant/task"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 )
 

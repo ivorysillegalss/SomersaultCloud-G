@@ -2,7 +2,6 @@ package executor
 
 import (
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 )
 

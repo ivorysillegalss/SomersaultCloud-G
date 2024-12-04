@@ -5,7 +5,6 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/cache"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/common"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/redis"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"context"

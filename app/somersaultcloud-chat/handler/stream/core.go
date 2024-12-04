@@ -4,7 +4,6 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/common"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/sys"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"fmt"
 	"github.com/thoas/go-funk"

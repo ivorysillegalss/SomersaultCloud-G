@@ -3,7 +3,6 @@ package compressutil
 import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/common"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/sys"
-	"SomersaultCloud/app/somersaultcloud-chat/infrastructure/log"
 	__proto "SomersaultCloud/app/somersaultcloud-chat/proto/.proto"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
 	"bytes"
