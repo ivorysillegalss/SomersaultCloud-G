@@ -1,6 +1,7 @@
 package dispatcher
 
 import (
+	"SomersaultCloud/app/somersaultcloud-ipconfig/domain"
 	"sync/atomic"
 	"unsafe"
 )
@@ -41,4 +42,10 @@ func CloneEndPort(eps map[string]*EndPort) []*EndPort {
 
 func (ed *EndPort) UpdateStat(s *Stat) {
 	ed.Window.statChan <- s
+}
+
+func (ed *EndPort) CalculateScore(ctx *domain.IpConfContext) {
+	if ed.Stats != nil {
+		ed.Score = ed.Stats.CalculateScore()
+	}
 }

@@ -2,7 +2,9 @@ package dispatcher
 
 import (
 	"SomersaultCloud/app/somersaultcloud-ipconfig/bootstrap"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/domain"
 	"SomersaultCloud/app/somersaultcloud-ipconfig/source"
+	"sort"
 	"sync"
 )
 
@@ -19,8 +21,38 @@ func init() {
 	dp.candidateTable = make(map[string]*EndPort)
 }
 
+func (dp *Dispatcher) Handle() {
+	go func() {
+		for event := range source.EventChan() {
+			switch event.Type {
+			case source.AddNodeEvent:
+				dp.addNode(event)
+			case source.DelNodeEvent:
+				dp.delNode(event)
+			}
+		}
+	}()
+}
+
+func (dp *Dispatcher) Do(ctx *domain.IpConfContext) []*EndPort {
+	//获得所有候选的endports
+	eds := dp.getCandidateEndPort(ctx)
+
+	//计算每一个的得分并且重赋值
+	for _, ed := range eds {
+		ed.CalculateScore(ctx)
+	}
+
+	//类Lambda 根据得分降序排序
+	sort.Slice(eds, func(i, j int) bool {
+		return eds[i].Score > eds[j].Score
+	})
+
+	return eds
+}
+
 // 获取候选EndPort的时候是遍历map 从这个方法获取所有候选列表 再基于他们的状态信息进行计算
-func (dp *Dispatcher) getCandidateEndPort(ctx *IpConfContext) []*EndPort {
+func (dp *Dispatcher) getCandidateEndPort(ctx *domain.IpConfContext) []*EndPort {
 	dp.RLock()
 	defer dp.RUnlock()
 	candidateList := CloneEndPort(dp.candidateTable)
@@ -56,17 +88,4 @@ func (dp *Dispatcher) addNode(event *source.Event) {
 		MessageBytes: event.MessageBytes,
 	})
 
-}
-
-func (dp *Dispatcher) Handle() {
-	go func() {
-		for event := range source.EventChan() {
-			switch event.Type {
-			case source.AddNodeEvent:
-				dp.addNode(event)
-			case source.DelNodeEvent:
-				dp.delNode(event)
-			}
-		}
-	}()
 }

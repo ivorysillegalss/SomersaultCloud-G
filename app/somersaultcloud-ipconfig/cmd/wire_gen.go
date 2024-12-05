@@ -16,10 +16,10 @@ import (
 // InitializeApp init application.
 func InitializeApp() (*bootstrap.IpConfigApplication, error) {
 	ipConfigEnv := bootstrap.NewEnv()
-	dataHandler := bootstrap.NewDataHandler(ipConfigEnv)
 	dispatcher := bootstrap.NewDispatcher(ipConfigEnv)
-	api := bootstrap.NewApi(dataHandler, dispatcher)
+	api := bootstrap.NewApi(dispatcher)
 	serviceDiscovery := bootstrap.NewServiceDiscovery(ipConfigEnv)
+	dataHandler := bootstrap.NewDataHandler(ipConfigEnv, serviceDiscovery)
 	ipConfigApplication := &bootstrap.IpConfigApplication{
 		Env:         ipConfigEnv,
 		Api:         api,
