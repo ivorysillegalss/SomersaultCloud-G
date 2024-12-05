@@ -68,12 +68,13 @@ func (e *etcdServiceDiscovery) watcher(prefix string, rev int64, set, del func(k
 	}
 }
 
-func NewServiceDiscovery(ctx context.Context, endpoints []string, timeout time.Duration) ServiceDiscovery {
+func NewServiceDiscovery(ctx context.Context, endpoints []string, timeout time.Duration, username string, password string) ServiceDiscovery {
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: timeout,
+		Username:    username,
+		Password:    password,
 	})
-	defer cli.Close()
 	if err != nil {
 		log.Fatal(err.Error())
 	}

@@ -8,5 +8,5 @@ import (
 
 func NewServiceDiscovery(env *IpConfigEnv) discovery.ServiceDiscovery {
 	config := env.DiscoveryConfig
-	return discovery.NewServiceDiscovery(context.Background(), config.Endpoints, config.Timeout*time.Second)
+	return discovery.NewServiceDiscovery(context.Background(), config.Endpoints, config.Timeout*time.Second, config.Username, config.Password)
 }

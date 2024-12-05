@@ -9,10 +9,12 @@ import (
 type IpConfigEnv struct {
 	AppEnv          string `mapstructure:"appenv"`
 	DiscoveryConfig struct {
-		Endpoints []string      `mapstructure:"endpoints"`
-		Timeout   time.Duration `mapstructure:"timeout"`
-	}
-	ServicePath string `mapstructure:"service_path"`
+		Endpoints   []string      `mapstructure:"endpoints"`
+		Timeout     time.Duration `mapstructure:"timeout"`
+		Username    string        `mapstructure:"username"`
+		Password    string        `mapstructure:"password"`
+		ServicePath string        `mapstructure:"service_path"`
+	} `mapstructure:"discovery"`
 }
 
 func NewEnv() *IpConfigEnv {
