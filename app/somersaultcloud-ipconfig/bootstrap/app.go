@@ -2,14 +2,13 @@ package bootstrap
 
 import (
 	"SomersaultCloud/app/somersaultcloud-common/discovery"
-	"SomersaultCloud/app/somersaultcloud-ipconfig/dispatcher"
-	"SomersaultCloud/app/somersaultcloud-ipconfig/source"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/domain"
 )
 
 type IpConfigApplication struct {
 	Env         *IpConfigEnv
 	Api         *Api
 	Discovery   discovery.ServiceDiscovery
-	DataHandler *source.DataHandler
-	Dispatcher  *dispatcher.Dispatcher
+	DataHandler domain.DataHandler
+	Dispatcher  domain.Dispatcher
 }

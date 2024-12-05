@@ -8,6 +8,8 @@ package main
 
 import (
 	"SomersaultCloud/app/somersaultcloud-ipconfig/bootstrap"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/dispatcher"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/source"
 	"github.com/google/wire"
 )
 
@@ -16,20 +18,20 @@ import (
 // InitializeApp init application.
 func InitializeApp() (*bootstrap.IpConfigApplication, error) {
 	ipConfigEnv := bootstrap.NewEnv()
-	dispatcher := bootstrap.NewDispatcher(ipConfigEnv)
-	api := bootstrap.NewApi(dispatcher)
+	domainDispatcher := dispatcher.NewDispatcher(ipConfigEnv)
+	api := bootstrap.NewApi(domainDispatcher)
 	serviceDiscovery := bootstrap.NewServiceDiscovery(ipConfigEnv)
-	dataHandler := bootstrap.NewDataHandler(ipConfigEnv, serviceDiscovery)
+	dataHandler := source.NewDataHandler(ipConfigEnv, serviceDiscovery)
 	ipConfigApplication := &bootstrap.IpConfigApplication{
 		Env:         ipConfigEnv,
 		Api:         api,
 		Discovery:   serviceDiscovery,
 		DataHandler: dataHandler,
-		Dispatcher:  dispatcher,
+		Dispatcher:  domainDispatcher,
 	}
 	return ipConfigApplication, nil
 }
 
 // wire.go:
 
-var appSet = wire.NewSet(bootstrap.NewEnv, bootstrap.NewServiceDiscovery, bootstrap.NewDispatcher, bootstrap.NewDataHandler, bootstrap.NewApi, wire.Struct(new(bootstrap.IpConfigApplication), "*"))
+var appSet = wire.NewSet(bootstrap.NewEnv, bootstrap.NewServiceDiscovery, bootstrap.NewApi, dispatcher.NewDispatcher, source.NewDataHandler, wire.Struct(new(bootstrap.IpConfigApplication), "*"))

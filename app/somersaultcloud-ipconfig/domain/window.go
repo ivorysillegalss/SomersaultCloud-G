@@ -1,4 +1,4 @@
-package dispatcher
+package domain
 
 const (
 	windowSize = 5

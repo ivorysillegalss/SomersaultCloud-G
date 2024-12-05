@@ -6,15 +6,18 @@ package main
 
 import (
 	"SomersaultCloud/app/somersaultcloud-ipconfig/bootstrap"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/dispatcher"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/source"
 	"github.com/google/wire"
 )
 
 var appSet = wire.NewSet(
 	bootstrap.NewEnv,
 	bootstrap.NewServiceDiscovery,
-	bootstrap.NewDispatcher,
-	bootstrap.NewDataHandler,
 	bootstrap.NewApi,
+
+	dispatcher.NewDispatcher,
+	source.NewDataHandler,
 
 	wire.Struct(new(bootstrap.IpConfigApplication), "*"),
 )

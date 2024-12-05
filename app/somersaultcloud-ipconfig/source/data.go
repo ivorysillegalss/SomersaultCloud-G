@@ -4,16 +4,21 @@ import (
 	"SomersaultCloud/app/somersaultcloud-common/discovery"
 	"SomersaultCloud/app/somersaultcloud-common/log"
 	"SomersaultCloud/app/somersaultcloud-ipconfig/bootstrap"
+	"SomersaultCloud/app/somersaultcloud-ipconfig/domain"
 	"context"
 )
 
-type DataHandler struct {
+type dataHandler struct {
 	IpConfigEnv      *bootstrap.IpConfigEnv
 	ServiceDiscovery discovery.ServiceDiscovery
 }
 
+func NewDataHandler(env *bootstrap.IpConfigEnv, ser discovery.ServiceDiscovery) domain.DataHandler {
+	return &dataHandler{IpConfigEnv: env, ServiceDiscovery: ser}
+}
+
 // Handle 服务发现处理 （当各服务有新的改动来到时，以etcd监听机制实现热更新）
-func (d *DataHandler) Handle() {
+func (d *dataHandler) Handle() {
 	eventChan = make(chan *Event)
 	go handle(d.ServiceDiscovery, d.IpConfigEnv.ServicePath)
 	//测试环境下mock出对应的测试诗句进行测试

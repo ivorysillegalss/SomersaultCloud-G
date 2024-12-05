@@ -8,20 +8,20 @@ import (
 	"sync"
 )
 
-type Dispatcher struct {
+type dispatcher struct {
 	IpConfigEnv    *bootstrap.IpConfigEnv
-	candidateTable map[string]*EndPort
+	candidateTable map[string]*domain.EndPort
 	sync.RWMutex
 }
 
-var dp *Dispatcher
-
-func init() {
-	dp = &Dispatcher{}
-	dp.candidateTable = make(map[string]*EndPort)
+func NewDispatcher(e *bootstrap.IpConfigEnv) domain.Dispatcher {
+	return &dispatcher{
+		IpConfigEnv:    e,
+		candidateTable: make(map[string]*domain.EndPort),
+		RWMutex:        sync.RWMutex{},
+	}
 }
-
-func (dp *Dispatcher) Handle() {
+func (dp *dispatcher) Handle() {
 	go func() {
 		for event := range source.EventChan() {
 			switch event.Type {
@@ -34,7 +34,7 @@ func (dp *Dispatcher) Handle() {
 	}()
 }
 
-func (dp *Dispatcher) Do(ctx *domain.IpConfContext) []*EndPort {
+func (dp *dispatcher) Do(ctx *domain.IpConfContext) []*domain.EndPort {
 	//获得所有候选的endports
 	eds := dp.getCandidateEndPort(ctx)
 
@@ -52,38 +52,38 @@ func (dp *Dispatcher) Do(ctx *domain.IpConfContext) []*EndPort {
 }
 
 // 获取候选EndPort的时候是遍历map 从这个方法获取所有候选列表 再基于他们的状态信息进行计算
-func (dp *Dispatcher) getCandidateEndPort(ctx *domain.IpConfContext) []*EndPort {
+func (dp *dispatcher) getCandidateEndPort(ctx *domain.IpConfContext) []*domain.EndPort {
 	dp.RLock()
 	defer dp.RUnlock()
-	candidateList := CloneEndPort(dp.candidateTable)
+	candidateList := domain.CloneEndPort(dp.candidateTable)
 	for _, ed := range dp.candidateTable {
 		candidateList = append(candidateList, ed)
 	}
 	return candidateList
 }
 
-func (dp *Dispatcher) delNode(event *source.Event) {
+func (dp *dispatcher) delNode(event *source.Event) {
 	dp.Lock()
 	defer dp.Unlock()
 	delete(dp.candidateTable, event.Key())
 }
 
 // addNode 增加节点
-func (dp *Dispatcher) addNode(event *source.Event) {
+func (dp *dispatcher) addNode(event *source.Event) {
 	dp.Lock()
 	defer dp.Unlock()
 	var (
-		ed *EndPort
+		ed *domain.EndPort
 		ok bool
 	)
 
 	//塞进去的时候 先判断这个节点是否存在 不存在创建 存在更新状态
 	if ed, ok = dp.candidateTable[event.Key()]; !ok {
-		ed = NewEndPort(event.IP, event.Port)
+		ed = domain.NewEndPort(event.IP, event.Port)
 		dp.candidateTable[event.Key()] = ed
 	}
 
-	ed.UpdateStat(&Stat{
+	ed.UpdateStat(&domain.Stat{
 		ConnectNum:   event.ConnectNum,
 		MessageBytes: event.MessageBytes,
 	})

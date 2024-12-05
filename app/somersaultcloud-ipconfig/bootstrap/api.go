@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"SomersaultCloud/app/somersaultcloud-ipconfig/dispatcher"
 	"SomersaultCloud/app/somersaultcloud-ipconfig/domain"
 	"context"
 	"github.com/cloudwego/hertz/pkg/app"
@@ -10,7 +9,7 @@ import (
 )
 
 type Api struct {
-	Dispatcher *dispatcher.Dispatcher
+	Dispatcher domain.Dispatcher
 }
 
 func (a *Api) GetInfoList(ctx context.Context, rectx *app.RequestContext) {
@@ -25,6 +24,6 @@ func (a *Api) GetInfoList(ctx context.Context, rectx *app.RequestContext) {
 	ipConfCtx.AppCtx.JSON(consts.StatusOK, domain.SuccessResp(eds))
 }
 
-func NewApi(d *dispatcher.Dispatcher) *Api {
+func NewApi(d domain.Dispatcher) *Api {
 	return &Api{Dispatcher: d}
 }

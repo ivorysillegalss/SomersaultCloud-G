@@ -1,7 +1,6 @@
-package dispatcher
+package domain
 
 import (
-	"SomersaultCloud/app/somersaultcloud-ipconfig/domain"
 	"sync/atomic"
 	"unsafe"
 )
@@ -44,7 +43,7 @@ func (ed *EndPort) UpdateStat(s *Stat) {
 	ed.Window.statChan <- s
 }
 
-func (ed *EndPort) CalculateScore(ctx *domain.IpConfContext) {
+func (ed *EndPort) CalculateScore(ctx *IpConfContext) {
 	if ed.Stats != nil {
 		ed.Score = ed.Stats.CalculateScore()
 	}
