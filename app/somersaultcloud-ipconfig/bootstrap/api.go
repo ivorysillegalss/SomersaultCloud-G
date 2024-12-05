@@ -12,7 +12,7 @@ type Api struct {
 	Dispatcher  *dispatcher.Dispatcher
 }
 
-func (a *Api) GetInfoList(ctx context.Context, ctx2 *app.RequestContext) {
+func (a *Api) GetInfoList(ctx context.Context, rectx *app.RequestContext) {
 
 }
 

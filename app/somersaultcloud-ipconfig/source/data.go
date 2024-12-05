@@ -19,9 +19,9 @@ func (d *DataHandler) Handle() {
 	//测试环境下mock出对应的测试诗句进行测试
 	if d.IpConfigEnv.AppEnv == "debug" {
 		ctx := context.Background()
-		testServiceRegister(&ctx, "7896", "node1", d.IpConfigEnv.ServicePath)
-		testServiceRegister(&ctx, "7897", "node2", d.IpConfigEnv.ServicePath)
-		testServiceRegister(&ctx, "7898", "node3", d.IpConfigEnv.ServicePath)
+		testServiceRegister(ctx, "7896", "node1", d.IpConfigEnv.ServicePath, d.ServiceDiscovery)
+		testServiceRegister(ctx, "7897", "node2", d.IpConfigEnv.ServicePath, d.ServiceDiscovery)
+		testServiceRegister(ctx, "7898", "node3", d.IpConfigEnv.ServicePath, d.ServiceDiscovery)
 	}
 }
 

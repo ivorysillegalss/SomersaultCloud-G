@@ -14,12 +14,21 @@ import (
 type ServiceDiscovery interface {
 	WatchService(prefix string, set, del func(key, value string)) error
 	Close() error
+	GetClient() *Client
+}
+
+type Client struct {
+	Cli *clientv3.Client
 }
 
 type etcdServiceDiscovery struct {
 	cli  *clientv3.Client
 	lock sync.Mutex
 	ctx  context.Context
+}
+
+func (e *etcdServiceDiscovery) GetClient() *Client {
+	return &Client{Cli: e.cli}
 }
 
 func (e *etcdServiceDiscovery) WatchService(prefix string, set, del func(key, value string)) error {
