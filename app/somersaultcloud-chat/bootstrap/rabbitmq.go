@@ -11,14 +11,15 @@ import (
 
 // NewRabbitConnection 获取channel.
 func NewRabbitConnection(e *Env) *rabbitmq.Connection {
-	if e.RabbitmqAddr == "" {
+	r := e.Rabbitmq
+	if r.Addr == "" {
 		return nil
 	}
 	defaultConn, err := Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/",
-		e.RabbitmqUser,
-		e.RabbitmqPassword,
-		e.RabbitmqAddr,
-		e.RabbitmqPort))
+		r.User,
+		r.Password,
+		r.Addr,
+		r.Port))
 	if err != nil {
 		log2.GetTextLogger().Error("new mq conn err: " + err.Error())
 	}

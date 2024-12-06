@@ -7,73 +7,42 @@ import (
 )
 
 type Env struct {
-	AppEnv         string `mapstructure:"APP_ENV"`
-	ServerAddress  string `mapstructure:"SERVER_ADDRESS"`
-	ContextTimeout int    `mapstructure:"CONTEXT_TIMEOUT"`
-
-	MongoHost string `mapstructure:"MONGO_DB_HOST"`
-	MongoPort string `mapstructure:"MONGO_DB_PORT"`
-	MongoUser string `mapstructure:"MONGO_DB_USER"`
-	MongoPass string `mapstructure:"MONGO_DB_PASS"`
-	MongoName string `mapstructure:"MONGO_DB_NAME"`
-
-	RedisAddr     string `mapstructure:"REDIS_DB_ADDR"`
-	RedisPassword string `mapstructure:"REDIS_DB_PASSWORD"`
-
-	MysqlUser     string `mapstructure:"MYSQL_DB_USER"`
-	MysqlPassword string `mapstructure:"MYSQL_DB_PASSWORD"`
-	MysqlHost     string `mapstructure:"MYSQL_DB_HOST"`
-	MysqlPort     int    `mapstructure:"MYSQL_DB_PORT"`
-	MysqlDB       string `mapstructure:"MYSQL_DB_DB"`
-
-	RabbitmqUser     string `mapstructure:"RABBITMQ_USER"`
-	RabbitmqPassword string `mapstructure:"RABBITMQ_PASSWORD"`
-	RabbitmqAddr     string `mapstructure:"RABBITMQ_ADDR"`
-	RabbitmqPort     string `mapstructure:"RABBITMQ_PORT"`
-
-	JwtSecretToken     string `mapstructure:"JWT_SECRET_KEY"`
-	ApiOpenaiSecretKey string `mapstructure:"API_OPENAI_SECRET_KEY"`
-
-	Serializer string `mapstructure:"SERIALIZER"`
-}
-
-type EnvForYaml struct {
-	AppEnv         string `mapstructure:"AppEnv"`
-	ServerAddress  string `mapstructure:"ServerAddress"`
-	ContextTimeout int    `mapstructure:"ContextTimeout"`
+	AppEnv         string `mapstructure:"app_env" yaml:"app_env"`
+	ServerAddress  string `mapstructure:"server_address" yaml:"server_address"`
+	ContextTimeout int    `mapstructure:"context_timeout" yaml:"context_timeout"`
 
 	Mongo struct {
-		Host string `mapstructure:"Host"`
-		Port int    `mapstructure:"Port"`
-		User string `mapstructure:"User"`
-		Pass string `mapstructure:"Pass"`
-		Name string `mapstructure:"Name"`
-	} `mapstructure:"Mongo"`
+		Host string `mapstructure:"host" yaml:"host"`
+		Port int    `mapstructure:"port" yaml:"port"`
+		User string `mapstructure:"user" yaml:"user"`
+		Pass string `mapstructure:"pass" yaml:"pass"`
+		Name string `mapstructure:"name" yaml:"name"`
+	} `mapstructure:"mongo" yaml:"mongo"`
 
 	Redis struct {
-		Addr     string `mapstructure:"Addr"`
-		Password string `mapstructure:"Password"`
-	} `mapstructure:"Redis"`
+		Addr     string `mapstructure:"addr" yaml:"addr"`
+		Password string `mapstructure:"password" yaml:"password"`
+	} `mapstructure:"redis" yaml:"redis"`
 
 	Mysql struct {
-		User     string `mapstructure:"User"`
-		Password string `mapstructure:"Password"`
-		Host     string `mapstructure:"Host"`
-		Port     int    `mapstructure:"Port"`
-		DB       string `mapstructure:"DB"`
-	} `mapstructure:"Mysql"`
+		User     string `mapstructure:"user" yaml:"user"`
+		Password string `mapstructure:"password" yaml:"password"`
+		Host     string `mapstructure:"host" yaml:"host"`
+		Port     int    `mapstructure:"port" yaml:"port"`
+		DB       string `mapstructure:"db" yaml:"db"`
+	} `mapstructure:"mysql" yaml:"mysql"`
 
 	Rabbitmq struct {
-		User     string `mapstructure:"User"`
-		Password string `mapstructure:"Password"`
-		Addr     string `mapstructure:"Addr"`
-		Port     int    `mapstructure:"Port"`
-	} `mapstructure:"Rabbitmq"`
+		User     string `mapstructure:"user" yaml:"user"`
+		Password string `mapstructure:"password" yaml:"password"`
+		Addr     string `mapstructure:"addr" yaml:"addr"`
+		Port     int    `mapstructure:"port" yaml:"port"`
+	} `mapstructure:"rabbitmq" yaml:"rabbitmq"`
 
-	JwtSecretToken     string `mapstructure:"JwtSecretToken"`
-	ApiOpenaiSecretKey string `mapstructure:"ApiOpenaiSecretKey"`
+	JwtSecretToken     string `mapstructure:"jwt_secret_token" yaml:"jwt_secret_token"`
+	ApiOpenaiSecretKey string `mapstructure:"api_openai_secret_key" yaml:"api_openai_secret_key"`
 
-	Serializer string `mapstructure:"Serializer"`
+	Serializer string `mapstructure:"serializer" yaml:"serializer"`
 }
 
 func NewEnv() *Env {

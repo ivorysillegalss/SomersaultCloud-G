@@ -14,10 +14,11 @@ func NewMongoDatabase(env *Env) mongo.Client {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	dbHost := env.MongoHost
-	dbPort := env.MongoPort
-	dbUser := env.MongoUser
-	dbPass := env.MongoPass
+	m := env.Mongo
+	dbHost := m.Host
+	dbPort := m.Port
+	dbUser := m.User
+	dbPass := m.Pass
 
 	mongodbURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", dbUser, dbPass, dbHost, dbPort)
 
@@ -47,8 +48,9 @@ func NewRedisDatabase(env *Env) redis.Client {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	dbAddr := env.RedisAddr
-	dbPassword := env.RedisPassword
+	rconf := env.Redis
+	dbAddr := rconf.Addr
+	dbPassword := rconf.Password
 
 	client, err := redis.NewRedisClient(redis.NewRedisApplication(dbAddr, dbPassword))
 	if err != nil {
@@ -67,8 +69,9 @@ func NewMysqlDatabase(env *Env) mysql.Client {
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	m := env.Mysql
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		env.MysqlUser, env.MysqlPassword, env.MysqlHost, env.MysqlPort, env.MysqlDB)
+		m.User, m.Password, m.Host, m.Port, m.DB)
 
 	client, err := mysql.NewMysqlClient(dsn)
 	if err != nil {

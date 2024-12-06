@@ -3,4 +3,5 @@ bin/
 /.idea
 .idea
 .env
+somersaultcloud.yaml
 .vscode
