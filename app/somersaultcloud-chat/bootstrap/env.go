@@ -39,6 +39,12 @@ type Env struct {
 		Port     int    `mapstructure:"port" yaml:"port"`
 	} `mapstructure:"rabbitmq" yaml:"rabbitmq"`
 
+	Grpc struct {
+		Monitor struct {
+			Port int `mapstructure:"port" yaml:"port"`
+		}
+	}
+
 	JwtSecretToken     string `mapstructure:"jwt_secret_token" yaml:"jwt_secret_token"`
 	ApiOpenaiSecretKey string `mapstructure:"api_openai_secret_key" yaml:"api_openai_secret_key"`
 

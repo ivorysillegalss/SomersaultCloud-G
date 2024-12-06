@@ -15,7 +15,7 @@ func NewRabbitConnection(e *Env) *rabbitmq.Connection {
 	if r.Addr == "" {
 		return nil
 	}
-	defaultConn, err := Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/",
+	defaultConn, err := Dial(fmt.Sprintf("amqp://%s:%s@%s:%v/",
 		r.User,
 		r.Password,
 		r.Addr,
