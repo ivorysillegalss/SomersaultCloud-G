@@ -10,6 +10,7 @@ type Env struct {
 	AppEnv         string `mapstructure:"app_env" yaml:"app_env"`
 	ServerAddress  string `mapstructure:"server_address" yaml:"server_address"`
 	ContextTimeout int    `mapstructure:"context_timeout" yaml:"context_timeout"`
+	Port           int    `mapstructure:"port" yaml:"port"`
 
 	Mongo struct {
 		Host string `mapstructure:"host" yaml:"host"`

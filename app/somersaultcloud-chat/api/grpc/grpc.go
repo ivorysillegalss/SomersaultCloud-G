@@ -1,8 +1,9 @@
 package grpc
 
 import (
-	pb "SomersaultCloud/app/somersaultcloud-chat/proto/.monitor"
 	"SomersaultCloud/app/somersaultcloud-common/monitor"
+	"SomersaultCloud/app/somersaultcloud-common/proto/.monitor"
+	"SomersaultCloud/app/somersaultcloud-common/util"
 	"context"
 	"google.golang.org/grpc"
 	"log"
@@ -26,7 +27,7 @@ func Setup(env struct {
 		log.Fatalf("failed to listen: %s", err.Error())
 	}
 	s := grpc.NewServer()
-	pb.RegisterMonitoringServiceServer(s, &MonitoringServer{})
+	__monitor.RegisterMonitoringServiceServer(s, &MonitoringServer{})
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %s", err.Error())
@@ -34,19 +35,24 @@ func Setup(env struct {
 }
 
 type MonitoringServer struct {
-	pb.UnimplementedMonitoringServiceServer
+	__monitor.UnimplementedMonitoringServiceServer
 }
 
-func (s *MonitoringServer) GetStatus(ctx context.Context, req *pb.EmptyRequest) (*pb.StatusResponse, error) {
+func (s *MonitoringServer) GetStatus(ctx context.Context, req *__monitor.EmptyRequest) (*__monitor.StatusResponse, error) {
+
 	availableMem, cpuIdleTime := monitor.GetSystemMetrics()
-	if availableMem == 0 || cpuIdleTime == 0.0 {
-		return &pb.StatusResponse{Status: unhealthy}, new(monitorError)
+	ip := util.GetLocalIP()
+	port := util.GetLocalPort()
+	if availableMem == 0 || cpuIdleTime == 0.0 || ip != "" || port != 0 {
+		return &__monitor.StatusResponse{Status: unhealthy}, new(monitorError)
 	}
 
-	return &pb.StatusResponse{
+	return &__monitor.StatusResponse{
 		Status:       healthy,
 		AvailableMem: availableMem,
 		CpuIdleTime:  cpuIdleTime,
+		Ip:           ip,
+		Port:         port,
 	}, nil
 }
 

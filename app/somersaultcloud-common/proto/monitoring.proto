@@ -4,13 +4,14 @@ package monitorpb;
 option go_package = ".monitor";
 
 // 请求信息
-//TODO 有可能需要补充IP和port作为标识符
 message EmptyRequest {}
 
 message StatusResponse {
-  string status = 1; // health / unhealthy
-  uint64 available_mem = 2;
-  double cpu_idle_time = 3;
+  int32 port = 1;
+  string ip = 2;
+  string status = 3; // health / unhealthy
+  uint64 available_mem = 4;
+  double cpu_idle_time = 5;
 }
 
 service MonitoringService{
