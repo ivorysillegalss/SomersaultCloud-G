@@ -48,6 +48,7 @@ func (s *MonitoringServer) GetStatus(ctx context.Context, req *__monitor.EmptyRe
 	}
 
 	return &__monitor.StatusResponse{
+		Name:         req.Name,
 		Status:       healthy,
 		AvailableMem: availableMem,
 		CpuIdleTime:  cpuIdleTime,

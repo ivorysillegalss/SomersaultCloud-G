@@ -4,7 +4,9 @@ package monitorpb;
 option go_package = ".monitor";
 
 // 请求信息
-message EmptyRequest {}
+message EmptyRequest {
+  string name = 1;
+}
 
 message StatusResponse {
   int32 port = 1;
@@ -12,6 +14,7 @@ message StatusResponse {
   string status = 3; // health / unhealthy
   uint64 available_mem = 4;
   double cpu_idle_time = 5;
+  string name = 6;
 }
 
 service MonitoringService{
