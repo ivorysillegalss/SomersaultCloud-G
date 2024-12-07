@@ -8,6 +8,7 @@ type MonitorStatus struct {
 }
 
 type Monitor interface {
-	HandleMonit(serviceName string)
+	HandleMonit()
 	ServiceRegister()
+	//TODO Prometheus消息抓取接口
 }

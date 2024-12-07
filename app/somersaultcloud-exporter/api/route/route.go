@@ -1,5 +1,0 @@
-package route
-
-func Setup() {
-
-}

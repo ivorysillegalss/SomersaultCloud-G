@@ -1,11 +1,9 @@
 package main
 
-import "SomersaultCloud/app/somersaultcloud-exporter/api/route"
-
 func main() {
-	_, err := InitializeApp()
+	app, err := InitializeApp()
+	app.Setup()
 	if err != nil {
 		return
 	}
-	route.Setup()
 }

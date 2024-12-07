@@ -9,26 +9,30 @@ import (
 	"context"
 	"fmt"
 	"github.com/thoas/go-funk"
+	"google.golang.org/grpc"
 	"math/rand"
 	"time"
 )
-
-var statusMap map[string]domain.MonitorStatus
-
-const (
-	//多服务时服务的数量 每一个服务对应一个etcd的客户端 独赢一个chan的value
-	applicationNums = 5
-)
-
-func init() {
-	// 给每个 key 初始化一个通道
-	statusMap = make(map[string]domain.MonitorStatus, applicationNums)
-}
 
 type monitor struct {
 	conn      *bootstrap.GrpcConn
 	env       *bootstrap.ExporterEnv
 	discovery discovery.ServiceDiscovery
+}
+
+func NewMonitor(conn *bootstrap.GrpcConn, env *bootstrap.ExporterEnv, dis discovery.ServiceDiscovery) domain.Monitor {
+	return &monitor{conn: conn, env: env, discovery: dis}
+}
+
+var statusMap map[string]domain.MonitorStatus
+
+const (
+	//多服务时服务的数量 每一个服务对应一个etcd的客户端 独赢一个chan的value
+	applicationNums = 2
+)
+
+func init() {
+	statusMap = make(map[string]domain.MonitorStatus, applicationNums)
 }
 
 func (m *monitor) ServiceRegister() {
@@ -60,8 +64,20 @@ func (m *monitor) ServiceRegister() {
 
 }
 
-func (m *monitor) HandleMonit(serviceName string) {
-	grpcConn := m.conn.Conn
+func (m *monitor) HandleMonit() {
+	//k is the name of the node(service)
+	for k, _ := range statusMap {
+		go func(k string) {
+			for {
+				handle(k, m.conn.Conn)
+				time.Sleep(time.Second)
+				log.GetTextLogger().Info("Success updating value with node: %s", k)
+			}
+		}(k)
+	}
+}
+
+func handle(serviceName string, grpcConn *grpc.ClientConn) {
 	client := pb.NewMonitoringServiceClient(grpcConn)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -87,7 +103,6 @@ func (m *monitor) HandleMonit(serviceName string) {
 	statusMap[serviceName] = status
 
 	_ = status.ServiceRegister.UpdateValue(&info)
-	time.Sleep(1 * time.Second)
 }
 
 func convertMetaData(raw *pb.StatusResponse) map[string]any {
@@ -96,8 +111,4 @@ func convertMetaData(raw *pb.StatusResponse) map[string]any {
 	m["available_mem"] = raw.GetAvailableMem()
 	m["cpu_idle_time"] = raw.GetCpuIdleTime()
 	return m
-}
-
-func NewMonitor(conn *bootstrap.GrpcConn, env *bootstrap.ExporterEnv, dis discovery.ServiceDiscovery) domain.Monitor {
-	return &monitor{conn: conn, env: env, discovery: dis}
 }
