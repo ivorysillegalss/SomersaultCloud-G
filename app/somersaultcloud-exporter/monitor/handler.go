@@ -55,7 +55,7 @@ func (m *monitor) ServiceRegister() {
 			m.env.DiscoveryConfig.ServicePath, address.Name), context.Background(), &ed, time.Now().Unix())
 
 		go sr.ListenLeaseRespChan()
-		statusMap[address.Name] = domain.MonitorStatus{ServiceRegister: sr, EndpointInfo: &ed}
+		statusMap[address.Name] = domain.MonitorStatus{ServiceRegister: sr, EndpointInfo: &ed, Time: time.Now()}
 
 		if err != nil {
 			log.GetTextLogger().Error("create service register error for node %s", address.Name)
@@ -100,6 +100,7 @@ func handle(serviceName string, grpcConn *grpc.ClientConn) {
 	}
 
 	status.EndpointInfo = &info
+	status.Time = time.Now()
 	statusMap[serviceName] = status
 
 	_ = status.ServiceRegister.UpdateValue(&info)

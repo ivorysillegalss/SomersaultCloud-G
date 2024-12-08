@@ -1,10 +1,14 @@
 package domain
 
-import "SomersaultCloud/app/somersaultcloud-common/discovery"
+import (
+	"SomersaultCloud/app/somersaultcloud-common/discovery"
+	"time"
+)
 
 type MonitorStatus struct {
 	EndpointInfo    *discovery.EndpointInfo
 	ServiceRegister *discovery.ServiceRegister
+	Time            time.Time
 }
 
 type Monitor interface {
