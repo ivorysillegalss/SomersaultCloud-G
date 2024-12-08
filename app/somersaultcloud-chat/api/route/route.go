@@ -2,11 +2,14 @@ package route
 
 import (
 	"SomersaultCloud/app/somersaultcloud-chat/bootstrap"
-	"github.com/gin-gonic/gin"
+	"context"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
-func Setup(c *bootstrap.Controllers, e *bootstrap.Executor) *gin.Engine {
-	r := gin.Default()
+func Setup(serverAddress string, c *bootstrap.Controllers, e *bootstrap.Executor) *server.Hertz {
+	r := server.Default(server.WithHostPorts(serverAddress))
 	defaultCorsConfig(r)
 
 	publicRouter := r.Group("/domain")
@@ -23,23 +26,26 @@ func Setup(c *bootstrap.Controllers, e *bootstrap.Executor) *gin.Engine {
 	return r
 }
 
-// CORS 中间件配置
-func defaultCorsConfig(r *gin.Engine) {
-	r.Use(func(c *gin.Context) {
-		// 设置允许访问的源，"*" 表示允许所有源，你也可以指定具体的域名
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		// 设置允许的请求方法
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-		// 设置允许的头部，注意添加你的自定义头部 "token"
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, token")
-		// 设置浏览器是否应该包含凭证
-		//c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+// CORS middleware configuration for Hertz
+func defaultCorsConfig(h *server.Hertz) {
+	// Correct middleware signature to match app.HandlerFunc
+	h.Use(
+		func(ctx context.Context, c *app.RequestContext) {
+			// Set allowed origins, "*" means all domains are allowed
+			c.Response.Header.Set("Access-Control-Allow-Origin", "*")
+			// Set allowed methods
+			c.Response.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+			// Set allowed headers, include your custom headers like "token"
+			c.Response.Header.Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, token")
+			// Set whether credentials should be included (optional)
+			// c.Response.Header.Set("Access-Control-Allow-Credentials", "true")
 
-		// 如果是OPTIONS请求，直接返回200
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-		} else {
-			c.Next()
-		}
-	})
+			// Handle OPTIONS request (CORS preflight request)
+
+			if consts.MethodOptions == string(c.Request.Method()[0]) {
+				c.AbortWithStatus(204)
+			} else {
+				c.Next(ctx)
+			}
+		})
 }

@@ -10,15 +10,14 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/handler/stream"
 	"SomersaultCloud/app/somersaultcloud-chat/internal/tokenutil"
 	"SomersaultCloud/app/somersaultcloud-chat/task"
-	log2 "SomersaultCloud/app/somersaultcloud-common/log"
+	"SomersaultCloud/app/somersaultcloud-common/log"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"github.com/hertz-contrib/sse"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/thoas/go-funk"
-	"net/http"
 	"strconv"
 	"time"
 )
@@ -51,17 +50,17 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	//defer cancel()
 
 	script := incrementLuaScript
-	log2.GetJsonLogger().Info("load new chat lua script")
+	log.GetJsonLogger().Info("load new chat lua script")
 
 	chatId, err := c.chatRepository.CacheLuaInsertNewChatId(ctx, script, cache.NewestChatIdKey)
 	if err != nil {
-		log2.GetTextLogger().Error(err.Error())
+		log.GetTextLogger().Error(err.Error())
 		return common.FalseInt
 	}
 
 	id, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
-		log2.GetTextLogger().Error(err.Error())
+		log.GetTextLogger().Error(err.Error())
 		return common.FalseInt
 	}
 
@@ -128,16 +127,16 @@ func (c *chatUseCase) StreamContextChatSetup(ctx context.Context, token string, 
 	return true, nil, task2.SuccessCode
 }
 
-func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string, gc *gin.Context, flusher http.Flusher) {
+func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string, s *sse.Stream) {
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
-		log2.GetTextLogger().Error(err.Error())
+		log.GetTextLogger().Error(err.Error())
 		return
 	}
 
 	newSequencer := stream.NewSequencer()
 	streamDataChan, _ := newSequencer.GetData(userId)
-	log2.GetTextLogger().Info("successfully getting the channel for: userId:" + strconv.Itoa(userId))
+	log.GetTextLogger().Info("successfully getting the channel for: userId:" + strconv.Itoa(userId))
 
 	var generateText string
 
@@ -147,16 +146,19 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 			// 模拟数据推送
 			marshal, _ := jsoniter.Marshal(v)
 			// 发送符合SSE格式的数据到前端
-			_, err = fmt.Fprintf(gc.Writer, "data: %s\n\n", marshal)
-			if err != nil {
-				log2.GetTextLogger().Error(err.Error())
+			event := &sse.Event{
+				Event: "streamData",
+				Data:  marshal,
 			}
-			flusher.Flush() // 刷新输出到客户端
+			err := s.Publish(event)
+			if err != nil {
+				log.GetTextLogger().Error(err.Error())
+			}
 
 			generateText += v.GetGenerateText()
 
 			if funk.NotEmpty(v.GetFinishReason()) {
-				log2.GetTextLogger().Info(fmt.Sprintf("Finish once push with finish reason " + v.GetFinishReason() + "  ,with chatcmplId:" + v.GetChatcmplId()))
+				log.GetTextLogger().Info(fmt.Sprintf("Finish once push with finish reason " + v.GetFinishReason() + "  ,with chatcmplId:" + v.GetChatcmplId()))
 				streamStorage := streamStorageMap[userId]
 				if streamStorage == nil {
 					streamStorage = make(chan string, 1)
@@ -166,7 +168,7 @@ func (c *chatUseCase) StreamContextChatWorker(ctx context.Context, token string,
 			}
 		case <-ctx.Done():
 			// 上下文取消信号，优雅退出
-			log2.GetTextLogger().Info("Context canceled, stopping worker")
+			log.GetTextLogger().Info("Context canceled, stopping worker")
 
 			streamStorage := streamStorageMap[userId]
 			if streamStorage == nil {
@@ -191,7 +193,7 @@ func (c *chatUseCase) StreamContextStorage(ctx context.Context, token string) bo
 
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
-		log2.GetTextLogger().Error(err.Error())
+		log.GetTextLogger().Error(err.Error())
 		return false
 	}
 
@@ -199,14 +201,14 @@ func (c *chatUseCase) StreamContextStorage(ctx context.Context, token string) bo
 
 	streamResChan := streamStorageMap[userId]
 	if streamResChan == nil {
-		log2.GetTextLogger().Error("cannot get target channel resource")
+		log.GetTextLogger().Error("cannot get target channel resource")
 		return false
 	} else {
 		generateText = <-streamResChan
 	}
 
 	if funk.IsEmpty(generateText) {
-		log2.GetTextLogger().Error("empty generateText for userId: " + strconv.Itoa(userId))
+		log.GetTextLogger().Error("empty generateText for userId: " + strconv.Itoa(userId))
 		return false
 	}
 
@@ -221,7 +223,7 @@ func (c *chatUseCase) StreamContextStorage(ctx context.Context, token string) bo
 
 	factory.Puts(chatTask.StorageTask)
 
-	log2.GetTextLogger().Info("successfully storage stream message for userId: " + strconv.Itoa(userId))
+	log.GetTextLogger().Info("successfully storage stream message for userId: " + strconv.Itoa(userId))
 	return true
 }
 
@@ -264,7 +266,7 @@ func (c *chatUseCase) InitMainPage(ctx context.Context, token string, botId int)
 }
 
 // TODO 支持旧表
-func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int, botId int, tokenString string) (*[]*domain.Record, error) {
+func (c *chatUseCase) GetChatHistory(ctx context.Context, chatId int, botId int, tokenString string) (*[]*domain.Record, error) {
 	var history *[]*domain.Record
 	history, isCache, err := c.chatRepository.CacheGetHistory(ctx, chatId, botId)
 	if err != nil {
@@ -272,14 +274,14 @@ func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int, botId int, to
 	}
 	userId, err := c.tokenUtil.DecodeToId(tokenString)
 	if err != nil {
-		log2.GetTextLogger().Error(err.Error())
+		log.GetTextLogger().Error(err.Error())
 		return nil, err
 	}
 	var title string
 	if isCache && funk.IsEmpty(history) {
 		history, title, err = c.chatRepository.DbGetHistory(ctx, chatId, botId)
 		if err != nil {
-			log2.GetTextLogger().Error(err.Error())
+			log.GetTextLogger().Error(err.Error())
 			return nil, err
 		}
 
@@ -296,7 +298,7 @@ func (c *chatUseCase) GetChatHistory(ctx *gin.Context, chatId int, botId int, to
 func (c *chatUseCase) GenerateUpdateTitle(ctx context.Context, message *[]domain.TextMessage, token string, chatId int) (string, error) {
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
-		log2.GetTextLogger().Error(err.Error())
+		log.GetTextLogger().Error(err.Error())
 		return common.ZeroString, nil
 	}
 
@@ -326,7 +328,7 @@ func (c *chatUseCase) GenerateUpdateTitle(ctx context.Context, message *[]domain
 func (c *chatUseCase) InputUpdateTitle(ctx context.Context, title string, token string, chatId int, botId int) bool {
 	userId, err := c.tokenUtil.DecodeToId(token)
 	if err != nil {
-		log2.GetTextLogger().Error("user signed error:")
+		log.GetTextLogger().Error("user signed error:")
 		return false
 	}
 	data := &domain.AskContextData{ChatId: chatId, ParsedResponse: &domain.OpenAIParsedResponse{GenerateText: title}, UserId: userId}

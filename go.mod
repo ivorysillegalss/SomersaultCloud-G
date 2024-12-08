@@ -9,6 +9,7 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/wire v0.6.0
+	github.com/hertz-contrib/sse v0.0.5
 	github.com/jinzhu/gorm v1.9.16
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.17.9

@@ -2,8 +2,7 @@ package domain
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"net/http"
+	"github.com/hertz-contrib/sse"
 )
 
 type ChatHistoryTitle struct {
@@ -95,7 +94,7 @@ type ChatUseCase interface {
 	// StreamContextChatSetup 流式输出启动
 	StreamContextChatSetup(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
 	// StreamContextChatWorker 流式输出 信息下发
-	StreamContextChatWorker(ctx context.Context, token string, gc *gin.Context, flusher http.Flusher)
+	StreamContextChatWorker(ctx context.Context, token string, s *sse.Stream)
 	// StreamContextStorage 流式输出缓存
 	StreamContextStorage(ctx context.Context, token string) bool
 
@@ -105,7 +104,7 @@ type ChatUseCase interface {
 	//InitMainPage(ctx context.Context, token string) (titles []string, err error)
 	InitMainPage(ctx context.Context, token string, botId int) (titles []*TitleData, err error)
 	// GetChatHistory 获取历史记录 若从DB取的记录 则回写缓存
-	GetChatHistory(c *gin.Context, chatId int, botId int, tokenString string) (*[]*Record, error)
+	GetChatHistory(ctx context.Context, chatId int, botId int, tokenString string) (*[]*Record, error)
 
 	GenerateUpdateTitle(ctx context.Context, message *[]TextMessage, token string, chatId int) (string, error)
 	InputUpdateTitle(ctx context.Context, title string, token string, chatId int, botId int) bool

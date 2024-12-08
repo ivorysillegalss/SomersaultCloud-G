@@ -2,10 +2,10 @@ package route
 
 import (
 	"SomersaultCloud/app/somersaultcloud-chat/bootstrap"
-	"github.com/gin-gonic/gin"
+	"github.com/cloudwego/hertz/pkg/route"
 )
 
-func RegisterChatRouter(group *gin.RouterGroup, controllers *bootstrap.Controllers) {
+func RegisterChatRouter(group *route.RouterGroup, controllers *bootstrap.Controllers) {
 	cc := controllers.ChatController
 	hmc := controllers.HistoryMessageController
 	chatGroup := group.Group("/context")

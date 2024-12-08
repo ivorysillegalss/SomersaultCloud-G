@@ -4,7 +4,8 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/api/dto"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/request"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
-	"github.com/gin-gonic/gin"
+	"context"
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/thoas/go-funk"
 	"net/http"
 	"strconv"
@@ -18,7 +19,7 @@ func NewHistoryMessageController(useCase domain.ChatUseCase) *HistoryMessageCont
 	return &HistoryMessageController{chatUseCase: useCase}
 }
 
-func (hmc *HistoryMessageController) HistoryTitle(c *gin.Context) {
+func (hmc *HistoryMessageController) HistoryTitle(ctx context.Context, c *app.RequestContext) {
 	tokenString := c.Request.Header.Get("token")
 	botIdStr := c.Param("botId")
 	botId, errBotId := strconv.Atoi(botIdStr)
@@ -28,7 +29,7 @@ func (hmc *HistoryMessageController) HistoryTitle(c *gin.Context) {
 		return
 	}
 
-	chats, err := hmc.chatUseCase.InitMainPage(c, tokenString, botId)
+	chats, err := hmc.chatUseCase.InitMainPage(ctx, tokenString, botId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: "渲染聊天记录失败", Code: request.ShowChatHistoryError})
 	} else {
@@ -36,7 +37,7 @@ func (hmc *HistoryMessageController) HistoryTitle(c *gin.Context) {
 	}
 }
 
-func (hmc *HistoryMessageController) GetChatHistory(c *gin.Context) {
+func (hmc *HistoryMessageController) GetChatHistory(ctx context.Context, c *app.RequestContext) {
 	chatIdStr := c.Param("chatId")
 	botIdStr := c.Param("botId")
 	tokenString := c.Request.Header.Get("token")
@@ -48,7 +49,7 @@ func (hmc *HistoryMessageController) GetChatHistory(c *gin.Context) {
 		return
 	}
 
-	history, err := hmc.chatUseCase.GetChatHistory(c, chatId, botId, tokenString)
+	history, err := hmc.chatUseCase.GetChatHistory(ctx, chatId, botId, tokenString)
 	if err != nil {
 		// 获取历史记录失败，返回500状态码
 		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: "获取聊天记录失败", Code: request.UserGetHistoryError})
@@ -58,7 +59,7 @@ func (hmc *HistoryMessageController) GetChatHistory(c *gin.Context) {
 	}
 }
 
-func (hmc *HistoryMessageController) UpdateInitTitle(c *gin.Context) {
+func (hmc *HistoryMessageController) UpdateInitTitle(ctx context.Context, c *app.RequestContext) {
 	var titleDTO dto.TitleDTO
 	tokenString := c.Request.Header.Get("token")
 	if err := c.BindJSON(&titleDTO); err != nil {
@@ -66,7 +67,7 @@ func (hmc *HistoryMessageController) UpdateInitTitle(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: "参数处理错误 更新标题失败", Code: request.UpdateTitleError})
 		return
 	}
-	title, err := hmc.chatUseCase.GenerateUpdateTitle(c, &titleDTO.Messages, tokenString, titleDTO.ChatId)
+	title, err := hmc.chatUseCase.GenerateUpdateTitle(ctx, &titleDTO.Messages, tokenString, titleDTO.ChatId)
 	if err != nil {
 		// 获取历史记录失败，返回500状态码
 		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: "获取聊天记录失败", Code: request.UpdateTitleError})
@@ -76,7 +77,7 @@ func (hmc *HistoryMessageController) UpdateInitTitle(c *gin.Context) {
 	}
 }
 
-func (hmc *HistoryMessageController) InputTitle(c *gin.Context) {
+func (hmc *HistoryMessageController) InputTitle(ctx context.Context, c *app.RequestContext) {
 	var titleDTO dto.TitleDTO
 	tokenString := c.Request.Header.Get("token")
 	if err := c.BindJSON(&titleDTO); err != nil {
@@ -84,7 +85,7 @@ func (hmc *HistoryMessageController) InputTitle(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: "参数处理错误 更新标题失败", Code: request.UpdateTitleError})
 		return
 	}
-	isSuccess := hmc.chatUseCase.InputUpdateTitle(c, titleDTO.Title, tokenString, titleDTO.ChatId, titleDTO.BotId)
+	isSuccess := hmc.chatUseCase.InputUpdateTitle(ctx, titleDTO.Title, tokenString, titleDTO.ChatId, titleDTO.BotId)
 	if !isSuccess {
 		// 获取历史记录失败，返回500状态码
 		c.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: "获取聊天记录失败", Code: request.UpdateTitleError})
