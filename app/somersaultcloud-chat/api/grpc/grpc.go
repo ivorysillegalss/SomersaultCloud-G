@@ -19,7 +19,7 @@ const (
 func Setup(env struct {
 	Monitor struct {
 		Port int `mapstructure:"port" yaml:"port"`
-	}
+	} `mapstructure:"monitor" yaml:"monitor"`
 }) {
 	monitorPort := env.Monitor.Port
 	lis, err := net.Listen("tcp", ":"+strconv.Itoa(monitorPort))
@@ -40,6 +40,9 @@ type MonitoringServer struct {
 
 func (s *MonitoringServer) GetStatus(ctx context.Context, req *__monitor.EmptyRequest) (*__monitor.StatusResponse, error) {
 
+	m := &monitor.Exporter{}
+	m.UpdateCacheFromRegistry()
+
 	availableMem, cpuIdleTime := monitor.GetSystemMetrics()
 	ip := util.GetLocalIP()
 	port := util.GetLocalPort()
@@ -48,12 +51,14 @@ func (s *MonitoringServer) GetStatus(ctx context.Context, req *__monitor.EmptyRe
 	}
 
 	return &__monitor.StatusResponse{
-		Name:         req.Name,
-		Status:       healthy,
-		AvailableMem: availableMem,
-		CpuIdleTime:  cpuIdleTime,
-		Ip:           ip,
-		Port:         port,
+		Name:            req.Name,
+		Status:          healthy,
+		AvailableMem:    availableMem,
+		CpuIdleTime:     cpuIdleTime,
+		Ip:              ip,
+		Port:            port,
+		RequestDuration: m.Cache.RequestDuration,
+		RequestCount:    m.Cache.RequestCount,
 	}, nil
 }
 

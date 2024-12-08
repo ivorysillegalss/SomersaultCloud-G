@@ -43,8 +43,12 @@ type Env struct {
 	Grpc struct {
 		Monitor struct {
 			Port int `mapstructure:"port" yaml:"port"`
-		}
-	}
+		} `mapstructure:"monitor" yaml:"monitor"`
+	} `mapstructure:"grpc" yaml:"grpc"`
+
+	Prometheus struct {
+		ServerAddress string `mapstructure:"server_address" yaml:"server_address"`
+	} `mapstructure:"prometheus" yaml:"prometheus"`
 
 	JwtSecretToken     string `mapstructure:"jwt_secret_token" yaml:"jwt_secret_token"`
 	ApiOpenaiSecretKey string `mapstructure:"api_openai_secret_key" yaml:"api_openai_secret_key"`

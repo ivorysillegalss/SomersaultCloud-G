@@ -7,7 +7,7 @@ import (
 )
 
 type ExporterEnv struct {
-	AppEnv string `mapstructure:"appenv"`
+	AppEnv string `mapstructure:"app_env"`
 
 	Grpc struct {
 		Monitor struct {
