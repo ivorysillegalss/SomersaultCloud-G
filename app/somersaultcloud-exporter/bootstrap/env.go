@@ -7,7 +7,7 @@ import (
 )
 
 type ExporterEnv struct {
-	AppEnv string `mapstructure:"appenv"`
+	AppEnv string `mapstructure:"app_env"`
 
 	Grpc struct {
 		Monitor struct {
@@ -32,6 +32,10 @@ type ExporterEnv struct {
 			Port      int32  `mapstructure:"port"`
 		} `mapstructure:"address"`
 	} `mapstructure:"business_config"`
+
+	ExporterConfig struct {
+		ServerAddress string `mapstructure:"server_address"`
+	} `mapstructure:"exporter"`
 }
 
 func NewEnv() *ExporterEnv {

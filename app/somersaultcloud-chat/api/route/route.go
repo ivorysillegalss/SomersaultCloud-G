@@ -6,10 +6,14 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	prometheus "github.com/hertz-contrib/monitor-prometheus"
 )
 
-func Setup(serverAddress string, c *bootstrap.Controllers, e *bootstrap.Executor) *server.Hertz {
-	r := server.Default(server.WithHostPorts(serverAddress))
+func Setup(env *bootstrap.Env, c *bootstrap.Controllers, e *bootstrap.Executor) *server.Hertz {
+	r := server.Default(server.WithHostPorts(env.ServerAddress),
+		server.WithTracer(
+			prometheus.NewServerTracer(env.Prometheus.ServerAddress, "/trace"),
+		))
 	defaultCorsConfig(r)
 
 	publicRouter := r.Group("/domain")

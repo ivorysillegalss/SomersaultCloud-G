@@ -7,7 +7,7 @@ import (
 )
 
 type IpConfigEnv struct {
-	AppEnv          string `mapstructure:"appenv"`
+	AppEnv          string `mapstructure:"app_env"`
 	DiscoveryConfig struct {
 		Endpoints   []string      `mapstructure:"endpoints"`
 		Timeout     time.Duration `mapstructure:"timeout"`
