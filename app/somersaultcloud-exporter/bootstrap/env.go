@@ -32,6 +32,10 @@ type ExporterEnv struct {
 			Port      int32  `mapstructure:"port"`
 		} `mapstructure:"address"`
 	} `mapstructure:"business_config"`
+
+	ExporterConfig struct {
+		ServerAddress string `mapstructure:"server_address"`
+	} `mapstructure:"exporter"`
 }
 
 func NewEnv() *ExporterEnv {

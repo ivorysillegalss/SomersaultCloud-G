@@ -17,10 +17,12 @@ type GrpcConn struct {
 
 // Setup pull和push入口
 func (e *ExportApplication) Setup() {
+	//push数据进入etcd
 	monit(e)
 
-	s := server.Default(server.WithHostPorts(":7890"))
-	//TODO 补充，Prometheus，消息抓取接口
+	//Prometheus pull数据入口
+	s := server.Default(server.WithHostPorts(e.Env.ExporterConfig.ServerAddress))
+	s.GET("/metrics", e.Monitor.ExposeMonitorInterface)
 	s.Spin()
 }
 
