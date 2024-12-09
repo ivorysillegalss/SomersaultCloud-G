@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"SomersaultCloud/app/somersaultcloud-chat/api/middleware/taskchain"
 	"SomersaultCloud/app/somersaultcloud-chat/bootstrap"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/cache"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/common"
@@ -11,6 +10,7 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/internal/tokenutil"
 	"SomersaultCloud/app/somersaultcloud-chat/task"
 	"SomersaultCloud/app/somersaultcloud-common/log"
+	"SomersaultCloud/app/somersaultcloud-common/taskchain"
 	"context"
 	_ "embed"
 	"errors"

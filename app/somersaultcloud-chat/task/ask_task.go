@@ -1,7 +1,6 @@
 package task
 
 import (
-	"SomersaultCloud/app/somersaultcloud-chat/api/middleware/taskchain"
 	"SomersaultCloud/app/somersaultcloud-chat/bootstrap"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/cache"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/common"
@@ -11,6 +10,7 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/handler"
 	"SomersaultCloud/app/somersaultcloud-chat/internal/checkutil"
 	log2 "SomersaultCloud/app/somersaultcloud-common/log"
+	"SomersaultCloud/app/somersaultcloud-common/taskchain"
 	"context"
 	"fmt"
 	"github.com/thoas/go-funk"
@@ -143,6 +143,8 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 
 	data := tc.TaskContextData.(*domain.AskContextData)
 
+	//TODO 流处理模式下此处将任务生产至rabbitmq中,mq消费端再对将任务放置再线程池中等待处理
+	//	假如任务执行失败,任务会自动转发到死信队列中,死信队列的消费逻辑重新进行消费,消费失败则返回失败ACK
 	var wg sync.WaitGroup
 	//包装提交的任务
 	t := func() {
