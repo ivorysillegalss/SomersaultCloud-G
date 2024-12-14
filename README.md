@@ -46,7 +46,11 @@ Go module
 | **Logrus**             | 日志记录组件                                                 |
 | Flink                  | 异构数据库间的数据流式同步与迁移，确保系统中不同数据库之间的数据一致性和高效的数据更新。 |
 
-## 项目流程图
+## 项目图相关
+
+**项目架构图**
+
+![architecture](https://github.com/user-attachments/assets/249b6766-fa69-4424-9005-2b0616973253)
 
 **项目各模块流程图**
 
