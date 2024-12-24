@@ -103,7 +103,7 @@ func (o OpenaiChatModelExecutor) ConfigureProxy(tc *domain.AskContextData) *http
 	return requtil.SetProxy()
 }
 
-func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
+func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) bool {
 	conn := tc.Conn
 	response, err := conn.Client.Do(conn.Request)
 	//若使用stream流式输出 则在发布到消息队列后 下发客户端前 进行消息格式的转换
@@ -111,8 +111,9 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 	//why？ 消息队列网络传输需将数据序列化后传 而generationResponse中某些字段如http.Response不可进行序列化
 
 	if response == nil {
+		//TODO 死信模式下反馈
 		log2.GetTextLogger().Warn("fail remote request ,response is nil, userId: " + strconv.Itoa(tc.UserId) + "   chatId: " + strconv.Itoa(tc.ChatId))
-		return
+		return false
 	}
 
 	if tc.Stream {
@@ -126,7 +127,7 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 
 			//TODO	此处SSE的信令和前缀以OpenAI的为主，拓展模型可添加
 			if line == sys.StreamOverSignal {
-				return
+				return true
 			}
 			// 过滤空行 并确保解析以 "data: " 开头的行
 			if line == common.ZeroString || !strings.HasPrefix(line, sys.StreamPrefix) {
@@ -148,6 +149,7 @@ func (o OpenaiChatModelExecutor) Execute(tc *domain.AskContextData) {
 		}
 		rpcRes <- generationResponse
 	}
+	return true
 }
 
 // ParseResp 关于

@@ -24,6 +24,7 @@ type ChatAskTask struct {
 	chatRepository domain.ChatRepository
 	botRepository  domain.BotRepository
 	chatEvent      domain.StorageEvent
+	generateEvent  domain.GenerateEvent
 	env            *bootstrap.Env
 	channels       *bootstrap.Channels
 	poolFactory    *bootstrap.PoolsFactory
@@ -143,8 +144,10 @@ func (c *ChatAskTask) CallApiTask(tc *taskchain.TaskContext) {
 
 	data := tc.TaskContextData.(*domain.AskContextData)
 
-	//TODO 流处理模式下此处将任务生产至rabbitmq中,mq消费端再对将任务放置再线程池中等待处理
+	// 流处理模式下此处将任务生产至rabbitmq中,mq消费端再对将任务放置再线程池中等待处理
 	//	假如任务执行失败,任务会自动转发到死信队列中,死信队列的消费逻辑重新进行消费,消费失败则返回失败ACK
+	//c.generateEvent.PublishChatGenerate(data)
+
 	var wg sync.WaitGroup
 	//包装提交的任务
 	t := func() {

@@ -78,7 +78,7 @@ func (o OpenaiVisionModelExecutor) ConfigureProxy(tc *domain.AskContextData) *ht
 	return requtil.SetProxy()
 }
 
-func (o OpenaiVisionModelExecutor) Execute(tc *domain.AskContextData) {
+func (o OpenaiVisionModelExecutor) Execute(tc *domain.AskContextData) bool {
 	//TODO implement me
 	panic("implement me")
 }

@@ -13,7 +13,7 @@ type LanguageModelExecutor interface {
 	EncodeReq(tc *AskContextData) *http.Request
 	// ConfigureProxy 非必实现 根据api是否被墙
 	ConfigureProxy(tc *AskContextData) *http.Client
-	Execute(tc *AskContextData)
+	Execute(tc *AskContextData) bool
 	ParseResp(tc *AskContextData) (ParsedResponse, string)
 }
 
