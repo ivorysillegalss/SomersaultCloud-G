@@ -19,11 +19,15 @@ const (
 )
 
 type Event struct {
-	Type         EventType
-	IP           string
-	Port         string
-	ConnectNum   float64
-	MessageBytes float64
+	Type            EventType
+	IP              string
+	Port            string
+	ConnectNum      float64
+	MessageBytes    float64
+	AvailableMem    int64
+	CpuIdleTime     float64
+	RequestCount    float64
+	RequestDuration float64
 }
 
 // NewEvent 将传过来的服务端点包装成为一个新的Event节点对象

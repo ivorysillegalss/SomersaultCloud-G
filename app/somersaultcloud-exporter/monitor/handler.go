@@ -58,8 +58,9 @@ func init() {
 
 func (m *monitor) ServiceRegister() {
 	// 从配置文件读取所有服务的初始化信息
-	intiAddress := m.env.BusinessConfig.Address
-	for _, address := range intiAddress {
+	//初始化的时候 随机状态信息 因为此时所有的服务器状态基本上都是一样的
+	initAddress := m.env.BusinessConfig.Address
+	for _, address := range initAddress {
 		randRaw := &pb.StatusResponse{
 			Status:       "healthy",
 			AvailableMem: uint64(rand.Int63n(12312321231231131)),
@@ -91,7 +92,7 @@ func (m *monitor) HandleMonit() {
 		go func(k string) {
 			for {
 				handle(k, m.conn.Conn)
-				time.Sleep(time.Second)
+				//time.Sleep(time.Second)
 				log.GetTextLogger().Info("Success updating value with node: %s", k)
 			}
 		}(k)

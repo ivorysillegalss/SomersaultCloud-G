@@ -15,6 +15,7 @@ type ServiceRegister struct {
 	ctx           context.Context
 }
 
+// NewServiceRegister 服务注册 设置租约
 func NewServiceRegister(cli *clientv3.Client, key string, ctx context.Context, info *EndpointInfo, lease int64) (*ServiceRegister, error) {
 	ser := &ServiceRegister{
 		cli: cli,

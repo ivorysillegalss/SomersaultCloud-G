@@ -17,7 +17,7 @@ type Monitor interface {
 	// ServiceRegister 初始化服务注册
 	ServiceRegister()
 
-	// HandleMonit 服务发现推送到etcd
+	// HandleMonit 发起gRPC连接 拉取信息 服务发现推送到etcd
 	HandleMonit()
 
 	// ExposeMonitorInterface 暴露接口供Prometheus拉取
