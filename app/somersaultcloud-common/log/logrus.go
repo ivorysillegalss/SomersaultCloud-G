@@ -90,20 +90,32 @@ func (l *Logger) WithFields(fields ...interface{}) *Logger {
 
 // Info 级别的日志记录方法
 func (l *Logger) Info(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		l.logger.Info(msg)
+	}
 	l.logger.Infof(msg, args)
 }
 
 // Warn 级别的日志记录方法
 func (l *Logger) Warn(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		l.logger.Warn(msg)
+	}
 	l.logger.Warnf(msg, args)
 }
 
 // Error 级别的日志记录方法
 func (l *Logger) Error(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		l.logger.Error(msg)
+	}
 	l.logger.Errorf(msg, args)
 }
 
 // Fatal 级别的日志记录方法
 func (l *Logger) Fatal(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		l.logger.Fatal(msg)
+	}
 	l.logger.Fatalf(msg, args)
 }

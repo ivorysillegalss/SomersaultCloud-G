@@ -7,7 +7,7 @@ import (
 func RunIpConfig(app *IpConfigApplication) {
 	app.Dispatcher.Handle()
 	app.DataHandler.Handle()
-	s := server.Default(server.WithHostPorts(":6789"))
+	s := server.Default(server.WithHostPorts(app.Env.DiscoveryConfig.ServerAddress))
 	s.GET("/ip/list", app.Api.GetInfoList)
 	s.Spin()
 }

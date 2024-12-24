@@ -79,7 +79,6 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
 	}
 
-	//我他妈太优雅了
 	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId, adjustment)
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext

@@ -9,11 +9,12 @@ import (
 type IpConfigEnv struct {
 	AppEnv          string `mapstructure:"app_env"`
 	DiscoveryConfig struct {
-		Endpoints   []string      `mapstructure:"endpoints"`
-		Timeout     time.Duration `mapstructure:"timeout"`
-		Username    string        `mapstructure:"username"`
-		Password    string        `mapstructure:"password"`
-		ServicePath string        `mapstructure:"service_path"`
+		ServerAddress string        `mapstructure:"server_address"`
+		Endpoints     []string      `mapstructure:"endpoints"`
+		Timeout       time.Duration `mapstructure:"timeout"`
+		Username      string        `mapstructure:"username"`
+		Password      string        `mapstructure:"password"`
+		ServicePath   string        `mapstructure:"service_path"`
 	} `mapstructure:"discovery"`
 }
 
