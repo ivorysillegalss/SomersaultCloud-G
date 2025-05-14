@@ -15,11 +15,12 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/hertz-contrib/sse"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/thoas/go-funk"
-	"strconv"
-	"time"
 )
 
 //go:embed lua/increment.lua
@@ -71,7 +72,7 @@ func (c *chatUseCase) InitChat(ctx context.Context, token string, botId int) int
 	return chatId
 }
 
-func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message domain.ParsedResponse, code int) {
+func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool, model string) (isSuccess bool, message domain.ParsedResponse, code int) {
 	chatTask := c.chatTask
 
 	userId, err := c.tokenUtil.DecodeToId(token)
@@ -79,8 +80,12 @@ func (c *chatUseCase) ContextChat(ctx context.Context, token string, botId int, 
 		return false, &domain.OpenAIParsedResponse{GenerateText: common.ZeroString}, common.FalseInt
 	}
 
-	//我他妈太优雅了
-	taskContext := chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId, adjustment)
+	var taskContext *taskchain.TaskContext
+	if funk.IsEqual(model, common.OpenAi) {
+		taskContext = chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskType, task2.ExecuteChatAskCode, task2.ChatAskExecutorId, adjustment)
+	} else if funk.IsEqual(model, common.DeepSeek) {
+		taskContext = chatTask.InitContextData(userId, botId, chatId, askMessage, task2.ExecuteChatAskTypeDs, task2.ExecuteChatAskCodeDs, task2.DeepSeekChatAskExecutorId, adjustment)
+	}
 	factory := taskchain.NewTaskContextFactory()
 	factory.TaskContext = taskContext
 	factory.Puts(chatTask.PreCheckDataTask, chatTask.GetHistoryTask, chatTask.GetBotTask,

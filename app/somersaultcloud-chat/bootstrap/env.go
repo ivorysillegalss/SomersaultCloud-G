@@ -52,6 +52,7 @@ type Env struct {
 
 	JwtSecretToken     string `mapstructure:"jwt_secret_token" yaml:"jwt_secret_token"`
 	ApiOpenaiSecretKey string `mapstructure:"api_openai_secret_key" yaml:"api_openai_secret_key"`
+	DeepSeekSecretKey  string `mapstructure:"api_deepseek_secret_key" yaml:"api_deepseek_secret_key"`
 
 	Serializer string `mapstructure:"serializer" yaml:"serializer"`
 }

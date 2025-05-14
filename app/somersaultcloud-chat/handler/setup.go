@@ -14,6 +14,10 @@ func NewLanguageModelExecutor(env *bootstrap.Env, channels *bootstrap.Channels, 
 	case task2.ChatAskExecutorId:
 		executor = &OpenaiChatModelExecutor{env: env, res: channels}
 		executorType = task2.ExecuteChatAskType
+	// 因为ds和openai的格式都是兼容的 所有这里可以直接复用 需要规范一下变量名之类的
+	case task2.DeepSeekChatAskExecutorId:
+		executor = &OpenaiChatModelExecutor{env: env, res: channels}
+		executorType = task2.ExecuteChatAskType
 	case task2.ChatTitleAskExecutorId:
 		executor = &OpenaiChatModelExecutor{env: env, res: channels}
 		executorType = task2.ExecuteTitleAskType

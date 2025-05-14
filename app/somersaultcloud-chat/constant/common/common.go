@@ -40,8 +40,22 @@ const (
 	HighDetail = "high"
 	// ApiServerOpenAI OpenAI-API服务器默认网址
 	ApiServerOpenAI = "https://api.openai.com/v1/chat/completions"
+	// ApiServerDeepSeek 加入ds兼容
+	ApiServerDeepSeek = "https://api.deepseek.com/v1"
 	// Info 日志级别 info
 	Info = "info"
 	// Error 日志级别 Error
 	Error = "Error"
+)
+
+const (
+	// openai模型
+	OpenAi = "chatgpt"
+	// ds模型
+	DeepSeek = "deepseek"
+
+	// ds v3模型
+	DeepSeekV3 = "deepseek-chat"
+	// ds r1模型
+	DeepSeekR1 = "deepseek-reasoner"
 )

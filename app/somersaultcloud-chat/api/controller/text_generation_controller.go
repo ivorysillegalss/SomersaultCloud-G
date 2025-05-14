@@ -6,11 +6,12 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/constant/request"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
 	"context"
+	"net/http"
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/gin-gonic/gin"
 	"github.com/hertz-contrib/sse"
 	"github.com/thoas/go-funk"
-	"net/http"
 )
 
 type ChatController struct {
@@ -47,7 +48,7 @@ func (cc *ChatController) ContextTextChat(ctx context.Context, c *app.RequestCon
 		c.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: "请求参数解析失败", Code: request.StartChatError})
 		return
 	}
-	isSuccess, parsedResponse, _ := cc.chatUseCase.ContextChat(ctx, tokenString, askDTO.Ask.BotId, askDTO.Ask.ChatId, askDTO.Ask.Message, askDTO.Adjustment)
+	isSuccess, parsedResponse, _ := cc.chatUseCase.ContextChat(ctx, tokenString, askDTO.Ask.BotId, askDTO.Ask.ChatId, askDTO.Ask.Message, askDTO.Adjustment, askDTO.Model)
 	if isSuccess {
 		c.JSON(http.StatusOK, domain.SuccessResponse{Message: "开启聊天成功", Code: request.StartChatSuccess, Data: parsedResponse})
 	} else {

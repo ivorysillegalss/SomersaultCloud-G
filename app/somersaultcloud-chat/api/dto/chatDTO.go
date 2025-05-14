@@ -18,6 +18,7 @@ type ExecuteBotDTO struct {
 
 // AskDTO 这个映射类是问题的映射类
 type AskDTO struct {
+	Model      string          `json:"model"`
 	ChatId     int             `json:"chat_id"`
 	BotId      int             `json:"bot_id"`
 	Ask        *domain.ChatAsk `json:"ask"`

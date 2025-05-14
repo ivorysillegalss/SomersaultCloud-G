@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+
 	"github.com/hertz-contrib/sse"
 )
 
@@ -89,7 +90,7 @@ type ChatRepository interface {
 
 type ChatUseCase interface {
 	InitChat(ctx context.Context, token string, botId int) int
-	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
+	ContextChat(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool, model string) (isSuccess bool, message ParsedResponse, code int)
 
 	// StreamContextChatSetup 流式输出启动
 	StreamContextChatSetup(ctx context.Context, token string, botId int, chatId int, askMessage string, adjustment bool) (isSuccess bool, message ParsedResponse, code int)
