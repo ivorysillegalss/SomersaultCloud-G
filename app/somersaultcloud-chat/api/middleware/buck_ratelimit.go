@@ -9,7 +9,6 @@ import (
 	"context"
 	_ "embed"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/app/server"
 	"net/http"
 	"time"
 )
@@ -17,7 +16,7 @@ import (
 //go:embed lua/ratelimit.lua
 var rateLimitRateLimit string
 var rcl redis.Client
-var chatConfig rateLimitConfig
+var chatConfig BuckRateLimitConfig
 
 const (
 	chatRateLimitPrefix = "chat_rate_limit"
@@ -27,8 +26,8 @@ const (
 	commonRequested = "1"
 )
 
-// 无论是什么类型 传到lua里都需要是string
-type rateLimitConfig struct {
+// BuckRateLimitConfig 无论是什么类型 传到lua里都需要是string
+type BuckRateLimitConfig struct {
 	prefix    string
 	rate      string
 	capacity  string
@@ -37,7 +36,7 @@ type rateLimitConfig struct {
 
 // TODO 多起来限流条件可以整理为一个map
 func init() {
-	chatConfig = rateLimitConfig{
+	chatConfig = BuckRateLimitConfig{
 		prefix:    chatRateLimitPrefix,
 		rate:      chatRate,
 		capacity:  chatCapacity,
@@ -45,16 +44,28 @@ func init() {
 	}
 }
 
-func RegisterRateLimit(h *server.Hertz, r redis.Client) {
-	rcl = r
-	h.Use(buckRateLimit)
+// BuckRateLimit 闭包函数 将桶限流作为单个限流的方法独立出来
+func BuckRateLimit(r redis.Client, rate string, capacity string, prefix string, requested string) app.HandlerFunc {
+	r = rcl
+	buckConfig := chatConfig
+	if rate != "" {
+		buckConfig.rate = rate
+	}
+	if capacity != "" {
+		buckConfig.capacity = capacity
+	}
+	if prefix != "" {
+		buckConfig.prefix = prefix
+	}
+	if requested != "" {
+		buckConfig.requested = requested
+	}
+	return func(c context.Context, ctx *app.RequestContext) {
+		handle(c, ctx, buckConfig)
+	}
 }
 
-func buckRateLimit(c context.Context, ctx *app.RequestContext) {
-	handle(c, ctx, chatConfig)
-}
-
-func handle(c context.Context, ctx *app.RequestContext, conf rateLimitConfig) {
+func handle(c context.Context, ctx *app.RequestContext, conf BuckRateLimitConfig) {
 	tokenString := ctx.Request.Header.Get("token")
 	prefix := conf.prefix + common.Infix + tokenString
 	err, v := rcl.ExecuteArgsLuaScript(c, rateLimitRateLimit,

@@ -19,9 +19,9 @@ func Setup(env *bootstrap.Env, c *bootstrap.Controllers, e *bootstrap.Executor, 
 	RegisterChatRouter(publicRouter, c)
 
 	//注册跨域中间件
-	middleware.DefaultCorsConfig(r)
+	registerCorsConfig(r, env)
 	//注册限流中间件 Redis实现
-	middleware.RegisterRateLimit(r, rcl)
+	registerRateLimit(r, rcl, env.Net.RateLimit)
 
 	//Cron start
 	e.CronExecutor.SetupCron()
@@ -31,4 +31,20 @@ func Setup(env *bootstrap.Env, c *bootstrap.Controllers, e *bootstrap.Executor, 
 	e.DataExecutor.InitData()
 
 	return r
+}
+
+// 注册多种限流
+func registerRateLimit(h *server.Hertz, r redis.Client, rl bootstrap.RateLimit) {
+	h.Use(middleware.BuckRateLimit(r, rl.Buck.Rate, rl.Buck.Capacity, rl.Buck.Prefix, rl.Buck.Requested))
+	h.Use()
+}
+
+// 注册跨域配置
+func registerCorsConfig(h *server.Hertz, env *bootstrap.Env) {
+	cors := env.Net.Cors
+	if cors.Default {
+		h.Use(middleware.DefaultCorsConfig())
+	} else {
+		h.Use(middleware.CustomCorsConfig(cors.AllowAllOrigin, cors.AllowAllCredentials, cors.Headers, cors.Methods))
+	}
 }
