@@ -22,6 +22,7 @@ func NewDispatcher(e *bootstrap.IpConfigEnv) domain.Dispatcher {
 	}
 }
 func (dp *dispatcher) Handle() {
+	//这里新开一个线程 将source中watch到的修改 通过addNode和delNode更新
 	go func() {
 		for event := range source.EventChan() {
 			switch event.Type {
@@ -62,13 +63,14 @@ func (dp *dispatcher) getCandidateEndPort(ctx *domain.IpConfContext) []*domain.E
 	return candidateList
 }
 
+// delNode 删除节点 (删除服务)
 func (dp *dispatcher) delNode(event *source.Event) {
 	dp.Lock()
 	defer dp.Unlock()
 	delete(dp.candidateTable, event.Key())
 }
 
-// addNode 增加节点
+// addNode 增加/修改节点 (增加服务 & 修改服务信息)
 func (dp *dispatcher) addNode(event *source.Event) {
 	dp.Lock()
 	defer dp.Unlock()

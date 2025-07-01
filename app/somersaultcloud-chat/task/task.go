@@ -1,7 +1,7 @@
 package task
 
 import (
-	"SomersaultCloud/app/somersaultcloud-chat/api/middleware/taskchain"
+	"SomersaultCloud/app/somersaultcloud-common/taskchain"
 )
 
 type AskTask interface {

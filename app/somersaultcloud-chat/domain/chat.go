@@ -133,6 +133,10 @@ type GenerateEvent interface {
 	StreamDataReady(b []byte) error
 	PublishStreamReadyStorageData(data *StreamGenerationReadyStorageData)
 	AsyncStreamStorageDataReady()
+
+	PublishChatGenerate(data *AskContextData)
+	ConsumeChatGenerate()
+	DoGenerate(b []byte) error
 }
 
 type ChatStorageData struct {

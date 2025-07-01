@@ -13,6 +13,7 @@ type MessageHandler interface {
 	PublishMessage(queueName string, data []byte)
 	ConsumeMessage(queueName string, handler func([]byte) error)
 	InitMessageQueue(args ...any)
+	GetConn() *rabbitmq.Connection
 }
 
 // TODO 初始化mq配置隔离,写在这好丑
@@ -37,6 +38,10 @@ type MessageQueueArgs struct {
 	DeadLetterRoutingKey string
 	ProducerChannel      *rabbitmq.RabbitMqChannel
 	ConsumerChannel      *rabbitmq.RabbitMqChannel
+}
+
+func (b baseMessageHandler) GetConn() *rabbitmq.Connection {
+	return b.conn
 }
 
 func (b baseMessageHandler) InitMessageQueue(args ...any) {

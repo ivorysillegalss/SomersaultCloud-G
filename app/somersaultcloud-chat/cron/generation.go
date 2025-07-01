@@ -54,9 +54,6 @@ func (g generationCron) AsyncPollerGeneration() {
 			return
 		case streamTask := <-g.channels.StreamRpcRes:
 			//log.GetTextLogger().Info("STREAM RPCRES CHANNEL < -- SUCCESSFULLY RECEIVED STREAM RESPONSE")
-			//TODO planA本身是go这个转码的函数，然后再下发的时候，通过排序器对失序做处理再下发的，但是太多bug了，先用同步上线
-			// 在同步的情况下，由于openai是经过http1.1or2的流式传输，所以是可以保证消息的有序的。唯一的可失序的地方就是mq 消息丢失
-			// 待优化
 			consumeAndParse(streamTask, g.env, g.channels, g.generateEvent, g.generationRepository)
 		default:
 			time.Sleep(500 * time.Millisecond) // 控制轮询频率

@@ -12,7 +12,7 @@ func main() {
 	}
 	defer app.CloseDBConnection()
 
-	setup := route.Setup(app.Env, app.Controllers, app.Executor)
+	setup := route.Setup(app.Env, app.Controllers, app.Executor, app.Databases.Redis)
 	grpc.Setup(app.Env.Grpc)
 	setup.Run()
 }

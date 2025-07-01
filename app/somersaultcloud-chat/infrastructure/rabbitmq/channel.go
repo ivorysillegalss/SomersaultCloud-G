@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// 死信队列中的最大重试次数
+const maxRetries = 5
+
 type MessageQueue interface {
 	// ExchangeDeclare 创建交换机.
 	ExchangeDeclare(name string, kind string) (err error)

@@ -1,7 +1,6 @@
 package task
 
 import (
-	"SomersaultCloud/app/somersaultcloud-chat/api/middleware/taskchain"
 	"SomersaultCloud/app/somersaultcloud-chat/bootstrap"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/common"
 	"SomersaultCloud/app/somersaultcloud-chat/constant/dao"
@@ -9,6 +8,7 @@ import (
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
 	"SomersaultCloud/app/somersaultcloud-chat/handler"
 	"SomersaultCloud/app/somersaultcloud-chat/internal/checkutil"
+	"SomersaultCloud/app/somersaultcloud-common/taskchain"
 	"context"
 	"github.com/thoas/go-funk"
 )

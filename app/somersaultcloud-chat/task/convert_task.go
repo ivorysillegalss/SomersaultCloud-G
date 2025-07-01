@@ -1,9 +1,9 @@
 package task
 
 import (
-	"SomersaultCloud/app/somersaultcloud-chat/api/middleware/taskchain"
 	task2 "SomersaultCloud/app/somersaultcloud-chat/constant/task"
 	"SomersaultCloud/app/somersaultcloud-chat/domain"
+	"SomersaultCloud/app/somersaultcloud-common/taskchain"
 )
 
 type ChatConvertTask struct {

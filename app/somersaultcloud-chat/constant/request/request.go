@@ -1,6 +1,10 @@
 package request
 
 const (
+
+	// RateLimit 限流
+	RateLimit = 400
+
 	// CreateNewChat 开启聊天
 	StartChatSuccess = 100
 	StartChatError   = 101

@@ -9,6 +9,7 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/wire v0.6.0
+	github.com/hertz-contrib/cors v0.1.0
 	github.com/hertz-contrib/monitor-prometheus v0.1.2
 	github.com/hertz-contrib/sse v0.0.5
 	github.com/jinzhu/gorm v1.9.16
@@ -17,6 +18,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12
 	github.com/panjf2000/ants/v2 v2.10.0
 	github.com/prometheus/client_golang v1.17.0
+	github.com/prometheus/common v0.45.0
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -72,7 +74,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect

@@ -12,6 +12,9 @@ const (
 
 	LogicalDelete   = 1
 	UnLogicalDelete = 0
+
+	True = 1
+	False
 )
 
 var (
